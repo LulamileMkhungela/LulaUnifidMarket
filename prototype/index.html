@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lula TrustShield Escrow Prototype</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <nav>
+      <span class="logo">Lula TrustShield</span>
+      <a href="#flow">Flow</a>
+      <a href="#rules">Rules</a>
+      <a href="#dashboard">Dashboard</a>
+    </nav>
+    <section class="hero-grid">
+      <div>
+        <p class="eyebrow">Escrow stops payment scams. TrustShield stops product-info scams.</p>
+        <h1>Buy the exact verified car or house, not a story.</h1>
+        <p class="lede">A buyer’s funds are confirmed privately, the advert is investigated, the listing is locked during negotiation, and escrow releases only after handover or transfer evidence.</p>
+        <div class="actions">
+          <a class="button primary" href="#dashboard">View trust dashboard</a>
+          <a class="button" href="#flow">See end-to-end flow</a>
+        </div>
+      </div>
+      <article class="trust-card">
+        <div class="badge verified">VIN & Escrow Ready</div>
+        <h2>2019 Toyota Corolla 1.8 XS</h2>
+        <dl>
+          <div><dt>VIN</dt><dd>AHTZZZ••••78901</dd></div>
+          <div><dt>Owner</dt><dd>NaTIS match</dd></div>
+          <div><dt>Police flag</dt><dd>Clear</dd></div>
+          <div><dt>Finance</dt><dd>No outstanding finance</dd></div>
+          <div><dt>Inspection</dt><dd>Independent report uploaded</dd></div>
+        </dl>
+        <p class="notice">Buyer funds confirmed for this transaction. Exact balance hidden.</p>
+      </article>
+    </section>
+  </header>
+
+  <main>
+    <section id="flow" class="section">
+      <p class="eyebrow">End-to-end flow</p>
+      <h2>From advert to payout without trusting screenshots</h2>
+      <div class="steps">
+        <article><span>1</span><h3>Investigate</h3><p>Seller uploads VIN/title/deed documents. TrustShield verifies identity, ownership, finance, stolen/title status, and inspection evidence.</p></article>
+        <article><span>2</span><h3>Confirm funds</h3><p>Buyer authorises a temporary provider check. Seller sees only “sufficient for this deal”, not full balance or bank statements.</p></article>
+        <article><span>3</span><h3>Lock terms</h3><p>Negotiation freezes description, price, VIN/title fields, known defects, and evidence hashes. Changes require buyer-approved addendum.</p></article>
+        <article><span>4</span><h3>Escrow</h3><p>Buyer funds a regulated escrow/trust partner. Lula orchestrates milestones and evidence; funds stay safeguarded by the partner.</p></article>
+        <article><span>5</span><h3>Handover</h3><p>Verifier checks final VIN/title/condition/transfer documents. Buyer accepts or opens dispute.</p></article>
+        <article><span>6</span><h3>Release</h3><p>Escrow pays seller only when conditions are met. If red flags appear, release pauses or refunds.</p></article>
+      </div>
+    </section>
+
+    <section id="rules" class="section split">
+      <div>
+        <p class="eyebrow">Aggressive anti-scam rules</p>
+        <h2>If it changes after trust is built, it cannot silently continue.</h2>
+        <ul class="rule-list">
+          <li><strong>VIN/title/deed tamper:</strong> remove listing immediately.</li>
+          <li><strong>Description edit after negotiation:</strong> block unless buyer accepts addendum.</li>
+          <li><strong>Fake proof of payment:</strong> ignored; only provider confirmation or escrow funding counts.</li>
+          <li><strong>Bank-detail substitution:</strong> freeze and verify through trusted partner registry.</li>
+          <li><strong>New stolen/ownership red flag:</strong> remove listing and freeze release.</li>
+        </ul>
+      </div>
+      <div class="incident-card">
+        <span class="badge danger">Removed for risk</span>
+        <h3>Critical asset tamper detected</h3>
+        <p>Seller attempted to replace the verified VIN after investigation. The listing was removed and buyer notifications were sent.</p>
+        <code>incident: CRITICAL_ASSET_TAMPER</code>
+      </div>
+    </section>
+
+    <section id="dashboard" class="section dashboard">
+      <p class="eyebrow">Trust operations dashboard</p>
+      <h2>One screen for confidence</h2>
+      <div class="dashboard-grid">
+        <article class="panel">
+          <h3>Verification checklist</h3>
+          <ul class="checklist">
+            <li class="ok">Seller FICA verified</li>
+            <li class="ok">VIN / engine / registration match</li>
+            <li class="ok">Owner/title-holder confirmed</li>
+            <li class="ok">SAPS-style stolen status clear</li>
+            <li class="ok">Finance settlement clear</li>
+            <li class="ok">Independent condition report</li>
+          </ul>
+        </article>
+        <article class="panel">
+          <h3>Escrow timeline</h3>
+          <ol class="timeline">
+            <li>Buyer funds confirmed temporarily</li>
+            <li>Escrow funded with partner reference</li>
+            <li>Final handover evidence uploaded</li>
+            <li>Buyer and verifier approved release</li>
+          </ol>
+        </article>
+        <article class="panel">
+          <h3>Audit hash</h3>
+          <p>Every important snapshot is hashed so disputes can compare the advert the buyer saw with the asset delivered.</p>
+          <code>sha256: 9f42b2...e17a</code>
+        </article>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

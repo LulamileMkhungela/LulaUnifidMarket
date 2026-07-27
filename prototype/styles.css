@@ -1,0 +1,76 @@
+:root {
+  --bg: #07130f;
+  --panel: #0f211a;
+  --panel-2: #132b22;
+  --text: #effcf6;
+  --muted: #a9c8bb;
+  --brand: #32d583;
+  --brand-2: #12b76a;
+  --danger: #ff5a65;
+  --warning: #fdb022;
+  --line: rgba(255, 255, 255, 0.12);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--text);
+  background: radial-gradient(circle at top left, rgba(50, 213, 131, 0.18), transparent 28rem), var(--bg);
+}
+
+a { color: inherit; text-decoration: none; }
+
+.hero { padding: 28px clamp(18px, 5vw, 72px) 72px; min-height: 88vh; }
+nav { display: flex; align-items: center; gap: 24px; margin-bottom: 84px; color: var(--muted); }
+.logo { margin-right: auto; color: var(--text); font-weight: 800; letter-spacing: -0.03em; }
+
+.hero-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr); gap: 44px; align-items: center; }
+.eyebrow { color: var(--brand); text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.78rem; font-weight: 800; }
+h1, h2, h3 { margin: 0; letter-spacing: -0.045em; }
+h1 { font-size: clamp(3rem, 8vw, 6.5rem); line-height: 0.94; max-width: 950px; }
+h2 { font-size: clamp(2rem, 4vw, 3.5rem); line-height: 1; }
+h3 { font-size: 1.25rem; }
+.lede { max-width: 760px; color: var(--muted); font-size: 1.25rem; line-height: 1.65; }
+.actions { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 28px; }
+.button { border: 1px solid var(--line); padding: 14px 18px; border-radius: 999px; color: var(--text); font-weight: 700; }
+.button.primary { background: var(--brand); color: #02130b; border-color: var(--brand); }
+
+.trust-card, .incident-card, .panel, .steps article {
+  background: linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.035));
+  border: 1px solid var(--line);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.28);
+}
+.trust-card { border-radius: 32px; padding: 30px; }
+.badge { display: inline-flex; padding: 8px 12px; border-radius: 999px; font-weight: 800; font-size: 0.82rem; margin-bottom: 18px; }
+.badge.verified { background: rgba(50, 213, 131, 0.16); color: #7ef0b1; }
+.badge.danger { background: rgba(255, 90, 101, 0.14); color: #ff9aa2; }
+dl { display: grid; gap: 12px; margin: 24px 0; }
+dl div { display: flex; justify-content: space-between; gap: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+dt { color: var(--muted); }
+dd { margin: 0; font-weight: 800; text-align: right; }
+.notice { background: rgba(50, 213, 131, 0.13); border: 1px solid rgba(50, 213, 131, 0.32); padding: 14px; border-radius: 18px; color: #cbffe2; }
+
+.section { padding: 80px clamp(18px, 5vw, 72px); }
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 32px; }
+.steps article { border-radius: 26px; padding: 24px; min-height: 220px; }
+.steps span { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: var(--brand); color: #03140b; font-weight: 900; margin-bottom: 22px; }
+.steps p, .rule-list, .incident-card p, .panel p, .timeline, .checklist { color: var(--muted); line-height: 1.6; }
+
+.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 0.65fr); gap: 36px; align-items: center; }
+.rule-list { list-style: none; padding: 0; display: grid; gap: 16px; }
+.rule-list li { padding: 16px; border: 1px solid var(--line); border-radius: 18px; background: rgba(255,255,255,0.035); }
+.incident-card { border-radius: 30px; padding: 30px; border-color: rgba(255, 90, 101, 0.25); }
+code { display: inline-block; max-width: 100%; overflow-x: auto; background: rgba(0,0,0,0.28); border: 1px solid var(--line); padding: 10px 12px; border-radius: 12px; color: #d6fff0; }
+.dashboard-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-top: 28px; }
+.panel { border-radius: 24px; padding: 24px; }
+.checklist, .timeline { padding-left: 20px; }
+.checklist li { margin: 10px 0; }
+.checklist .ok::marker { content: "✓  "; color: var(--brand); }
+.timeline li { margin: 12px 0; }
+
+@media (max-width: 900px) {
+  nav { margin-bottom: 48px; }
+  .hero-grid, .split, .steps, .dashboard-grid { grid-template-columns: 1fr; }
+}

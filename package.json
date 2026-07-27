@@ -1,0 +1,23 @@
+{
+  "name": "lula-unified-market-trust-escrow",
+  "version": "0.1.0",
+  "description": "Reference trust, verification, and escrow workflow for Lula Unified Market high-value South African marketplace transactions.",
+  "main": "src/trustEscrowEngine.js",
+  "scripts": {
+    "demo": "node src/demo.js",
+    "test": "node --test"
+  },
+  "keywords": [
+    "escrow",
+    "marketplace",
+    "south-africa",
+    "vehicle-verification",
+    "property-verification",
+    "fraud-prevention"
+  ],
+  "author": "Lula Unified Market",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22"
+  }
+}
