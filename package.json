@@ -1,23 +1,41 @@
 {
-  "name": "lula-unified-market-trust-escrow",
-  "version": "0.1.0",
-  "description": "Reference trust, verification, and escrow workflow for Lula Unified Market high-value South African marketplace transactions.",
-  "main": "src/trustEscrowEngine.js",
+  "name": "lula-proveri",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lula ProVeri \u2014 South Africa's verified on-demand services marketplace. KYC-verified pros, multi-bid jobs, escrow-protected payments, proof-of-work evidence chains, load-shedding & weather-aware scheduling, plus a verified-vehicle vertical powered by the shared ProVeri Trust Kernel.",
+  "type": "commonjs",
+  "main": "src/server/index.js",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
+    "start": "node src/server/index.js",
+    "dev": "node --watch src/server/index.js",
     "demo": "node src/demo.js",
-    "test": "node --test"
+    "demo:vehicle": "node src/demo-vehicle.js",
+    "test": "node --test",
+    "test:legacy": "node --test test/legacy.trustEscrowEngine.test.js",
+    "seed:reset": "node scripts/reset-store.js",
+    "openapi": "node scripts/print-openapi.js",
+    "healthcheck": "node scripts/healthcheck.js",
+    "integrations:probe": "node scripts/probe-integrations.js"
   },
   "keywords": [
-    "escrow",
-    "marketplace",
     "south-africa",
+    "services-marketplace",
+    "on-demand",
+    "escrow",
+    "kyc",
+    "verification",
+    "pwa",
+    "trades",
+    "load-shedding",
     "vehicle-verification",
-    "property-verification",
-    "fraud-prevention"
+    "fraud-prevention",
+    "popia"
   ],
   "author": "Lula Unified Market",
   "license": "UNLICENSED",
-  "engines": {
-    "node": ">=22"
-  }
+  "dependencies": {},
+  "devDependencies": {}
 }

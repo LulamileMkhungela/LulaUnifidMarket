@@ -1,0 +1,219 @@
+{
+  "version": "2026-10-12",
+  "country": "ZA",
+  "countryName": "South Africa",
+  "timezone": "Africa/Johannesburg",
+  "sources": {
+    "coordinates": "OpenStreetMap / Nominatim (ODbL 1.0) — live lookup at runtime, bundled here for offline first paint",
+    "postalCodes": "Zippopotam.us public postal-code API (free, no key) — ZA/{postalCode}",
+    "municipalities": "Municipal Demarcation Board public boundaries"
+  },
+  "metros": [
+    {
+      "id": "jhb",
+      "name": "City of Johannesburg",
+      "province": "Gauteng",
+      "municipalityCode": "JHB",
+      "center": { "lat": -26.2041, "lon": 28.0473 },
+      "loadSheddingAuthority": "City Power",
+      "espAreaPrefix": "johannesburg",
+      "suburbs": [
+        { "id": "sandton", "name": "Sandton", "postalCode": "2196", "lat": -26.1076, "lon": 28.0567, "incomeBand": "HIGH", "density": "HIGH" },
+        { "id": "bryanston", "name": "Bryanston", "postalCode": "2191", "lat": -26.0556, "lon": 28.0167, "incomeBand": "HIGH", "density": "MEDIUM" },
+        { "id": "fourways", "name": "Fourways", "postalCode": "2191", "lat": -26.0186, "lon": 28.0128, "incomeBand": "HIGH", "density": "HIGH" },
+        { "id": "randburg", "name": "Randburg", "postalCode": "2194", "lat": -26.0936, "lon": 27.9894, "incomeBand": "MEDIUM", "density": "HIGH" },
+        { "id": "roodepoort", "name": "Roodepoort", "postalCode": "1724", "lat": -26.1625, "lon": 27.8725, "incomeBand": "MEDIUM", "density": "HIGH" },
+        { "id": "midrand", "name": "Midrand", "postalCode": "1685", "lat": -25.9886, "lon": 28.1269, "incomeBand": "MEDIUM", "density": "MEDIUM" },
+        { "id": "soweto", "name": "Soweto", "postalCode": "1804", "lat": -26.2485, "lon": 27.8546, "incomeBand": "MIXED", "density": "VERY_HIGH" },
+        { "id": "alexandra", "name": "Alexandra", "postalCode": "2090", "lat": -26.0986, "lon": 28.0928, "incomeBand": "LOW", "density": "VERY_HIGH" },
+        { "id": "jhb-cbd", "name": "Johannesburg CBD", "postalCode": "2001", "lat": -26.2041, "lon": 28.0473, "incomeBand": "MIXED", "density": "VERY_HIGH" },
+        { "id": "melville", "name": "Melville", "postalCode": "2092", "lat": -26.1786, "lon": 28.0069, "incomeBand": "MEDIUM", "density": "HIGH" },
+        { "id": "parkhurst", "name": "Parkhurst", "postalCode": "2193", "lat": -26.1442, "lon": 28.0342, "incomeBand": "HIGH", "density": "HIGH" },
+        { "id": "norwood", "name": "Norwood", "postalCode": "2192", "lat": -26.1653, "lon": 28.0694, "incomeBand": "HIGH", "density": "HIGH" },
+        { "id": "maboneng", "name": "Maboneng", "postalCode": "2094", "lat": -26.2058, "lon": 28.0606, "incomeBand": "MEDIUM", "density": "HIGH" },
+        { "id": "lenasia", "name": "Lenasia", "postalCode": "1829", "lat": -26.3211, "lon": 27.8194, "incomeBand": "MEDIUM", "density": "HIGH" },
+        { "id": "orange-farm", "name": "Orange Farm", "postalCode": "1805", "lat": -26.4667, "lon": 27.8667, "incomeBand": "LOW", "density": "VERY_HIGH" }
+      ]
+    },
+    {
+      "id": "pta",
+      "name": "City of Tshwane",
+      "province": "Gauteng",
+      "municipalityCode": "TSH",
+      "center": { "lat": -25.7479, "lon": 28.2293 },
+      "loadSheddingAuthority": "City of Tshwane Electricity",
+      "espAreaPrefix": "tshwane",
+      "suburbs": [
+        { "id": "centurion", "name": "Centurion", "postalCode": "0157", "lat": -25.8603, "lon": 28.1894, "incomeBand": "MEDIUM", "density": "HIGH" },
+        { "id": "pretoria-east", "name": "Pretoria East", "postalCode": "0081", "lat": -25.7900, "lon": 28.2900, "incomeBand": "HIGH", "density": "MEDIUM" },
+        { "id": "hatfield", "name": "Hatfield", "postalCode": "0028", "lat": -25.7545, "lon": 28.2314, "incomeBand": "MEDIUM", "density": "VERY_HIGH" },
+        { "id": "menlyn", "name": "Menlyn", "postalCode": "0181", "lat": -25.7826, "lon": 28.2754, "incomeBand": "HIGH", "density": "HIGH" },
+        { "id": "soshanguve", "name": "Soshanguve", "postalCode": "0152", "lat": -25.5233, "lon": 28.0939, "incomeBand": "LOW", "density": "VERY_HIGH" },
+        { "id": "mamelodi", "name": "Mamelodi", "postalCode": "0122", "lat": -25.7211, "lon": 28.3936, "incomeBand": "LOW", "density": "VERY_HIGH" },
+        { "id": "atteridgeville", "name": "Atteridgeville", "postalCode": "0008", "lat": -25.7703, "lon": 28.0822, "incomeBand": "LOW", "density": "HIGH" },
+        { "id": "waterkloof", "name": "Waterkloof", "postalCode": "0181", "lat": -25.7989, "lon": 28.2425, "incomeBand": "HIGH", "density": "MEDIUM" }
+      ]
+    },
+    {
+      "id": "ekur",
+      "name": "Ekurhuleni",
+      "province": "Gauteng",
+      "municipalityCode": "EKU",
+      "center": { "lat": -26.1520, "lon": 28.2437 },
+      "loadSheddingAuthority": "Ekurhuleni Electricity",
+      "espAreaPrefix": "ekurhuleni",
+      "suburbs": [
+        { "id": "benoni", "name": "Benoni", "postalCode": "1501", "lat": -26.1886, "lon": 28.3208, "incomeBand": "MEDIUM", "density": "HIGH" },
+        { "id": "boksburg", "name": "Boksburg", "postalCode": "1460", "lat": -26.2125, "lon": 28.2611, "incomeBand": "MEDIUM", "density": "HIGH" },
+        { "id": "kempton-park", "name": "Kempton Park", "postalCode": "1619", "lat": -26.1028, "lon": 28.2336, "incomeBand": "MEDIUM", "density": "HIGH" },
+        { "id": "alberton", "name": "Alberton", "postalCode": "1449", "lat": -26.2672, "lon": 28.1225, "incomeBand": "MEDIUM", "density": "HIGH" },
+        { "id": "germiston", "name": "Germiston", "postalCode": "1401", "lat": -26.2292, "lon": 28.1700, "incomeBand": "MEDIUM", "density": "HIGH" },
+        { "id": "springs", "name": "Springs", "postalCode": "1559", "lat": -26.2503, "lon": 28.4167, "incomeBand": "MEDIUM", "density": "MEDIUM" },
+        { "id": "katlehong", "name": "Katlehong", "postalCode": "1431", "lat": -26.3333, "lon": 28.1500, "incomeBand": "LOW", "density": "VERY_HIGH" },
+        { "id": "tembisa", "name": "Tembisa", "postalCode": "1632", "lat": -26.0075, "lon": 28.2286, "incomeBand": "LOW", "density": "VERY_HIGH" }
+      ]
+    },
+    {
+      "id": "cpt",
+      "name": "City of Cape Town",
+      "province": "Western Cape",
+      "municipalityCode": "CPT",
+      "center": { "lat": -33.9249, "lon": 18.4241 },
+      "loadSheddingAuthority": "City of Cape Town (own generation + Eskom)",
+      "espAreaPrefix": "capetown",
+      "suburbs": [
+        { "id": "cpt-cbd", "name": "Cape Town CBD", "postalCode": "8001", "lat": -33.9249, "lon": 18.4241, "incomeBand": "HIGH", "density": "VERY_HIGH" },
+        { "id": "century-city", "name": "Century City", "postalCode": "7441", "lat": -33.8903, "lon": 18.5122, "incomeBand": "HIGH", "density": "HIGH" },
+        { "id": "bellville", "name": "Bellville", "postalCode": "7530", "lat": -33.9000, "lon": 18.6281, "incomeBand": "MEDIUM", "density": "HIGH" },
+        { "id": "durbanville", "name": "Durbanville", "postalCode": "7550", "lat": -33.8331, "lon": 18.6531, "incomeBand": "HIGH", "density": "MEDIUM" },
+        { "id": "clifton", "name": "Clifton", "postalCode": "8008", "lat": -33.9369, "lon": 18.3772, "incomeBand": "HIGH", "density": "MEDIUM" },
+        { "id": "sea-point", "name": "Sea Point", "postalCode": "8060", "lat": -33.9181, "lon": 18.3894, "incomeBand": "HIGH", "density": "VERY_HIGH" },
+        { "id": "khayelitsha", "name": "Khayelitsha", "postalCode": "7784", "lat": -34.0300, "lon": 18.6781, "incomeBand": "LOW", "density": "VERY_HIGH" },
+        { "id": "gugulethu", "name": "Gugulethu", "postalCode": "7750", "lat": -33.9750, "lon": 18.5700, "incomeBand": "LOW", "density": "VERY_HIGH" },
+        { "id": "mitchells-plain", "name": "Mitchells Plain", "postalCode": "7785", "lat": -34.0500, "lon": 18.6167, "incomeBand": "LOW", "density": "VERY_HIGH" },
+        { "id": "somerset-west", "name": "Somerset West", "postalCode": "7130", "lat": -34.0833, "lon": 18.8333, "incomeBand": "MEDIUM", "density": "MEDIUM" },
+        { "id": "stellenbosch", "name": "Stellenbosch", "postalCode": "7600", "lat": -33.9321, "lon": 18.8602, "incomeBand": "MEDIUM", "density": "MEDIUM" }
+      ]
+    },
+    {
+      "id": "eth",
+      "name": "eThekwini (Durban)",
+      "province": "KwaZulu-Natal",
+      "municipalityCode": "ETH",
+      "center": { "lat": -29.8587, "lon": 31.0218 },
+      "loadSheddingAuthority": "Eskom / eThekwini Electricity",
+      "espAreaPrefix": "durban",
+      "suburbs": [
+        { "id": "umhlanga", "name": "Umhlanga Rocks", "postalCode": "4320", "lat": -29.7275, "lon": 31.0878, "incomeBand": "HIGH", "density": "HIGH" },
+        { "id": "durban-north", "name": "Durban North", "postalCode": "4051", "lat": -29.7833, "lon": 31.0333, "incomeBand": "HIGH", "density": "HIGH" },
+        { "id": "ballito", "name": "Ballito", "postalCode": "4420", "lat": -29.5353, "lon": 31.2131, "incomeBand": "HIGH", "density": "MEDIUM" },
+        { "id": "pinetown", "name": "Pinetown", "postalCode": "3610", "lat": -29.8500, "lon": 30.8667, "incomeBand": "MEDIUM", "density": "HIGH" },
+        { "id": "amanzimtoti", "name": "Amanzimtoti", "postalCode": "4126", "lat": -30.0500, "lon": 30.8833, "incomeBand": "MEDIUM", "density": "MEDIUM" },
+        { "id": "umlazi", "name": "Umlazi", "postalCode": "4066", "lat": -29.9667, "lon": 30.8833, "incomeBand": "LOW", "density": "VERY_HIGH" },
+        { "id": "kwamashu", "name": "KwaMashu", "postalCode": "4360", "lat": -29.7333, "lon": 30.9833, "incomeBand": "LOW", "density": "VERY_HIGH" },
+        { "id": "chatsworth", "name": "Chatsworth", "postalCode": "4092", "lat": -29.9000, "lon": 30.8833, "incomeBand": "MEDIUM", "density": "HIGH" }
+      ]
+    },
+    {
+      "id": "pe",
+      "name": "Nelson Mandela Bay (Gqeberha)",
+      "province": "Eastern Cape",
+      "municipalityCode": "NMA",
+      "center": { "lat": -33.9608, "lon": 25.6022 },
+      "loadSheddingAuthority": "Eskom",
+      "espAreaPrefix": "gqeberha",
+      "suburbs": [
+        { "id": "summerstrand", "name": "Summerstrand", "postalCode": "6019", "lat": -34.0167, "lon": 25.6833, "incomeBand": "HIGH", "density": "HIGH" },
+        { "id": "walmer", "name": "Walmer", "postalCode": "6070", "lat": -33.9833, "lon": 25.6000, "incomeBand": "HIGH", "density": "MEDIUM" },
+        { "id": "despatch", "name": "Despatch", "postalCode": "6270", "lat": -33.8833, "lon": 25.4500, "incomeBand": "MEDIUM", "density": "MEDIUM" },
+        { "id": "uyitenhage", "name": "Uitenhage", "postalCode": "6229", "lat": -33.7667, "lon": 25.4000, "incomeBand": "MEDIUM", "density": "HIGH" },
+        { "id": "kwa-nobuhle", "name": "KwaNobuhle", "postalCode": "6229", "lat": -33.8000, "lon": 25.3833, "incomeBand": "LOW", "density": "VERY_HIGH" }
+      ]
+    },
+    {
+      "id": "blm",
+      "name": "Mangaung (Bloemfontein)",
+      "province": "Free State",
+      "municipalityCode": "MAN",
+      "center": { "lat": -29.0852, "lon": 26.1596 },
+      "loadSheddingAuthority": "Eskom / Centlec",
+      "espAreaPrefix": "bloemfontein",
+      "suburbs": [
+        { "id": "dan-pienaar", "name": "Dan Pienaar", "postalCode": "9301", "lat": -29.0833, "lon": 26.1833, "incomeBand": "HIGH", "density": "MEDIUM" },
+        { "id": "westdene", "name": "Westdene", "postalCode": "9301", "lat": -29.1000, "lon": 26.1500, "incomeBand": "MEDIUM", "density": "HIGH" },
+        { "id": "botshabelo", "name": "Botshabelo", "postalCode": "9777", "lat": -29.2500, "lon": 26.7000, "incomeBand": "LOW", "density": "VERY_HIGH" },
+        { "id": "thaba-nchu", "name": "Thaba Nchu", "postalCode": "9780", "lat": -29.2000, "lon": 26.8333, "incomeBand": "LOW", "density": "HIGH" }
+      ]
+    },
+    {
+      "id": "mbb",
+      "name": "Mbombela (Nelspruit)",
+      "province": "Mpumalanga",
+      "municipalityCode": "MBM",
+      "center": { "lat": -25.4753, "lon": 30.9694 },
+      "loadSheddingAuthority": "Eskom",
+      "espAreaPrefix": "mbombela",
+      "suburbs": [
+        { "id": "nelspruit-ext", "name": "Nelspruit Ext 6", "postalCode": "1200", "lat": -25.4667, "lon": 30.9667, "incomeBand": "HIGH", "density": "MEDIUM" },
+        { "id": "white-river", "name": "White River", "postalCode": "1240", "lat": -25.3333, "lon": 31.0167, "incomeBand": "HIGH", "density": "LOW" },
+        { "id": "hazyview", "name": "Hazyview", "postalCode": "1242", "lat": -25.0500, "lon": 31.1333, "incomeBand": "MEDIUM", "density": "LOW" },
+        { "id": "barberton", "name": "Barberton", "postalCode": "1300", "lat": -25.7167, "lon": 31.0167, "incomeBand": "LOW", "density": "MEDIUM" }
+      ]
+    },
+    {
+      "id": "pkk",
+      "name": "Polokwane (Capricorn)",
+      "province": "Limpopo",
+      "municipalityCode": "PLK",
+      "center": { "lat": -23.9045, "lon": 29.4689 },
+      "loadSheddingAuthority": "Eskom",
+      "espAreaPrefix": "polokwane",
+      "suburbs": [
+        { "id": "polokwane-ext9", "name": "Polokwane Ext 9", "postalCode": "0699", "lat": -23.8833, "lon": 29.4500, "incomeBand": "HIGH", "density": "MEDIUM" },
+        { "id": "thohoyandou", "name": "Thohoyandou", "postalCode": "0950", "lat": -22.9667, "lon": 30.4833, "incomeBand": "LOW", "density": "HIGH" },
+        { "id": "tzaneen", "name": "Tzaneen", "postalCode": "0850", "lat": -23.8333, "lon": 30.1500, "incomeBand": "MEDIUM", "density": "MEDIUM" },
+        { "id": "mokopane", "name": "Mokopane", "postalCode": "0601", "lat": -24.1833, "lon": 28.9833, "incomeBand": "LOW", "density": "MEDIUM" }
+      ]
+    },
+    {
+      "id": "mah",
+      "name": "Mahikeng (Ngaka Modiri Molema)",
+      "province": "North West",
+      "municipalityCode": "MAH",
+      "center": { "lat": -25.8500, "lon": 25.6300 },
+      "loadSheddingAuthority": "Eskom",
+      "espAreaPrefix": "mahikeng",
+      "suburbs": [
+        { "id": "mahikeng-central", "name": "Mahikeng Central", "postalCode": "2745", "lat": -25.8500, "lon": 25.6300, "incomeBand": "MEDIUM", "density": "MEDIUM" },
+        { "id": "rustenburg", "name": "Rustenburg", "postalCode": "0299", "lat": -25.6667, "lon": 27.2417, "incomeBand": "MEDIUM", "density": "HIGH" },
+        { "id": "klerksdorp", "name": "Klerksdorp", "postalCode": "2570", "lat": -26.8667, "lon": 26.6667, "incomeBand": "MEDIUM", "density": "HIGH" },
+        { "id": "brits", "name": "Brits", "postalCode": "0250", "lat": -25.6333, "lon": 27.7833, "incomeBand": "MEDIUM", "density": "MEDIUM" }
+      ]
+    },
+    {
+      "id": "kim",
+      "name": "Sol Plaatje (Kimberley)",
+      "province": "Northern Cape",
+      "municipalityCode": "KIM",
+      "center": { "lat": -28.7282, "lon": 24.7499 },
+      "loadSheddingAuthority": "Eskom",
+      "espAreaPrefix": "kimberley",
+      "suburbs": [
+        { "id": "kimberley-central", "name": "Kimberley Central", "postalCode": "8301", "lat": -28.7282, "lon": 24.7499, "incomeBand": "MEDIUM", "density": "MEDIUM" },
+        { "id": "upington", "name": "Upington", "postalCode": "8800", "lat": -28.4567, "lon": 21.2447, "incomeBand": "LOW", "density": "LOW" },
+        { "id": "springbok", "name": "Springbok", "postalCode": "8240", "lat": -29.6667, "lon": 17.8833, "incomeBand": "LOW", "density": "LOW" }
+      ]
+    }
+  ],
+  "provinces": [
+    { "code": "GP", "name": "Gauteng", "metroIds": ["jhb", "pta", "ekur"] },
+    { "code": "WC", "name": "Western Cape", "metroIds": ["cpt"] },
+    { "code": "KZN", "name": "KwaZulu-Natal", "metroIds": ["eth"] },
+    { "code": "EC", "name": "Eastern Cape", "metroIds": ["pe"] },
+    { "code": "FS", "name": "Free State", "metroIds": ["blm"] },
+    { "code": "MP", "name": "Mpumalanga", "metroIds": ["mbb"] },
+    { "code": "LP", "name": "Limpopo", "metroIds": ["pkk"] },
+    { "code": "NW", "name": "North West", "metroIds": ["mah"] },
+    { "code": "NC", "name": "Northern Cape", "metroIds": ["kim"] }
+  ]
+}

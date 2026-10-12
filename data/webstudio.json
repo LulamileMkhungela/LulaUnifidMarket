@@ -1,0 +1,233 @@
+{
+  "version": "2026-10-12",
+  "source": "Package names, prices and inclusions mirror the publicly listed MyServicePro Web Studio catalogue at https://www.myservicepro.co.za/get-a-website.html. Lula ProVeri ships the same promise (preview before you pay) plus ProVeri-specific upgrades, flagged with `proveriUpgrade`.",
+  "promise": "Preview first, pay after. We build your live interactive preview before you pay a cent.",
+  "contact": {
+    "whatsapp": "https://wa.me/27721403821",
+    "email": "contact@myservicepro.co.za",
+    "phone": "+27721403821"
+  },
+  "packages": [
+    {
+      "id": "digital-storefront",
+      "name": "Digital Storefront",
+      "priceCents": 350000,
+      "recurringCents": 0,
+      "popular": true,
+      "audience": "Startups · Trades · Salons",
+      "blurb": "A clean, fast, professional online home without ongoing database hosting fees.",
+      "includes": [
+        "Sleek single-page, mobile-first website",
+        "Standard WhatsApp direct click-to-chat",
+        "Google Search & Maps visibility setup",
+        "Up to 3 sections, gallery setup for up to 10 photos",
+        ".co.za domain registration + zero monthly hosting fees"
+      ],
+      "breakdown": [
+        { "item": "Professional 1-Page Website", "detail": "Clean, mobile-friendly design." },
+        { "item": "WhatsApp Direct Link", "detail": "Direct click-to-chat button so visitors can message you immediately." },
+        { "item": "Domain & Hosting", "detail": ".co.za registration with zero monthly hosting fees." },
+        { "item": "Gallery Setup", "detail": "Initial setup of up to 10 of your project photos." }
+      ],
+      "proveriUpgrade": "Auto-generated from your verified ProVeri profile: reviews, trust badge, availability and live job history are data-bound, so the site never goes stale.",
+      "deliveryDays": 5,
+      "escrow": true,
+      "milestones": [
+        { "label": "Live preview approved", "weight": 40 },
+        { "label": "Domain + site handover", "weight": 60 }
+      ]
+    },
+    {
+      "id": "website-as-a-service",
+      "name": "Website-as-a-Service",
+      "priceCents": 150000,
+      "recurringCents": 45000,
+      "recurringLabel": "R1,500 setup + R450/month",
+      "popular": false,
+      "audience": "Zero upfront stress · Full support",
+      "blurb": "A fully managed, professional website without the high upfront cost. We handle hosting, updates and maintenance every month.",
+      "includes": [
+        "Custom mobile storefront with low upfront fee",
+        "Fast cloud hosting + 24/7 security monitoring included",
+        "Monthly content updates — just WhatsApp us your changes",
+        "Cancel anytime with 20 business days' notice"
+      ],
+      "proveriUpgrade": "Monthly report includes your ProVeri trust score, review velocity and jobs won from the site — so you can see exactly what the R450 buys.",
+      "deliveryDays": 7,
+      "escrow": true,
+      "milestones": [{ "label": "Site live", "weight": 100 }]
+    },
+    {
+      "id": "business-growth",
+      "name": "Business Growth Storefront",
+      "priceCents": 750000,
+      "recurringCents": 0,
+      "popular": false,
+      "audience": "Established Services · Contractors · Consultancies",
+      "blurb": "For businesses that need dedicated pages for different services, client testimonials and online deposit payments.",
+      "includes": [
+        "3–5 page custom responsive website",
+        "PayFast / Yoco online payments & deposit collection",
+        "Smart WhatsApp quote request forms",
+        "12 months technical support & maintenance included",
+        "Local search & Google Maps optimisation"
+      ],
+      "proveriUpgrade": "Embedded ProVeri booking widget: visitors can post a job and pay into escrow without leaving your site. You keep your brand, we keep the money safe.",
+      "deliveryDays": 12,
+      "escrow": true,
+      "milestones": [
+        { "label": "Design preview approved", "weight": 30 },
+        { "label": "Build + payments integrated", "weight": 40 },
+        { "label": "Launch & handover", "weight": 30 }
+      ]
+    },
+    {
+      "id": "premium-ecommerce",
+      "name": "Premium E-Commerce",
+      "priceCents": 1500000,
+      "recurringCents": 0,
+      "popular": false,
+      "audience": "Retailers · Product Sellers · Scalable Brands",
+      "blurb": "Sell physical or digital goods online 24/7 with direct settlement into your South African bank account.",
+      "includes": [
+        "Full online store / custom shopping catalogue",
+        "PayFast / Yoco / Ozow secure checkout integration",
+        "Inventory management & order notifications",
+        "Premium mobile UI/UX design optimised for checkout conversions"
+      ],
+      "proveriUpgrade": "Optional TradeSafe escrow on high-value orders so customers can pay in confidence and you can ship without chargeback fear.",
+      "deliveryDays": 21,
+      "escrow": true,
+      "milestones": [
+        { "label": "Store design approved", "weight": 25 },
+        { "label": "Catalogue + checkout live", "weight": 45 },
+        { "label": "Launch, training & handover", "weight": 30 }
+      ]
+    },
+    {
+      "id": "website-rescue",
+      "name": "\"Page 3\" Website Rescue",
+      "priceCents": 250000,
+      "recurringCents": 0,
+      "priceLabel": "From R2,500 once-off",
+      "popular": false,
+      "audience": "Glitchy, slow or outdated existing sites",
+      "blurb": "Instead of rebuilding from zero at agency rates, we rescue your existing content and assets and port them to a fast, modern setup.",
+      "includes": [
+        "Full technical diagnostic of your current site",
+        "Fix broken mobile views, broken buttons & layout glitches",
+        "Speed overhaul & modern redesign",
+        "Move to fast, zero-monthly-fee cloud architecture"
+      ],
+      "proveriUpgrade": "Diagnostic report is machine-generated and hash-sealed — you own the audit even if you never buy the rescue.",
+      "deliveryDays": 6,
+      "escrow": true,
+      "milestones": [
+        { "label": "Diagnostic report delivered", "weight": 30 },
+        { "label": "Rescued site live", "weight": 70 }
+      ]
+    },
+    {
+      "id": "student-portfolio",
+      "name": "Student & Individual Portfolio",
+      "priceCents": 45000,
+      "priceLabel": "R450–R1,000 negotiable",
+      "recurringCents": 0,
+      "popular": false,
+      "audience": "Students · Freelancers · Job Seekers",
+      "blurb": "A single-page portfolio or digital CV with a shareable link for WhatsApp and LinkedIn.",
+      "includes": [
+        "Single-page portfolio website / digital CV",
+        "Mobile-optimised shareable link for WhatsApp & LinkedIn",
+        "Contact form + LinkedIn/social links",
+        "Zero monthly server fees"
+      ],
+      "proveriUpgrade": "Free tier: every verified ProVeri pro already gets an auto-generated profile microsite at no cost. Pay only if you want the custom portfolio treatment.",
+      "deliveryDays": 3,
+      "escrow": true,
+      "milestones": [{ "label": "Portfolio live", "weight": 100 }]
+    }
+  ],
+  "growthServices": [
+    {
+      "id": "google-maps",
+      "name": "Get Recommended on Google",
+      "priceCents": 65000,
+      "icon": "📍",
+      "audience": "Trades · Salons · Local Services",
+      "how": [
+        "Google Business Profile setup or complete audit of your existing listing",
+        "Verified service areas across your target suburbs and towns",
+        "Search-optimised service categories and keywords so Google matches you with local searches",
+        "High-resolution photo uploads with location tags to build instant customer trust",
+        "Review-request system to turn happy past clients into 5-star Google reviews"
+      ],
+      "honestBoundary": "Google local ranking depends on relevance, distance and authentic customer reviews. We maximise your profile's authority so Google recommends you over unverified competitors.",
+      "proveriUpgrade": "Review requests are sent only after an escrow-released job — so every Google review you earn is backed by a real, paid, completed booking."
+    },
+    {
+      "id": "whatsapp-automation",
+      "name": "Automate Your WhatsApp",
+      "priceCents": 55000,
+      "icon": "💬",
+      "audience": "Contractors · Service Providers · Shops",
+      "how": [
+        "Professional Business Profile with opening hours, business address & website link",
+        "In-app service and product catalogue with photos, descriptions and starting prices",
+        "24/7 automated greeting and after-hours away message for instant customer responses",
+        "5 quick-reply shortcuts (send full price list, bank details or quotes in 1 tap)",
+        "Direct click-to-chat links for your Facebook, Instagram and TikTok bios"
+      ],
+      "honestBoundary": "Configured directly on your phone using official WhatsApp Business app tools (no monthly software bills). Advanced automated AI bots or custom API connections are quoted separately.",
+      "proveriUpgrade": "Quick-reply template that turns a WhatsApp enquiry into a ProVeri job link — keeps the money inside escrow instead of losing it to a cash deal."
+    },
+    {
+      "id": "lead-campaigns",
+      "name": "Get Customer Leads",
+      "priceCents": 120000,
+      "icon": "🎯",
+      "audience": "Contractors · Trades · Salons looking for calls",
+      "how": [
+        "Targeted local ads on Google Search and Meta (Facebook/Instagram radius targeting)",
+        "High-intent setup routing incoming homeowner enquiries into your WhatsApp or phone calls",
+        "Custom ad creative banners and persuasive copy written for your trade",
+        "Live conversion tracking and a weekly performance report"
+      ],
+      "honestBoundary": "You fund your ad budget directly on Google/Meta (we recommend starting from R50–R100/day). We don't sell cold recycled phone lists — we build the live advertising machine that brings fresh, paying enquiries to your phone.",
+      "proveriUpgrade": "Ad creative auto-features your live ProVeri trust badge and star rating, which measurably lifts click-through versus unverified competitors."
+    },
+    {
+      "id": "brand-kit",
+      "name": "Professional Posters & Brand Kit",
+      "priceCents": 49900,
+      "icon": "🎨",
+      "audience": "WhatsApp status · Facebook · Instagram promos",
+      "how": [
+        "4 high-definition custom branded promotional posters (WhatsApp status 1080x1920 & feed square 1080x1080)",
+        "1 branded digital price list / service menu card with your contact and banking details",
+        "Clean typography touch-up or modern logo refinement",
+        "Ready-to-copy promotional captions with local hashtags + 1 revision round included"
+      ],
+      "honestBoundary": "Defined graphics package (client supplies core photos and text). Ongoing monthly content creation is quoted separately.",
+      "proveriUpgrade": "Banking details on the price-list card are replaced by your ProVeri payment link — customers pay into escrow, not into a personal account."
+    }
+  ],
+  "freeProVeriMicrosite": {
+    "id": "proveri-profile-site",
+    "name": "Your ProVeri Profile Microsite (free)",
+    "priceCents": 0,
+    "audience": "Every verified pro",
+    "blurb": "Generated automatically the moment your verification passes. Live-data bound, so it never goes stale.",
+    "includes": [
+      "Your own public URL: lulaproveri.co.za/p/<your-slug>",
+      "Live trust badge and 0–100 ProVeri score",
+      "Only reviews from completed, escrow-protected jobs",
+      "Live availability and instant-book button",
+      "Portfolio gallery from your proof-of-work evidence",
+      "WhatsApp click-to-chat and one-tap job request",
+      "Printable QR code for your bakkie, toolbox or till slip"
+    ],
+    "deliveryDays": 0,
+    "escrow": false
+  }
+}

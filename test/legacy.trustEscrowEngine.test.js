@@ -7,7 +7,7 @@ const {
   CHECK_STATUS,
   LISTING_STATUS,
   ESCROW_STATUS,
-} = require('../src/trustEscrowEngine');
+} = require('../src/kernel/legacy/trustEscrowEngine');
 
 function createVerifiedVehicle(engine = new TrustEscrowEngine()) {
   const listing = engine.createListing({

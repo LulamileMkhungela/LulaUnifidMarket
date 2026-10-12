@@ -1,0 +1,14 @@
+# Runtime artefacts — never committed
+node_modules/
+data/.store.json
+*.log
+.DS_Store
+
+# Editor / tooling
+.vscode/
+.idea/
+
+# Build outputs (none today: the PWA ships without a build step)
+dist/
+build/
+out/

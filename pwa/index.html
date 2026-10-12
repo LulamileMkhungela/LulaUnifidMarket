@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en-ZA">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Lula ProVeri — Verified pros. Escrow-protected money. Proof of work.</title>
+  <meta name="description" content="South Africa's verified on-demand services marketplace. Post a job and get bids from KYC-verified pros near you — your money stays safe in escrow until the work is done. Proudly South African 🇿">
+  <meta name="theme-color" content="#0E7C5A">
+  <meta name="color-scheme" content="light dark">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="mask-icon" href="/icons/icon-192.png" color="#0E7C5A">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ProVeri">
+  <meta property="og:site_name" content="Lula ProVeri">
+  <meta property="og:title" content="Lula ProVeri — verified pros, escrow-protected money, proof of work">
+  <meta property="og:description" content="Post a job, get bids from KYC-verified pros, pay into escrow, release on geotagged proof of work. Plus verified vehicles and a free pro microsite.">
+  <meta property="og:image" content="/icons/og-card.png">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="/styles/app.css">
+  <link rel="preload" href="/js/app.js" as="script">
+</head>
+<body>
+  <div id="app-shell">
+    <header id="app-header">
+      <a class="brand" href="/" data-link>
+        <img src="/icons/icon-192.png" alt="" width="30" height="30">
+        <span>Lula ProVeri<small>Verified · Escrow · Proof</small></span>
+      </a>
+      <span class="spacer"></span>
+      <span id="conn-pill" class="conn" title="Connectivity">●</span>
+      <button class="head-btn" id="btn-notifications" aria-label="Notifications" title="Notifications">🔔<span class="dot" id="notif-dot" hidden></span></button>
+      <button class="head-btn" id="btn-profile" aria-label="Profile and settings" title="Profile">👤🏾</button>
+    </header>
+
+    <main id="app-main" role="main" aria-live="polite"></main>
+
+    <nav id="app-nav" aria-label="Primary">
+      <button data-nav="/" aria-label="Home"><span class="ico">🏠</span>Home</button>
+      <button data-nav="/find-a-pro" aria-label="Find a pro"><span class="ico">🔍</span>Find</button>
+      <button data-nav="/post-job" aria-label="Post a job"><span class="ico">➕</span>Post</button>
+      <button data-nav="/bookings" aria-label="My activity"><span class="ico">📦</span>My jobs</button>
+      <button data-nav="/trust" aria-label="Trust and transparency"><span class="ico">🛡️</span>Trust</button>
+    </nav>
+  </div>
+
+  <div id="sheet-backdrop"></div>
+  <div id="sheet" role="dialog" aria-modal="true" aria-label="Dialog"></div>
+  <div id="toasts" aria-live="assertive"></div>
+
+  <noscript>
+    <div style="padding:30px;font-family:sans-serif">
+      <h1>Lula ProVeri</h1>
+      <p>This marketplace is a progressive web app and needs JavaScript. Every pro microsite, by contrast, is plain server-rendered HTML and works without it — see <a href="/api/webstudio/microsites">/api/webstudio/microsites</a> for the list.</p>
+    </div>
+  </noscript>
+
+  <script src="/js/api.js" defer></script>
+  <script src="/js/ui.js" defer></script>
+  <script src="/js/screens-market.js" defer></script>
+  <script src="/js/screens-work.js" defer></script>
+  <script src="/js/screens-verticals.js" defer></script>
+  <script src="/js/screens-trust.js" defer></script>
+  <script src="/js/app.js" defer></script>
+</body>
+</html>

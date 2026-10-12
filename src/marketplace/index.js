@@ -1,0 +1,300 @@
+'use strict';
+
+/**
+ * Lula ProVeri — Marketplace facade.
+ *
+ * One object that composes the Trust Kernel, the verticals and the service
+ * modules, and is the only thing the HTTP layer talks to. Every mutation goes
+ * through here, so every mutation lands in the hash-chained audit ledger.
+ */
+
+const { TrustKernel } = require('../kernel/trustKernel');
+const { VERTICALS } = require('../verticals');
+const { Store } = require('./store');
+const { Catalog } = require('./catalog');
+const { PeopleService } = require('./people');
+const { JobService } = require('./jobs');
+const { BookingService } = require('./bookings');
+const { VehicleService } = require('./vehicles');
+const { WebStudioService } = require('./webstudio');
+const integrations = require('../integrations');
+const { nowIso, deepClone, sha256 } = require('../kernel/util');
+
+class Marketplace {
+  constructor({ fees, persist = false, storeFile } = {}) {
+    this.kernel = new TrustKernel({
+      fees: {
+        platformFeePercent: 10,
+        warrantyHoldbackPercent: 5,
+        confirmationWindowMinutes: 48 * 60,
+        warrantyDays: 14,
+        paymentWindowMinutes: 120,
+        ...fees,
+      },
+      verticals: VERTICALS,
+    });
+    this.store = new Store({ persist, file: storeFile });
+    this.catalog = new Catalog({ store: this.store });
+    this.people = new PeopleService({ store: this.store, kernel: this.kernel, catalog: this.catalog });
+    this.jobs = new JobService({ store: this.store, kernel: this.kernel, catalog: this.catalog, people: this.people });
+    this.bookings = new BookingService({ store: this.store, kernel: this.kernel, catalog: this.catalog, people: this.people, jobs: this.jobs });
+    this.vehicles = new VehicleService({ store: this.store, kernel: this.kernel, catalog: this.catalog, people: this.people });
+    this.webStudio = new WebStudioService({ store: this.store, kernel: this.kernel, catalog: this.catalog, people: this.people });
+    this.integrations = integrations;
+    this.startedAt = nowIso();
+    this.schedulerTimer = null;
+  }
+
+  /* ---------------- verticals ---------------- */
+
+  verticals() {
+    return this.kernel.listVerticals();
+  }
+
+  /* ---------------- cross-vertical bridge ---------------- */
+
+  /**
+   * When a services booking that touches a vehicle completes, write it into
+   * that vehicle's Service Passport and (if the VIN is on a live listing) into
+   * the listing's trust chain. This is the payoff of running both verticals on
+   * one kernel.
+   */
+  bridgeBookingToVehicle({ bookingId, vin, reportHash, findings }) {
+    const booking = this.store.get('bookings', bookingId);
+    if (!booking) throw new Error(`booking ${bookingId} not found`);
+    const category = this.catalog.get(booking.categoryId);
+    if (!category.vehicleVerticalBridge) {
+      return { bridged: false, reason: `${category.label} does not write to a vehicle passport` };
+    }
+
+    const pro = this.store.get('pros', booking.proId);
+    const passport = this.vehicles.appendServiceToPassport({
+      vin,
+      bookingId,
+      categoryId: booking.categoryId,
+      summary: `${booking.title} completed and escrow-released on ProVeri`,
+      evidenceIds: booking.evidence.map((e) => e.evidenceId),
+      proName: pro?.displayName,
+    });
+
+    let listingBridge = null;
+    const listing = this.store.findOne('vehicles', (v) => v.asset.vin === String(vin).toUpperCase() && v.status !== 'REMOVED');
+    if (listing && booking.categoryId === 'vehicle-inspection') {
+      listingBridge = this.vehicles.bridgeInspectionToListing({
+        listingId: listing.listingId,
+        bookingId,
+        reportHash: reportHash || sha256(booking.bookingId),
+        findings: findings || 'Independent pre-purchase inspection completed as an escrow-released ProVeri service job',
+        inspectorProId: booking.proId,
+      });
+    }
+
+    return { bridged: true, passport, listingBridge, category: category.label };
+  }
+
+  /* ---------------- scheduler ---------------- */
+
+  startScheduler({ intervalMs = 60_000 } = {}) {
+    if (this.schedulerTimer) return { started: false, reason: 'already running' };
+    this.schedulerTimer = setInterval(() => {
+      try {
+        this.bookings.runScheduler();
+      } catch (error) {
+        this.kernel.ledger.append({
+          action: 'SCHEDULER_ERROR',
+          subject: 'platform',
+          level: 'CRITICAL',
+          payload: { summary: `Scheduler failed: ${error.message}` },
+        });
+      }
+    }, intervalMs);
+    this.schedulerTimer.unref?.();
+    return { started: true, intervalMs };
+  }
+
+  stopScheduler() {
+    if (this.schedulerTimer) clearInterval(this.schedulerTimer);
+    this.schedulerTimer = null;
+    return { stopped: true };
+  }
+
+  runSchedulerOnce() {
+    return this.bookings.runScheduler();
+  }
+
+  /* ---------------- platform views ---------------- */
+
+  /** Public landing-page data: proof, not marketing adjectives. */
+  publicSnapshot() {
+    const jobStats = this.jobs.stats();
+    const bookingStats = this.bookings.stats();
+    const proCount = this.store.count('pros', (p) => p.canBid);
+    const reviews = this.store.all('reviews').filter((r) => r.visible !== false);
+    const ratings = reviews.map((r) => r.rating);
+    const transparency = this.kernel.transparencyReport();
+
+    return {
+      brand: {
+        name: 'Lula ProVeri',
+        tagline: 'Verified pros. Escrow-protected money. Proof of work.',
+        promise: 'Post a job and get bids from KYC-verified pros near you — your money stays safe in escrow until the work is done. Or flip it: turn your skills into income, with payment guaranteed before you start.',
+        country: 'South Africa',
+        flag: '🇿🇦',
+      },
+      verticals: this.verticals(),
+      supply: {
+        verifiedPros: proCount,
+        totalPros: this.store.count('pros'),
+        elitePros: this.store.count('pros', (p) => p.badge === 'PROVERI_ELITE'),
+        statutoryCertified: this.store.count('pros', (p) => p.statutoryTrade && p.canBid),
+        metrosCovered: jobStats.metrosActive,
+        categoriesLive: this.catalog.categories.size,
+      },
+      demand: jobStats,
+      transactions: bookingStats,
+      trust: {
+        verifiedReviews: ratings.length,
+        averageRating: ratings.length ? Number((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(2)) : null,
+        reviewIntegrityClaim: 'Every review is written by a customer who paid for that job through ProVeri escrow. Ratings cannot be bought, and the escrow release is hash-sealed in the audit ledger.',
+        ledgerEntries: transparency.ledgerEntries,
+        chainValid: transparency.chainValid,
+        publishedReceipt: transparency.publishedReceipt,
+        policyRules: transparency.policy.rules,
+        riskSignalsCatalogued: Object.keys(require('../kernel/risk').SIGNAL_CATALOGUE).length,
+        checksPassed: transparency.verifications.passed,
+        checksFailed: transparency.verifications.failed,
+      },
+      money: {
+        heldInEscrowCents: bookingStats.escrow.currentlyHeldCents,
+        releasedToProsCents: bookingStats.escrow.releasedToProsCents,
+        refundedToCustomersCents: bookingStats.escrow.refundedToCustomersCents,
+        warrantyHoldbackReleasedCents: bookingStats.warrantyHoldbackReleasedCents,
+        platformFeePercent: this.kernel.escrow.fees.platformFeePercent,
+        proSharePercent: 100 - this.kernel.escrow.fees.platformFeePercent,
+        escrowPartners: Object.keys(require('../kernel/escrow').PROVIDERS).length,
+      },
+      guarantees: [
+        { icon: '🔐', title: 'Your money is never at risk', body: `Customers pay into escrow when a bid is accepted. The pro is only paid after you confirm the work is done — and ${this.kernel.escrow.fees.warrantyHoldbackPercent}% stays held for a ${this.kernel.escrow.fees.warrantyDays}-day workmanship warranty.` },
+        { icon: '🪪', title: 'Every pro is verified', body: 'Identity, phone, email and bank account are confirmed before anyone can bid. Statutory trades — electricians, plumbers, gas installers, builders, security — also need a certificate from the issuing body on file.' },
+        { icon: '📸', title: 'Proof of work, not promises', body: 'Before-and-after photos are geotagged and hash-sealed against the job address. A photo taken 40 km away holds the payout.' },
+        { icon: '⚖️', title: 'Disputes are decided on evidence', body: 'The dispute centre weighs hash-sealed evidence from both sides and publishes the weighting, so the outcome is auditable rather than arbitrary.' },
+        { icon: '👩🏾‍💼', title: 'Real humans, real support', body: 'In-app help tickets with photo evidence, a dispute desk with a 48-hour target, and a team based in South Africa.' },
+        { icon: '🇿🇦', title: 'Built for how Mzansi actually works', body: 'Load-shedding-aware scheduling, weather-aware quoting for exterior work, WhatsApp-first job posting, instant EFT and eWallet payouts, and Remit-a-Job so family abroad can pay for a relative’s repairs.' },
+      ],
+      labourMarket: this.integrations.MARKET.LABOUR_MARKET,
+      generatedAt: nowIso(),
+    };
+  }
+
+  /** Everything the PWA needs to work offline on first paint. */
+  offlineBundle() {
+    return {
+      version: nowIso(),
+      catalog: this.catalog.offlineBundle(),
+      snapshot: this.publicSnapshot(),
+      packages: this.webStudio.packages(),
+      growthServices: this.webStudio.growthServices(),
+      webStudioPromise: this.webStudio.promise(),
+      verticals: this.verticals(),
+      banks: this.integrations.bankVerification.listBanks(),
+      payoutRails: Object.values(this.integrations.bankVerification.PAYOUT_RAILS),
+      evidenceTypes: Object.entries(require('./bookings').EVIDENCE_TYPES).map(([id, def]) => ({ id, ...def })),
+      integrations: this.integrations.CATALOGUE,
+      policies: this.kernel.policy.ruleBook(),
+    };
+  }
+
+  /** Admin console: what the trust desk needs to work. */
+  adminConsole() {
+    return {
+      ledger: {
+        integrity: this.kernel.ledger.integrityReceipt(),
+        recentCritical: this.kernel.ledger.query({ level: 'CRITICAL', limit: 30 }).reverse(),
+        recentTrust: this.kernel.ledger.query({ level: 'TRUST', limit: 20 }).reverse(),
+      },
+      policy: this.kernel.policy.stats(),
+      risk: {
+        stats: this.kernel.risk.stats(),
+        highRiskSubjects: this.store.all('pros')
+          .map((p) => ({ proId: p.proId, name: p.displayName, ...this.kernel.risk.assess(p.proId) }))
+          .filter((a) => ['HIGH', 'CRITICAL'].includes(a.tier)),
+      },
+      escrow: this.kernel.escrow.portfolioStats(),
+      queues: {
+        prosAwaitingVerification: this.store.count('pros', (p) => p.status === 'IN_VERIFICATION'),
+        jobsAwaitingBids: this.store.count('jobs', (j) => ['OPEN', 'BIDDING'].includes(j.status) && j.bidCount === 0),
+        bookingsAwaitingConfirmation: this.store.count('bookings', (b) => b.status === 'AWAITING_CONFIRMATION'),
+        disputesOpen: this.store.count('disputes', (d) => ['OPEN', 'EVIDENCE_WINDOW', 'UNDER_REVIEW', 'MEDIATION'].includes(d.status)),
+        warrantiesOpen: this.store.count('bookings', (b) => b.status === 'IN_WARRANTY'),
+        webStudioPipeline: this.store.count('webStudioOrders', (o) => !['DELIVERED', 'CANCELLED'].includes(o.status)),
+      },
+      bookings: this.bookings.stats(),
+      jobs: this.jobs.stats(),
+      vehicles: this.vehicles.stats(),
+      webStudio: this.webStudio.stats(),
+      store: this.store.stats(),
+      integrations: { mode: this.integrations.MODE, configured: this.integrations.configuredPartners(), http: this.integrations.httpClient.getStats() },
+      generatedAt: nowIso(),
+    };
+  }
+
+  /** Help-desk ticket with photo evidence. */
+  openTicket({ userId, role, subject, description, photos = [], bookingId = null, priority = 'NORMAL' }) {
+    const ticket = {
+      ticketId: this.store.reference('TCK', 'ticket', 6),
+      userId,
+      role,
+      subject,
+      description,
+      photos: photos.map((p) => ({ hash: sha256(p.hash || p), type: p.type || 'PHOTO', at: nowIso() })),
+      bookingId,
+      priority,
+      status: 'OPEN',
+      slaTargetHours: priority === 'URGENT' ? 4 : priority === 'HIGH' ? 12 : 48,
+      messages: [],
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    };
+    this.store.put('tickets', ticket.ticketId, ticket);
+    this.kernel.ledger.append({
+      action: 'SUPPORT_TICKET_OPENED',
+      subject: ticket.ticketId,
+      visibility: 'PUBLIC',
+      payload: { summary: `${role} ticket ${ticket.ticketId}: ${subject}`, priority, slaTargetHours: ticket.slaTargetHours },
+    });
+    return deepClone(ticket);
+  }
+
+  listTickets({ userId, status } = {}) {
+    let rows = this.store.all('tickets');
+    if (userId) rows = rows.filter((t) => t.userId === userId);
+    if (status) rows = rows.filter((t) => t.status === status);
+    return rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((t) => deepClone(t));
+  }
+
+  replyToTicket({ ticketId, actorId, body, resolve = false }) {
+    const ticket = this.store.get('tickets', ticketId);
+    if (!ticket) throw new Error(`ticket ${ticketId} not found`);
+    ticket.messages.push({ at: nowIso(), actorId, body });
+    if (resolve) ticket.status = 'RESOLVED';
+    ticket.updatedAt = nowIso();
+    return deepClone(ticket);
+  }
+
+  /** Property vertical waitlist (coming soon). */
+  joinPropertyWaitlist(contact) {
+    const result = this.kernel.joinWaitlist('property', contact);
+    this.store.data.waitlist.push({ ...contact, ...result, at: nowIso() });
+    return result;
+  }
+
+  toJSON() {
+    return {
+      startedAt: this.startedAt,
+      kernel: this.kernel.toJSON(),
+      store: this.store.stats(),
+    };
+  }
+}
+
+module.exports = { Marketplace };
