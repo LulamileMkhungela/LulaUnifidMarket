@@ -1,0 +1,424 @@
+{
+  "version": "1.0.0",
+  "source": "Subscription plans, sales playbook and compliance checklists. Pricing structure taken from the published MyServicePro playbook (docs/pricing-packages.md, pitch-script.md, lead-list-template.md, permission-checklist.md, ai-image-workflow.md in github.com/Albert-Machuene-Dev/MyServicePro_Demos) and rebuilt so that every claim is enforceable: update allowances are metered by policy, permission records are hash-chained, and a month's fee is held in escrow until the site is actually live.",
+  "promise": "Zero upfront build cost. We design, maintain and host. You just run your business — and every button on the site actually works.",
+  "positioning": {
+    "strategy": "Lead with Business Growth as the recommended option, use Essential as the entry point for price-sensitive owners, and use Enterprise as the anchor that makes Business Growth look affordable.",
+    "oneLiner": "For less than the cost of one slow night, your website becomes your best salesperson."
+  },
+  "plans": [
+    {
+      "id": "essential",
+      "name": "Essential Start",
+      "priceCents": 99900,
+      "recurring": "MONTHLY",
+      "setupCents": 0,
+      "audience": "Small businesses that just need to be found and look credible",
+      "blurb": "One stunning mobile-first page, your catalogue online, hosting and SSL included, and two updates a month so it does not rot.",
+      "positioning": "ENTRY",
+      "updateCreditsPerMonth": 2,
+      "extraUpdateCents": 15000,
+      "deliveryDays": 3,
+      "pages": 1,
+      "features": [
+        "One-page mobile-first site from a ProVeri industry template",
+        "Live catalogue: menu, rooms, treatments, services or collection with prices",
+        "Hosting, SSL and daily backups included",
+        "Click-to-call, WhatsApp click-to-chat and a map link",
+        "Opening hours and contact block with LocalBusiness structured data",
+        "2 minor updates per month (menu changes, hours, photos)",
+        "Basic Google Search Console submission"
+      ],
+      "honestBoundary": "Two updates a month means price and photo changes, not a redesign. If you change your menu weekly, Business Growth is the honest buy.",
+      "proveriUpgrade": "Free ProVeri trust block: verification checks and escrow-backed reviews pulled live from the audit ledger, so a visitor can check you instead of trusting you.",
+      "excludes": [
+        "Booking automation beyond a request form",
+        "Paid advertising",
+        "E-commerce checkout",
+        "Custom development"
+      ]
+    },
+    {
+      "id": "business-growth",
+      "name": "Business Growth",
+      "priceCents": 179900,
+      "recurring": "MONTHLY",
+      "setupCents": 0,
+      "audience": "Busy businesses ready to turn visitors into confirmed bookings",
+      "blurb": "Everything in Essential, plus live booking that creates real reservations or escrow-ready jobs, local SEO, and five updates a month.",
+      "positioning": "RECOMMENDED",
+      "popular": true,
+      "updateCreditsPerMonth": 5,
+      "extraUpdateCents": 15000,
+      "deliveryDays": 5,
+      "pages": 3,
+      "features": [
+        "Everything in Essential Start",
+        "Live booking form with industry-specific fields — reservations, transfer requests or escrow-protected trade jobs",
+        "Bookings land in the ProVeri business inbox with a reference number, and become jobs in the marketplace when the site is linked to a verified pro",
+        "Local SEO: Google Business Profile setup, review generation flow, LocalBusiness + Product schema",
+        "Photo gallery with permission-checked assets and a lightbox",
+        "Testimonials block, escrow-backed reviews where they exist",
+        "5 minor updates per month",
+        "Priority support — same business day on WhatsApp",
+        "Monthly performance report: views, bookings, and where visitors dropped off"
+      ],
+      "honestBoundary": "We set up your Google Business Profile and give you the review flow. We cannot promise rankings, and we will not pretend to. What we can show you is bookings, with numbers.",
+      "proveriUpgrade": "A booking made on your site can open an escrow-protected ProVeri job — the customer's money is held, your payment is guaranteed before you start, and the review is written after release. No website platform in South Africa closes that loop.",
+      "excludes": [
+        "Paid ad spend (managed separately as a growth service)",
+        "Full e-commerce checkout",
+        "POS integration"
+      ]
+    },
+    {
+      "id": "enterprise",
+      "name": "Enterprise Power",
+      "priceCents": 299900,
+      "recurring": "MONTHLY",
+      "setupCents": 0,
+      "audience": "Established businesses and multi-location groups that need backend power",
+      "blurb": "Everything in Business Growth, plus a customer database, online ordering or quoting, analytics, an assistant for booking enquiries, and unlimited updates.",
+      "positioning": "ANCHOR",
+      "updateCreditsPerMonth": -1,
+      "extraUpdateCents": 0,
+      "deliveryDays": 12,
+      "pages": -1,
+      "features": [
+        "Everything in Business Growth",
+        "Unlimited minor updates",
+        "Multi-location support: one brand, many addresses, each with its own hours and booking flow",
+        "Customer database (CRM) with booking history, consent state and notes",
+        "Online ordering or quoting with Paystack/Stripe checkout into escrow",
+        "Analytics dashboard: bookings, revenue held in escrow, conversion by page",
+        "Assistant for booking enquiries — answers FAQs on WhatsApp and hands a human anything it cannot resolve",
+        "Optional POS or accounting integration",
+        "Custom feature development quoted per item, in escrow, milestone by milestone"
+      ],
+      "honestBoundary": "The booking assistant is a rules-and-retrieval bot, not a person. It is labelled as an assistant on every message and escalates to a human the moment a request falls outside what it can confirm.",
+      "proveriUpgrade": "Every checkout goes through the same escrow engine as a plumbing job: milestone releases, a 5% workmanship holdback, geotagged proof of work, and a dispute centre that weighs evidence rather than opinions.",
+      "excludes": [
+        "Third-party licence fees (POS, accounting)",
+        "Paid ad spend"
+      ]
+    }
+  ],
+  "planIncludesComparison": [
+    {
+      "feature": "Industry template + live catalogue",
+      "essential": true,
+      "business-growth": true,
+      "enterprise": true
+    },
+    {
+      "feature": "Hosting, SSL, backups",
+      "essential": true,
+      "business-growth": true,
+      "enterprise": true
+    },
+    {
+      "feature": "Live booking form",
+      "essential": "request only",
+      "business-growth": true,
+      "enterprise": true
+    },
+    {
+      "feature": "Bookings become ProVeri jobs with escrow",
+      "essential": false,
+      "business-growth": true,
+      "enterprise": true
+    },
+    {
+      "feature": "Local SEO + Google Business Profile",
+      "essential": "submission only",
+      "business-growth": true,
+      "enterprise": true
+    },
+    {
+      "feature": "Photo gallery with permission checks",
+      "essential": false,
+      "business-growth": true,
+      "enterprise": true
+    },
+    {
+      "feature": "Customer database (CRM)",
+      "essential": false,
+      "business-growth": false,
+      "enterprise": true
+    },
+    {
+      "feature": "Online ordering / checkout",
+      "essential": false,
+      "business-growth": false,
+      "enterprise": true
+    },
+    {
+      "feature": "Analytics dashboard",
+      "essential": false,
+      "business-growth": "monthly report",
+      "enterprise": true
+    },
+    {
+      "feature": "Booking assistant",
+      "essential": false,
+      "business-growth": false,
+      "enterprise": true
+    },
+    {
+      "feature": "Multi-location",
+      "essential": false,
+      "business-growth": false,
+      "enterprise": true
+    },
+    {
+      "feature": "Updates per month",
+      "essential": 2,
+      "business-growth": 5,
+      "enterprise": "unlimited"
+    },
+    {
+      "feature": "Support",
+      "essential": "email",
+      "business-growth": "priority WhatsApp",
+      "enterprise": "priority WhatsApp + named account lead"
+    }
+  ],
+  "websiteStatus": {
+    "source": "MyServicePro_Demos/docs/lead-list-template.md — the status vocabulary their sales team uses in the field.",
+    "options": [
+      {
+        "id": "NO_WEBSITE",
+        "label": "No website",
+        "severity": 5,
+        "note": "Only on Facebook or nothing at all. Highest-value lead: the whole channel is missing.",
+        "pitchPhrase": "there is no website at all — a Facebook page is the whole channel"
+      },
+      {
+        "id": "BROKEN",
+        "label": "Broken",
+        "severity": 5,
+        "note": "Errors, dead links, expired domain or an SSL warning.",
+        "pitchPhrase": "it throws errors, dead links or an SSL warning before a customer gets to the menu"
+      },
+      {
+        "id": "OUTDATED",
+        "label": "Outdated",
+        "severity": 4,
+        "note": "Looks like 2012. Menu or prices are years old.",
+        "pitchPhrase": "it looks like 2012 — the menu and the prices are years old"
+      },
+      {
+        "id": "MINIMAL",
+        "label": "Minimal",
+        "severity": 3,
+        "note": "One page, no call to action, no way to book.",
+        "pitchPhrase": "there is no booking button anywhere on it, so a customer has to phone"
+      },
+      {
+        "id": "GENERIC_TEMPLATE",
+        "label": "Generic template",
+        "severity": 3,
+        "note": "Stock template with placeholder text or stock photos still in it.",
+        "pitchPhrase": "it is a stock template with placeholder text and stock photos still in it"
+      },
+      {
+        "id": "SLOW_ON_MOBILE",
+        "label": "Slow on mobile",
+        "severity": 4,
+        "note": "Works on a desktop, unusable on the phone most South Africans actually use.",
+        "pitchPhrase": "it works on a desktop and is unusable on the phone most South Africans actually use"
+      },
+      {
+        "id": "HEALTHY",
+        "label": "Healthy",
+        "severity": 1,
+        "note": "Fast, current, clear call to action. Do not sell a rebuild — sell growth services or nothing.",
+        "pitchPhrase": "it is fast, current and has a clear call to action — honestly, you may not need us"
+      }
+    ],
+    "pitchPhraseNote": "pitchPhrase is the wording that slots into \"I looked at {businessName} online and …\" — it exists so the cold email never reads like a pasted status label."
+  },
+  "priorityGuide": [
+    {
+      "priority": 5,
+      "action": "Walk in this week"
+    },
+    {
+      "priority": 4,
+      "action": "Email or WhatsApp plus a follow-up"
+    },
+    {
+      "priority": 3,
+      "action": "Add to the nurture list"
+    },
+    {
+      "priority": 2,
+      "action": "Low potential — quarterly check-in"
+    },
+    {
+      "priority": 1,
+      "action": "Skip for now"
+    }
+  ],
+  "pitch": {
+    "source": "MyServicePro_Demos/docs/pitch-script.md — field-tested timing and script, kept intact because it works.",
+    "bestWindowHours": [
+      14.5,
+      16.5
+    ],
+    "bestWindowLabel": "14:30 – 16:30",
+    "avoid": "Never during the lunch or dinner rush, and never before the shop opens.",
+    "script": [
+      {
+        "beat": "open",
+        "line": "Hi, I'm {agentName} with Lula ProVeri. I know you're incredibly busy, so I'll take exactly 60 seconds of your time."
+      },
+      {
+        "beat": "hook",
+        "line": "I work with local businesses, and I like what {businessName} does — but your current website doesn't do it justice. I built a modern version of your site already, just to show you what's possible. Can I show you quickly?",
+        "lineWithoutDemo": "I work with local businesses, and I like what {businessName} does — but your current website doesn't do it justice. Give me ten minutes and I will build a modern version of it for free, so you can see what is possible before you spend a cent.",
+        "honestyNote": "lineWithoutDemo is used until buildDemo has run — the script never claims a preview that does not exist."
+      },
+      {
+        "beat": "show",
+        "line": "Turn the phone around and let them scroll. Say nothing for ten seconds.",
+        "stageDirection": true
+      },
+      {
+        "beat": "difference",
+        "line": "The difference is that the buttons work. When someone taps '{bookingLabel}' on this site, it lands in your WhatsApp with a reference number — and if you're verified on ProVeri, it opens a job with the customer's money held in escrow, so you know you'll be paid before you start."
+      },
+      {
+        "beat": "risk-reversal",
+        "line": "There's no big upfront build fee. It's a flat monthly rate — I handle hosting, maintenance and updates. If it's not for you, no hard feelings and I'll get out of your hair. What do you think of the design?"
+      },
+      {
+        "beat": "close",
+        "line": "Which one feels right for where you are — the R{essentialPrice} Essential, the R{growthPrice} Business Growth, or should we talk about the full Enterprise setup?"
+      }
+    ],
+    "objections": [
+      {
+        "objection": "I already have a website.",
+        "answer": "Great — run it through the free diagnostic. It scores nine things that cost you customers and the report is yours whether you buy anything. If it scores 70+, I'll tell you not to buy a rebuild."
+      },
+      {
+        "objection": "It's too expensive.",
+        "answer": "The Essential is R999 a month with zero build cost. One extra booking a month usually covers it, and I can show you the bookings, not a promise."
+      },
+      {
+        "objection": "I don't have time.",
+        "answer": "That's the point — you won't have to. Two updates a month are included, and I do them from a WhatsApp voice note."
+      },
+      {
+        "objection": "How do I know you won't disappear?",
+        "answer": "Your fee goes into escrow and is only released when the site is live. Your content is exportable as a single HTML file you own, and your domain can be registered in your name."
+      },
+      {
+        "objection": "Can I see other work?",
+        "answer": "Yes — the demo gallery is live sites with working booking forms, not screenshots."
+      }
+    ],
+    "coldEmail": {
+      "subject": "Quick question about {businessName}'s website",
+      "body": "Hi {contactName},\n\nI help {suburb} businesses turn their websites into customer-magnet machines.\n\nI looked at {businessName} online and {specificGap}. I went ahead and built a free, working mockup of what a modern version could look like — with a booking form that actually sends you the booking.\n\nWould you be open to a 2-minute look? No cost, no commitment, and the mockup is yours to keep either way.\n\n{agentName}\nLula ProVeri · {agentMobile}"
+    },
+    "whatsappMessage": "Hi {contactName} 👋 I'm {agentName} from Lula ProVeri in {metro}. I built a free working preview of a modern site for {businessName} — the booking form actually sends bookings to your WhatsApp. Mind if I send the link? No cost either way."
+  },
+  "permissions": {
+    "source": "MyServicePro_Demos/docs/permission-checklist.md — upgraded from a markdown checklist to a hash-chained record that gates publishing.",
+    "principles": [
+      "Photos and videos are protected by copyright the moment they are created.",
+      "The business may not own the copyright to its own social media content — the photographer or creator might.",
+      "Giving credit is not a substitute for permission.",
+      "If identifiable people appear in an image, POPIA consent is required in addition to copyright permission.",
+      "If permission cannot be obtained, use a licensed stock photo or a clearly labelled AI-generated image instead."
+    ],
+    "checklist": [
+      {
+        "id": "OWNER_PERMISSION",
+        "label": "Written permission from the owner or manager to use the content",
+        "required": true
+      },
+      {
+        "id": "COPYRIGHT_CLEARED",
+        "label": "Owner confirms they hold the copyright or have cleared it with the creator",
+        "required": true
+      },
+      {
+        "id": "POPIA_CONSENT",
+        "label": "Identifiable people in the images consented (POPIA)",
+        "requiredWhen": "images contain identifiable people"
+      },
+      {
+        "id": "PERMISSION_STORED",
+        "label": "The permission itself is stored — email, WhatsApp screenshot or signed note",
+        "required": true
+      },
+      {
+        "id": "AI_LABELLED",
+        "label": "Any AI-generated image is labelled as such on the public page",
+        "requiredWhen": "asset is AI-generated"
+      },
+      {
+        "id": "CREDIT_RECORDED",
+        "label": "Any required credit line is recorded and shown",
+        "requiredWhen": "the licence requires attribution"
+      }
+    ],
+    "demoSafeDefault": "Unlisted preview URLs are low risk and need no permission records. The moment a site is published to a public URL, every asset it uses must have a permission record — enforced by policy WEB-002, not by memory."
+  },
+  "aiImages": {
+    "source": "MyServicePro_Demos/docs/ai-image-workflow.md",
+    "budgetStack": [
+      {
+        "step": "Enhance real photos",
+        "tool": "FoodShot AI Starter or equivalent",
+        "cost": "~R200–R300/month"
+      },
+      {
+        "step": "Generate missing items",
+        "tool": "FLUX Schnell-class API",
+        "cost": "~R0.06/image"
+      },
+      {
+        "step": "Upscale",
+        "tool": "Upscayl (free, local)",
+        "cost": "R0"
+      },
+      {
+        "step": "Total",
+        "tool": "",
+        "cost": "under ~R700/month"
+      }
+    ],
+    "labellingPolicy": "An AI-generated image must carry aiGenerated=true and render a visible 'Image is illustrative' note on the public page. We do not let a generated steak stand in for a real one without saying so.",
+    "promptTemplate": "Professional {style} photography, {item}, {setting}, {lighting}, appetising and true to colour, 4K, photorealistic, no text, no watermark, no logos"
+  },
+  "deployment": {
+    "targets": [
+      {
+        "id": "proveri-hosted",
+        "label": "ProVeri hosting (included)",
+        "note": "Served at lulaproveri.co.za/s/{slug} with SSL, caching and daily backups."
+      },
+      {
+        "id": "github-pages",
+        "label": "GitHub Pages",
+        "note": "Export the bundle, push to a repo, and the included Actions workflow deploys on every push."
+      },
+      {
+        "id": "own-domain",
+        "label": "Own domain",
+        "note": "The export is a single self-contained HTML file per site — upload it anywhere, or point a domain at ProVeri hosting."
+      }
+    ],
+    "exportIncludes": [
+      "One self-contained HTML file per site (CSS inlined, assets inlined as data URIs)",
+      "A deploy/index.html gallery of every site in the account",
+      "A .github/workflows/deploy.yml ready for GitHub Pages",
+      "A README with the publish steps and the permission checklist",
+      "A sitemap.xml and robots.txt"
+    ]
+  }
+}

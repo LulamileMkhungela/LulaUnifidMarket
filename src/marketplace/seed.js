@@ -100,7 +100,7 @@ function evidenceForBooking({ bookingId, category, suburb, notes = {} }) {
  */
 async function seed(marketplace, { withLiveIntegrations = false } = {}) {
   const { store, catalog, kernel, people, jobs, bookings, vehicles, webStudio } = marketplace;
-  const summary = { pros: 0, customers: 0, jobs: 0, bids: 0, bookings: 0, reviews: 0, vehicles: 0, microsites: 0 };
+  const summary = { pros: 0, customers: 0, jobs: 0, bids: 0, bookings: 0, reviews: 0, vehicles: 0, microsites: 0, sites: 0, sitesLive: 0, siteBookings: 0, siteJobs: 0, leads: 0, leadsWon: 0, demos: 0 };
 
   /* ---------------- customers ---------------- */
   const customers = [];
@@ -664,6 +664,256 @@ async function seed(marketplace, { withLiveIntegrations = false } = {}) {
     contact: { firstName: 'Lerato', surname: 'Mashaba', email: 'lerato@example.co.za', mobile: '0791112224', businessName: 'Mashaba Garden Services', suburb: 'Midrand', preferredChannel: 'whatsapp' },
     brief: { message: 'I want to appear when people search "garden service near me" in Midrand.' },
   });
+
+  /* ================================================================== *
+   * BUSINESS SITE STUDIO
+   * The MyServicePro demo-site pipeline, rebuilt so the buttons work:
+   * six South African businesses across six industries, each with a
+   * themed, permission-cleared, subscription-backed site, and bookings
+   * that become real reservations or real escrow-ready jobs.
+   * ================================================================== */
+  const sites = marketplace.businessSites;
+  const salesDesk = marketplace.salesDesk;
+  const plumberPro = pros.find((p) => p.primaryCategory === 'plumbing' && p.canBid);
+
+  const studioSpecs = [
+    {
+      templateId: 'trade-services',
+      businessName: 'Dlamini Plumbing',
+      proId: plumberPro?.proId,
+      suburbId: 'soweto',
+      planId: 'business-growth',
+      contact: { phone: plumberPro?.mobile, email: 'sipho@dlaminiplumbing.co.za', whatsapp: plumberPro?.mobile, address: '14 Vilakazi Street, Orlando West' },
+      tagline: 'PIRB-registered. Paid only after you are happy.',
+      description: 'Sipho Dlamini has been plumbing Soweto, Roodepoort and the West Rand for 14 years. Geyser specialist — solar, heat pump and electric — and every job that needs one leaves with a Plumbing CoC.',
+      assets: [
+        { filename: 'geyser-replacement-before.jpg', caption: 'Old electric geyser with a weeping pressure valve before replacement', bytes: 480000 },
+        { filename: 'geyser-replacement-after.jpg', caption: 'New 150 litre geyser installed with a compliant drip tray and isolator', bytes: 720000 },
+        { filename: 'pirb-certificate-of-compliance.jpg', caption: 'Plumbing Certificate of Compliance issued on the job', bytes: 210000 },
+      ],
+      permission: { grantedBy: 'Sipho Dlamini', role: 'owner', method: 'whatsapp', identifiablePeople: false, notes: 'Pro sent his own job photos and confirmed he took them on site.' },
+      bookings: [
+        { values: { name: 'Naledi Sithole', phone: '0821234501', email: 'naledi.s@example.co.za', service: 'Geyser replacement', suburb: 'Bryanston', urgency: 'URGENT — today', budget: 6500, notes: 'Two-year-old 200 litre geyser dripping from the pressure valve onto the ceiling below.' }, expectJob: true },
+        { values: { name: 'Kagiso Molefe', phone: '0791234504', service: 'Blocked drain', suburb: 'Soweto', urgency: 'SOON — this week', budget: 1200, notes: 'Kitchen drain backing up, tried a plunger.' }, expectJob: true },
+      ],
+      updates: ['Added the emergency callout line to the hours block', 'Swapped two job photos after the owner sent better ones'],
+    },
+    {
+      templateId: 'restaurant',
+      businessName: "Thando's Table",
+      suburbId: 'sea-point',
+      planId: 'business-growth',
+      contact: { phone: '0214349911', email: 'book@thandostable.co.za', whatsapp: '0721403821', address: '78 Main Road, Sea Point' },
+      tagline: 'Fire, salt and a view worth the drive',
+      assets: [
+        { filename: 'dry-aged-sirloin-hero.jpg', caption: 'Dry-aged sirloin off the grill with herb butter', bytes: 1400000 },
+        { filename: 'dining-room-ocean-view.jpg', caption: 'Main dining room with the ocean view at sunset', bytes: 980000 },
+        { filename: 'chef-plating-mains.jpg', caption: 'Chef plating the linefish in the open kitchen', bytes: 860000, identifiablePeople: true },
+      ],
+      permission: { grantedBy: 'Thandiwe Radebe', role: 'owner', method: 'email', identifiablePeople: true, popiaConsent: true, notes: 'Owner supplied the photos and confirmed the chef in frame consented to being photographed for the site.' },
+      bookings: [
+        { values: { name: 'Ruan Pretorius', phone: '0831234502', date: addDays(nowIso(), 6).slice(0, 10), time: '19:30', guests: '4', notes: 'Anniversary — a quiet corner if you have one' } },
+        { values: { name: 'Aisha Moosa', phone: '0761234503', date: addDays(nowIso(), 2).slice(0, 10), time: '13:00', guests: '2', notes: 'Halal options please' } },
+        { values: { name: 'Mariette Coetzee', phone: '0721234507', date: addDays(nowIso(), 12).slice(0, 10), time: '18:00', guests: '12', notes: 'Birthday table for twelve, set menu' } },
+      ],
+      updates: ['Winter menu prices updated across the mains category'],
+    },
+    {
+      templateId: 'transport-transfers',
+      businessName: 'Egoli Airport Shuttles',
+      suburbId: 'kempton-park',
+      planId: 'enterprise',
+      contact: { phone: '0119742200', email: 'dispatch@egolishuttles.co.za', whatsapp: '0831230000', address: 'OR Tambo International, Terminal B forecourt' },
+      tagline: 'On time, every time, with the paperwork to prove it',
+      assets: [
+        { filename: 'fleet-13-seater-quantum.jpg', caption: 'Thirteen-seater shuttle vehicle on the airport forecourt', bytes: 1100000 },
+        { filename: 'driver-meet-and-greet-arrivals.jpg', caption: 'Driver meeting a guest at arrivals with a name board', bytes: 640000, identifiablePeople: true },
+      ],
+      permission: { grantedBy: 'Sipho Mabena', role: 'operations director', method: 'in-person', identifiablePeople: true, popiaConsent: true, notes: 'Signed permission form on file; the driver in frame is an employee who consented in writing.' },
+      bookings: [
+        { values: { name: 'Priya Naidoo', phone: '0831234508', pickup: 'OR Tambo International, arrivals', dropoff: 'Umhlanga Rocks hotel', date: addDays(nowIso(), 3).slice(0, 10), time: '10:15', passengers: '3', vehicle: '9-seater', notes: 'SA 324, two large bags, one child seat' } },
+        { values: { name: 'Tshepo Mahlangu', phone: '0611234506', pickup: 'Sandton convention centre', dropoff: 'OR Tambo International', date: addDays(nowIso(), 9).slice(0, 10), time: '04:45', passengers: '1', vehicle: 'Sedan (1–3)', notes: 'Early flight, need a 04:45 pickup' } },
+      ],
+      updates: [],
+    },
+    {
+      templateId: 'accommodation',
+      businessName: 'Umoya Guesthouse',
+      suburbId: 'midrand',
+      planId: 'business-growth',
+      contact: { phone: '0112345678', email: 'stay@umoyaguesthouse.co.za', whatsapp: '0791230000', address: '9 Fourth Avenue, Midrand' },
+      tagline: 'Home-from-home, ten minutes from everything',
+      assets: [
+        { filename: 'garden-double-room.jpg', caption: 'Garden double room with the patio doors open', bytes: 1200000 },
+        { filename: 'breakfast-on-the-deck.jpg', caption: 'Breakfast served on the deck', bytes: 700000 },
+      ],
+      permission: { grantedBy: 'Nomsa Khumalo', role: 'owner', method: 'whatsapp', identifiablePeople: false },
+      bookings: [
+        { values: { name: 'Brenda Williams', phone: '0841234505', email: 'brenda.w@example.co.za', checkIn: addDays(nowIso(), 14).slice(0, 10), checkOut: addDays(nowIso(), 17).slice(0, 10), guests: '2', room: 'Garden double', notes: 'Late arrival around 21:00, please' } },
+      ],
+      updates: [],
+    },
+    {
+      templateId: 'fashion-retail',
+      businessName: 'Mzansi Threads',
+      suburbId: 'melville',
+      planId: 'essential',
+      contact: { phone: '0114447788', email: 'hello@mzansithreads.co.za', whatsapp: '0721400000', address: '2 Melville Central, 7th Street' },
+      tagline: 'Curated South African fashion & lifestyle',
+      assets: [
+        { filename: 'signature-tee-charcoal-studio.jpg', caption: 'Signature tee in charcoal on the studio rail', bytes: 520000 },
+        { filename: 'hand-thrown-mug-homeware.jpg', caption: 'Hand-thrown stoneware mug from the homeware shelf', bytes: 380000 },
+        { filename: 'ai-utility-overshirt.jpg', caption: 'Utility overshirt — illustrative render, sample not yet photographed', bytes: 240000, aiGenerated: true, source: 'ai-generated' },
+      ],
+      permission: { grantedBy: 'Ayanda Ncube', role: 'owner', method: 'email', identifiablePeople: false, notes: 'Product photos shot in store; the AI render is labelled as illustrative on the public page.' },
+      bookings: [
+        { values: { name: 'Sibusiso Zulu', phone: '0761234509', item: 'Signature tee — charcoal', size: 'L', fulfilment: 'Courier (R85)', notes: 'Deliver to Chatsworth,Durban' } },
+      ],
+      updates: ['Restocked the kids collection and added sizes'],
+    },
+    {
+      templateId: 'wine-estate',
+      businessName: 'Kloof Cellars',
+      suburbId: 'stellenbosch',
+      planId: 'essential',
+      contact: { phone: '0218877120', email: 'tastings@kloofcellars.co.za', whatsapp: '0721400011', address: 'R44, Stellenbosch' },
+      tagline: 'Rooted in tradition, crafted in precision',
+      // Deliberately no permission record: this is the site the publish gate
+      // stops, so the compliance feature is visible in the demo data.
+      assets: [
+        { filename: 'cellar-flight-tasting.jpg', caption: 'Cellar flight poured in the tasting room', bytes: 900000 },
+        { filename: 'vineyard-rows-morning.jpg', caption: 'Vineyard rows on the north-facing slope', bytes: 1300000 },
+      ],
+      permission: null,
+      bookings: [],
+      updates: [],
+      leaveInPreview: true,
+    },
+  ];
+
+  for (const spec of studioSpecs) {
+    const site = sites.scaffold({
+      templateId: spec.templateId,
+      businessName: spec.businessName,
+      tagline: spec.tagline || null,
+      description: spec.description || null,
+      proId: spec.proId || null,
+      suburbId: spec.suburbId,
+      contact: spec.contact,
+      planId: spec.planId,
+    });
+    summary.sites = (summary.sites || 0) + 1;
+
+    for (const asset of spec.assets || []) {
+      sites.addAsset(site.siteId, {
+        filename: asset.filename,
+        caption: asset.caption,
+        bytes: asset.bytes,
+        aiGenerated: Boolean(asset.aiGenerated),
+        source: asset.source || 'owner-supplied',
+      });
+    }
+    if (spec.permission) {
+      sites.recordPermission(site.siteId, {
+        grantedBy: spec.permission.grantedBy,
+        role: spec.permission.role,
+        method: spec.permission.method,
+        identifiablePeople: Boolean(spec.permission.identifiablePeople),
+        popiaConsent: Boolean(spec.permission.popiaConsent),
+        notes: spec.permission.notes || null,
+        evidenceHash: `permission-${fingerprint(site.siteId, 8)}`,
+      });
+    }
+
+    for (const note of spec.updates || []) sites.logUpdate(site.siteId, { summary: note, actorId: 'studio' });
+
+    if (!spec.leaveInPreview) {
+      sites.subscribe(site.siteId, { planId: spec.planId, paymentProvider: 'paystack', reference: `SUB_${fingerprint(site.siteId, 10)}` });
+      sites.publish(site.siteId);
+      summary.sitesLive = (summary.sitesLive || 0) + 1;
+    } else {
+      sites.preview(site.siteId);
+      // Prove the gate works on the seeded data too.
+      try {
+        sites.publish(site.siteId);
+      } catch (error) {
+        kernel.ledger.append({
+          action: 'SEED_PUBLISH_GATE_DEMONSTRATED',
+          subject: site.siteId,
+          visibility: 'INTERNAL',
+          payload: { summary: `${site.name} stayed unpublished as intended: ${error.message}` },
+        });
+      }
+    }
+
+    for (const booking of spec.bookings || []) {
+      const result = await sites.submitBooking(site.siteId, booking.values, { source: 'website' });
+      summary.siteBookings = (summary.siteBookings || 0) + 1;
+      if (result.job && booking.expectJob) summary.siteJobs = (summary.siteJobs || 0) + 1;
+      if (result.status === 'NEW' || result.status === 'CONFIRMED') {
+        // The business confirms the ones it can honour, so the demo shows both
+        // states: an actioned reservation and one still waiting.
+        if (booking.values.guests !== '12') sites.decideBooking(result.bookingId, { decision: 'CONFIRMED', actorId: 'owner', note: 'Confirmed on WhatsApp' });
+      }
+    }
+  }
+
+  /* ---------------- the sales desk that produced those sites ---------------- */
+  const leadSpecs = [
+    { businessName: 'Harbour Light Seafood', industry: 'restaurant', suburbId: 'sea-point', url: 'https://harbourlight.example.co.za', contactName: 'Mia', phone: '0214341122', websiteStatus: 'OUTDATED', source: 'FIELD_RESEARCH', notes: 'Menu PDF from 2019, no booking button, text-only site.' },
+    { businessName: 'Kloof Street Bistro', industry: 'restaurant', suburbId: 'cpt-cbd', url: 'https://kloofstreetbistro.example.co.za', contactName: 'Owner', phone: '0214223344', websiteStatus: 'MINIMAL', source: 'FIELD_RESEARCH', notes: 'One page, no hours, no call to action.' },
+    { businessName: 'Bergzicht Guest Farm', industry: 'accommodation', suburbId: 'stellenbosch', url: null, contactName: 'Elsa', phone: '0218884455', websiteStatus: 'NO_WEBSITE', source: 'WALK_IN', notes: 'Only a Facebook page. Takes bookings by phone and loses them.' },
+    { businessName: 'Sandton Shuttle Co', industry: 'transport', suburbId: 'sandton', url: 'https://sandtonshuttle.example.co.za', contactName: 'Dispatch', phone: '0118834400', websiteStatus: 'SLOW_ON_MOBILE', source: 'FIELD_RESEARCH', notes: 'Desktop-only template, 4 MB hero image, no click-to-call.' },
+    { businessName: 'Nails on Main', industry: 'beauty', suburbId: 'parkhurst', url: 'https://nailsonmain.example.co.za', contactName: 'Zinhle', phone: '0114427788', websiteStatus: 'BROKEN', source: 'REFERRAL', notes: 'Domain expired three months ago. Referred by another salon.' },
+    { businessName: 'Vermeulen Accountants', industry: 'accounting', suburbId: 'centurion', url: 'https://vermeulenacct.example.co.za', contactName: 'Rian', phone: '0126641100', websiteStatus: 'GENERIC_TEMPLATE', source: 'FIELD_RESEARCH', notes: 'Stock template with placeholder text still on the about page.' },
+  ];
+
+  for (const spec of leadSpecs) {
+    const suburb = catalog.suburb(spec.suburbId);
+    const lead = salesDesk.capture({
+      businessName: spec.businessName,
+      industry: spec.industry,
+      url: spec.url,
+      contactName: spec.contactName,
+      phone: spec.phone,
+      suburb: suburb?.name,
+      metro: suburb?.metroName,
+      source: spec.source,
+      websiteStatus: spec.websiteStatus,
+      notes: spec.notes,
+      consent: { marketingOptIn: ['REFERRAL', 'WALK_IN'].includes(spec.source) },
+    });
+    summary.leads = (summary.leads || 0) + 1;
+    await salesDesk.diagnose(lead.leadId);
+
+    // Two of them get a demo built before the meeting — the pitch is show, don't tell.
+    if (['Bergzicht Guest Farm', 'Nails on Main'].includes(spec.businessName)) {
+      salesDesk.buildDemo(lead.leadId, { businessName: spec.businessName });
+      salesDesk.logOutreach(lead.leadId, { channel: 'WHATSAPP', template: 'WHATSAPP', note: 'Sent the preview link with the working booking form', actorId: 'sales-desk' });
+      summary.demos = (summary.demos || 0) + 1;
+    }
+    if (spec.businessName === 'Harbour Light Seafood') {
+      salesDesk.logOutreach(lead.leadId, { channel: 'EMAIL', template: 'COLD_EMAIL', note: 'Cold email sent with the diagnostic summary', actorId: 'sales-desk' });
+      salesDesk.update(lead.leadId, { stage: 'PREVIEW_SENT', notes: `${spec.notes} Sent the preview; owner asked about the booking form.` });
+    }
+    if (spec.businessName === 'Vermeulen Accountants') {
+      // The honest outcome: the site is fine, so we do not sell a rebuild.
+      salesDesk.lose(lead.leadId, { reason: 'Site scored healthy on the diagnostic — recommended growth services only, no rebuild. Kept on the nurture list.' });
+    }
+  }
+
+  // One lead converted end to end, so the pipeline has a real won deal.
+  const convertedLead = store.findOne('salesLeads', (l) => l.businessName === 'Bergzicht Guest Farm');
+  if (convertedLead) {
+    salesDesk.convert(convertedLead.leadId, { planId: 'business-growth' });
+    const wonSite = store.get('businessSites', convertedLead.siteId);
+    if (wonSite && wonSite.status !== 'LIVE') {
+      // No assets were added for a farm that sent no photos, so the gate is open.
+      sites.publish(wonSite.siteId);
+      summary.sitesLive = (summary.sitesLive || 0) + 1;
+    }
+    summary.leadsWon = (summary.leadsWon || 0) + 1;
+  }
 
   /* ---------------- refresh microsites now that reviews exist ---------------- */
   for (const pro of pros) {

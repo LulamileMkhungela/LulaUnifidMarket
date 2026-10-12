@@ -82,6 +82,9 @@
       '/vehicles': 'Verified vehicles · Lula ProVeri',
       '/property': 'Property (coming soon) · Lula ProVeri',
       '/web-studio': 'Web Studio · Lula ProVeri',
+      '/business-studio': 'Business Site Studio · Lula ProVeri',
+      '/sites': 'Sites built on ProVeri',
+      '/sales-desk': 'Sales desk · Lula ProVeri',
       '/become-a-pro': 'Become a verified pro · Lula ProVeri',
       '/admin': 'Trust desk · Lula ProVeri',
       '/integrations': 'Data & integrations · Lula ProVeri',
@@ -94,6 +97,7 @@
     if (pathname.startsWith('/booking/')) return 'Booking · Lula ProVeri';
     if (pathname.startsWith('/pro/')) return 'Pro profile · Lula ProVeri';
     if (pathname.startsWith('/vehicle/')) return 'Vehicle · Lula ProVeri';
+    if (pathname.startsWith('/site/')) return 'Site editor · Lula ProVeri';
     return 'Lula ProVeri';
   }
 

@@ -12,8 +12,20 @@
 - Property vertical: honest `COMING_SOON` with published reasons and waitlist.
 - Web Studio: free microsites, six packages through milestone escrow, four
   growth services, free sealed diagnostic.
-- PWA: installable, offline-first, mutation queue, share target, dark mode.
-- 124-route API with generated OpenAPI; 104 tests; demo scripts; this doc suite.
+- **Business Site Studio**: ten industry templates, three monthly plans with
+  enforced update allowances, asset classification with a hash-chained
+  permission/POPIA publish gate, AI-image labelling, subscriptions held in
+  escrow, zero-dependency server-rendered sites, single-file and bundle export
+  with a GitHub Pages workflow, and a booking form that creates reservations or
+  real escrow-ready jobs.
+- **Sales desk**: weighted-stage CRM, the field status vocabulary, an honest
+  offline diagnostic, R0 demo building, a generated pitch kit, consent-checked
+  outreach windows and next-best-actions.
+- PWA: installable, offline-first, mutation queue, share target, dark mode,
+  studio and sales-desk screens.
+- 171-operation API with generated OpenAPI and generated API docs; 168 tests
+  (including a DOM-shim test that renders every PWA screen against a live
+  server); three demo scripts; this doc suite.
 
 ## Phase 1 — make it real money (next 90 days)
 
@@ -28,6 +40,14 @@
 4. **Dispute desk tooling:** evidence side-by-side, SLA timers, outcome
    templates, published anonymised outcome statistics.
 5. **Push notifications** (Web Push) for bids, arrival codes and releases.
+6. **Studio billing live:** subscription renewals on a real payment schedule
+   (Paystack subscriptions or a Stripe billing portal), dunning at `PAST_DUE`,
+   and the extra-update charge billed through the same rail. The escrow record,
+   the allowance meter and the refusal path already exist; what is missing is a
+   recurring charge against a live merchant account.
+7. **Domains and DNS:** register and point a client domain at `/s/<slug>`, with
+   certificate issuance tracked per site. Until then the export bundle and
+   GitHub Pages target are the honest answer, and the plan data says so.
 
 ## Phase 2 — deepen the moat (months 4–9)
 
@@ -68,6 +88,17 @@
 | Repeat-customer rate | ≥ 35% | `pro.stats` |
 | Ledger chain validity | always true | `GET /api/trust/ledger` |
 | Fraud loss per R1m GMV | < classifieds baseline / 10 | trust desk |
+| Sites published per week | ≥ 10 | `businessSites.stats` |
+| Booking forms that produce a reference | 100% (no dead buttons) | `test/pwa-screens.test.js` |
+| Bookings converted to escrow jobs | ≥ 25% of JOB-intake bookings | `businessSites.stats.bookingsConvertedToJobs` |
+| Assets permission-cleared before publish | 100% (enforced, not measured) | policy `WEB-002` |
+| AI images labelled on the public page | 100% | policy `WEB-003` |
+| Lead → win conversion | ≥ 20% | `salesDesk.stats.conversionRate` |
+| Median lead cycle, capture → won | ≤ 21 days | `salesDesk.stats.averageCycleDays` |
+| Demos built before a pitch | ≥ 80% of walk-ins | `salesDesk.stats.demosBuilt` |
+| Outreach after a POPIA objection | 0 (blocked in code) | policy `LEAD-001` |
+| Monthly recurring revenue | reported, not projected | `salesDesk.stats.monthlyRecurringCents` |
+| Churn with export offered | 100% of cancellations get their file | `businessSites.cancelSubscription` |
 
 ## Known risks and the honest mitigations
 
@@ -79,6 +110,10 @@
 | Verification cost per pro | Free offline checks first (ID, bank shape, CIPC format); paid bureau calls only for the checks that need them |
 | Partner concentration | Every money role has ≥2 adapters; escrow provider chosen per transaction value |
 | Regulatory change (payments, property) | Shadow-escrow design keeps licensing with partners; property deferred until partner rails exist |
+| Studio becomes an agency treadmill (unlimited edits, R0 build) | The allowance is a policy rule, not a promise in a contract: the edit is refused with the price of the exception attached, so scope creep is a conversation with a number in it |
+| A client site publishes someone else's photograph | Publishing is gated on a per-asset permission record with a seal in the ledger; previews are unlisted precisely so the pitch can happen before the paperwork |
+| Generated imagery misleading a customer | `WEB-003` labels every generated image where it is shown and flags the cases where it cannot be labelled |
+| Selling websites to businesses that do not need one | The diagnostic reports a healthy site as healthy and the pitch kit says "do not sell a rebuild" — a lead can be lost on purpose, with the reason recorded |
 
 ## What "done" looks like
 

@@ -17,7 +17,7 @@
  * The worker is served with Cache-Control: no-cache, so a deploy always wins.
  */
 
-const VERSION = 'proveri-v1';
+const VERSION = 'proveri-v2';   // v2: h() children fix + the studio screen bundle
 const SHELL_CACHE = `${VERSION}-shell`;
 const DATA_CACHE = `${VERSION}-data`;
 const QUEUE_KEY = `${VERSION}-mutation-queue`;
@@ -34,6 +34,7 @@ const SHELL_ASSETS = [
   '/js/screens-work.js',
   '/js/screens-verticals.js',
   '/js/screens-trust.js',
+  '/js/screens-studio.js',
   '/manifest.webmanifest',
   '/icons/icon-192.png',
   '/icons/icon-512.png',

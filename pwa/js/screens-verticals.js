@@ -241,6 +241,17 @@ window.ProVeri.screens = window.ProVeri.screens || {};
     root.append(h('h1', 'Web Studio'));
     root.append(h('p.muted.small', data.promise));
 
+    root.append(h('div.card', { style: { borderLeft: '3px solid var(--gold, #F2A65A)' } }, [
+      h('div.kicker.gold', '🏪 Looking for the monthly website product?'),
+      h('h3', 'Business Site Studio'),
+      h('p.small.muted', 'Ten industry templates, R0 to build, hosting and metered updates included — and every booking form creates a real reservation or an escrow-protected job. The packages below are the custom, once-off builds.'),
+      h('div.row.wrap', { style: { gap: '8px', marginTop: '10px' } }, [
+        h('button.btn.sm.gold', { onclick: () => navigate('/business-studio') }, 'Open the studio'),
+        h('button.btn.sm.ghost', { onclick: () => navigate('/sites') }, 'See live sites'),
+        h('button.btn.sm.ghost', { onclick: () => navigate('/sales-desk') }, 'Sales desk'),
+      ]),
+    ]));
+
     root.append(h('div.card.gold', [
       h('div.kicker.gold', '🎁 Free with verification'),
       h('h3', data.freeMicrosite.name),

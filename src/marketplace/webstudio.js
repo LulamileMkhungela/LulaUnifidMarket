@@ -466,6 +466,12 @@ class WebStudioService {
       reference: this.store.reference('DIAG', 'webstudio-diag', 5),
       ranAt: nowIso(),
       reachable,
+      simulated: Boolean(res.offline),
+      integrationMode: require('../integrations').MODE,
+      simulationNote: res.offline
+        ? 'This scan ran with network integrations disabled (PROVERI_INTEGRATION_MODE=offline), so reachability and timing are simulated rather than measured. Run with PROVERI_INTEGRATION_MODE=live to scan for real.'
+        : null,
+      reachabilityCheck: res.offline ? 'SIMULATED' : (reachable ? 'PASS' : 'FAIL'),
       httpStatus: status,
       responseMs,
       sizeKb,

@@ -16,6 +16,15 @@ window.ProVeri = window.ProVeri || {};
     element = document.createElement(name || 'div');
     if (classes.length) element.className = classes.join(' ');
 
+    // h('div', [a, b]), h('div', 'text') and h('div', node) are all used across
+    // the screens, so a second argument that is not a props object is children.
+    if (props !== null && typeof props === 'object' && !Array.isArray(props) && !(props instanceof Node)) {
+      // a props object
+    } else if (props !== undefined && props !== null) {
+      children = children === undefined ? props : [props, children];
+      props = {};
+    }
+
     props = props || {};
     children = children === undefined ? [] : (Array.isArray(children) ? children : [children]);
 

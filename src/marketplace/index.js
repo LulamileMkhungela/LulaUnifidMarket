@@ -17,6 +17,8 @@ const { JobService } = require('./jobs');
 const { BookingService } = require('./bookings');
 const { VehicleService } = require('./vehicles');
 const { WebStudioService } = require('./webstudio');
+const { BusinessSiteStudio } = require('./businessSites');
+const { SalesDeskService } = require('./leads');
 const integrations = require('../integrations');
 const { nowIso, deepClone, sha256 } = require('../kernel/util');
 
@@ -40,6 +42,8 @@ class Marketplace {
     this.bookings = new BookingService({ store: this.store, kernel: this.kernel, catalog: this.catalog, people: this.people, jobs: this.jobs });
     this.vehicles = new VehicleService({ store: this.store, kernel: this.kernel, catalog: this.catalog, people: this.people });
     this.webStudio = new WebStudioService({ store: this.store, kernel: this.kernel, catalog: this.catalog, people: this.people });
+    this.businessSites = new BusinessSiteStudio({ store: this.store, kernel: this.kernel, catalog: this.catalog, people: this.people, jobs: this.jobs });
+    this.salesDesk = new SalesDeskService({ store: this.store, kernel: this.kernel, catalog: this.catalog, businessSites: this.businessSites, webStudio: this.webStudio, people: this.people });
     this.integrations = integrations;
     this.startedAt = nowIso();
     this.schedulerTimer = null;
@@ -181,6 +185,14 @@ class Marketplace {
         { icon: '👩🏾‍💼', title: 'Real humans, real support', body: 'In-app help tickets with photo evidence, a dispute desk with a 48-hour target, and a team based in South Africa.' },
         { icon: '🇿🇦', title: 'Built for how Mzansi actually works', body: 'Load-shedding-aware scheduling, weather-aware quoting for exterior work, WhatsApp-first job posting, instant EFT and eWallet payouts, and Remit-a-Job so family abroad can pay for a relative’s repairs.' },
       ],
+      studio: {
+        liveBusinessSites: this.store.count('businessSites', (s) => s.status === 'LIVE'),
+        industryTemplates: this.businessSites.templates().length,
+        subscriptionPlans: this.businessSites.plans().length,
+        bookingsTakenOnSites: this.store.count('siteBookings'),
+        promise: this.businessSites.playbook().promise,
+        difference: 'A ProVeri business site has no dead buttons. A booking on it creates a reservation with a reference number, or — when the business is a verified pro — posts a real job whose payment is held in escrow.',
+      },
       labourMarket: this.integrations.MARKET.LABOUR_MARKET,
       generatedAt: nowIso(),
     };
@@ -195,6 +207,10 @@ class Marketplace {
       packages: this.webStudio.packages(),
       growthServices: this.webStudio.growthServices(),
       webStudioPromise: this.webStudio.promise(),
+      siteTemplates: this.businessSites.templates(),
+      sitePlans: this.businessSites.plans(),
+      sitePlaybook: this.businessSites.playbook().positioning,
+      publishedSites: this.businessSites.list({ publicOnly: true, limit: 24 }),
       verticals: this.verticals(),
       banks: this.integrations.bankVerification.listBanks(),
       payoutRails: Object.values(this.integrations.bankVerification.PAYOUT_RAILS),
@@ -227,11 +243,17 @@ class Marketplace {
         disputesOpen: this.store.count('disputes', (d) => ['OPEN', 'EVIDENCE_WINDOW', 'UNDER_REVIEW', 'MEDIATION'].includes(d.status)),
         warrantiesOpen: this.store.count('bookings', (b) => b.status === 'IN_WARRANTY'),
         webStudioPipeline: this.store.count('webStudioOrders', (o) => !['DELIVERED', 'CANCELLED'].includes(o.status)),
+        sitesAwaitingPermission: this.store.count('businessSites', (s) => s.permissions && !s.permissions.gateOpen),
+        siteBookingsUnactioned: this.store.count('siteBookings', (b) => b.status === 'NEW'),
+        leadsDueFollowUp: this.store.count('salesLeads', (l) => !['WON', 'LOST'].includes(l.stage) && l.nextActionAt && l.nextActionAt <= nowIso()),
       },
       bookings: this.bookings.stats(),
       jobs: this.jobs.stats(),
       vehicles: this.vehicles.stats(),
       webStudio: this.webStudio.stats(),
+      businessSites: this.businessSites.stats(),
+      salesDesk: this.salesDesk.stats(),
+      nextBestActions: this.salesDesk.nextBestActions({ limit: 5 }),
       store: this.store.stats(),
       integrations: { mode: this.integrations.MODE, configured: this.integrations.configuredPartners(), http: this.integrations.httpClient.getStats() },
       generatedAt: nowIso(),

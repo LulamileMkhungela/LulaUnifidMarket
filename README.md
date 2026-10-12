@@ -6,14 +6,23 @@ Lula ProVeri is a South African on-demand services marketplace built to the same
 product shape as [myservicepro.co.za](https://www.myservicepro.co.za) — post a
 job, KYC-verified pros bid, your money sits in escrow until you confirm the work
 — and then extended well past it. It ships as an **installable, offline-first
-PWA** plus a **zero-dependency REST API** (124 routes), runs on **one Node 22
-process with no `node_modules`**, and is enforced by **104 tests**.
+PWA** plus a **zero-dependency REST API** (171 operations across 155 paths), runs
+on **one Node 22 process with no `node_modules`**, and is enforced by **168
+tests**.
+
+It also ships a **Business Site Studio**: ten industry templates that produce a
+live, server-rendered business website at R0 build cost, where the booking form
+is not a dead button — it creates a reservation with a reference number, or a
+real escrow-protected marketplace job when the business is a verified pro. The
+sales desk around it is a CRM with a free diagnostic, a demo builder and a
+generated pitch kit.
 
 ```bash
 npm start        # seeds a full demo marketplace · API + PWA on http://localhost:4173
-npm test         # 104 tests: kernel, flows, verticals, integrations, HTTP
+npm test         # 168 tests: kernel, flows, verticals, integrations, studio, sales desk, HTTP, PWA screens
 npm run demo     # one services journey printed end to end
 npm run demo:vehicle   # one vehicle journey (the merged TrustShield rail)
+npm run demo:studio    # research → diagnose → demo → pitch → win → publish → booking → job → export
 ```
 
 Open `http://localhost:4173` and install it to your home screen from the
@@ -36,6 +45,9 @@ signal and it syncs on reconnect.
 | **Verified reviews** | Only customers whose escrow reached a terminal state can review — ratings cannot be bought |
 | **Second vertical** | Verified vehicles: VIN/ownership/stolen/finance checks, tamper-removal, negotiation locks, and a Service Passport built from real escrow-released jobs |
 | **Free microsite** | Every verified pro gets `/p/<slug>` — server-rendered HTML generated live from their trust ledger. No JavaScript required |
+| **Business Site Studio** | Ten industry templates → a live website at R0 build cost, monthly hosting, metered updates. The booking form creates a reservation with a reference, or a real escrow-ready job |
+| **Permission-gated publishing** | A site cannot go public while any asset lacks a hash-chained permission record; identifiable faces need POPIA consent on top of copyright (policy `WEB-002`) |
+| **Sales desk** | Weighted pipeline CRM, free 9-check website diagnostic, one-click demo build, and a pitch kit with the script, objections, plan and cold email already filled in |
 
 ## The three promises, and where each is enforced
 
@@ -60,15 +72,20 @@ src/
   kernel/          Trust Kernel: audit ledger · verification · escrow · risk · policy
                    (vertical-agnostic; the old TrustShield engine lives in kernel/legacy/)
   marketplace/     services vertical: catalogue, people+KYC, jobs, bookings,
-                   vehicles vertical, Web Studio, seeding, facade
+                   vehicles vertical, Web Studio, Business Site Studio
+                   (businessSites.js), sales desk (leads.js), seeding, facade
   integrations/    every external dependency, offline-first and honestly labelled
   verticals/       services (LIVE) · vehicles (BETA) · property (COMING_SOON)
-  server/          zero-dep router, static PWA serving, 124 API routes
+  server/          zero-dep router, static PWA serving, 171 API operations,
+                   server-rendered public site pages (/sites, /s/:slug, /preview/:slug)
 pwa/               installable app: shell, manifest, service worker, icons, screens
-data/              categories (32), geography (11 metros, 9 provinces), Web Studio catalogue
-docs/              00 executive summary → 11 roadmap (+ archive/ with the original TrustShield docs)
+                   (market, work, verticals, trust, studio)
+data/              categories (32), geography (11 metros, 9 provinces), Web Studio
+                   catalogue, 10 site templates, 3 studio plans + the sales playbook
+docs/              00 executive summary → 12 business site studio (+ archive/ with
+                   the original TrustShield docs)
 scripts/           icon generator, integration probe, OpenAPI printer, healthcheck, store reset
-test/              104 tests across 6 files
+test/              168 tests across 9 files
 ```
 
 ## Documentation
@@ -76,9 +93,9 @@ test/              104 tests across 6 files
 | Doc | Contents |
 | --- | --- |
 | [`docs/00-executive-summary.md`](docs/00-executive-summary.md) | what changed in the restructure, the proof table, how to run |
-| [`docs/01-servicepro-parity-matrix.md`](docs/01-servicepro-parity-matrix.md) | 32-row parity matrix against myservicepro.co.za, plus declared gaps |
+| [`docs/01-servicepro-parity-matrix.md`](docs/01-servicepro-parity-matrix.md) | 46-row parity matrix against myservicepro.co.za and its demo-site repository, plus declared gaps |
 | [`docs/02-competitor-teardown.md`](docs/02-competitor-teardown.md) | 14 platforms with take-rate economics and attack surfaces |
-| [`docs/03-innovative-features.md`](docs/03-innovative-features.md) | the 18 differentiators, each with mechanism, code and test |
+| [`docs/03-innovative-features.md`](docs/03-innovative-features.md) | the 25 differentiators, each with mechanism, code and test |
 | [`docs/04-public-data-and-integrations.md`](docs/04-public-data-and-integrations.md) | every endpoint, auth, cost, licence and fallback |
 | [`docs/05-architecture.md`](docs/05-architecture.md) | layering rules, state machines, security posture |
 | [`docs/06-api-reference.md`](docs/06-api-reference.md) | the generated route table (live at `/api/openapi.json`) |
@@ -87,6 +104,7 @@ test/              104 tests across 6 files
 | [`docs/09-money-flow-and-unit-economics.md`](docs/09-money-flow-and-unit-economics.md) | escrow maths, refunds, take-rate comparison |
 | [`docs/10-web-studio.md`](docs/10-web-studio.md) | preview-first websites delivered through milestone escrow |
 | [`docs/11-roadmap-and-metrics.md`](docs/11-roadmap-and-metrics.md) | phases, targets, known risks |
+| [`docs/12-business-site-studio.md`](docs/12-business-site-studio.md) | the studio and the sales desk: templates, plans, the working booking form, the permission gate, metered updates, export, and what is declared but not faked |
 | [`docs/archive/`](docs/archive/) | the original TrustShield solution, compliance plan and competitor notes, preserved |
 
 ## Highlights you should click on first
@@ -100,6 +118,15 @@ test/              104 tests across 6 files
 - **`/p/sipho-dlamini-plumbing`** — a free pro microsite, rendered without JavaScript.
 - **`/web-studio`** — paste any URL into the free rescue diagnostic; the sealed
   report is yours whether or not you buy anything.
+- **`/business-studio`** — ten industry templates, three plans, and the studio's
+  own sites. Scaffold one and publish it in a minute.
+- **`/sites`** — every published site, each with a booking form that works. Try
+  `/s/thando-s-table` (restaurant) or `/s/egoli-airport-shuttles` (a shuttle
+  operator whose fleet is rendered live from the vehicles vertical).
+- **`/sales-desk`** — the pipeline: research a lead, run the free diagnostic,
+  build the demo at R0, open the pitch kit.
+- **`/preview/kloof-cellars`** — a site that *cannot* be published: two photos
+  with no permission record, and policy `WEB-002` saying so.
 - **`/integrations`** — every public data source and partner, with what is live
   versus bundled right now, and `POST /api/integrations/probe` to re-check.
 

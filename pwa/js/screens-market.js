@@ -95,6 +95,11 @@ window.ProVeri.screens = window.ProVeri.screens || {};
           h('h3', 'Preview before you pay'),
           h('p.small.muted', 'Every verified pro gets a free data-bound microsite. Paid packages are delivered through the same escrow and milestone machinery as a plumbing job.'),
         ]),
+        h('div.card', { style: { width: '280px', cursor: 'pointer' }, onclick: () => navigate('/business-studio') }, [
+          h('div.kicker.gold', '🏪 Business Site Studio'),
+          h('h3', 'A website with no dead buttons'),
+          h('p.small.muted', 'Ten industry templates, R0 to build, monthly hosting — and every booking form creates a real reservation or an escrow-protected job.'),
+        ]),
         h('div.card', { style: { width: '280px', cursor: 'pointer' }, onclick: () => navigate('/property') }, [
           h('div.kicker', '🏠 Coming soon'),
           h('h3', 'Property & conveyancing'),

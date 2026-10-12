@@ -404,6 +404,170 @@ function buildApiRoutes({ marketplace }) {
 
   router.post('/api/webstudio/diagnostic', wrap(async ({ body }) => mp.webStudio.rescueDiagnostic({ url: require_(body.url, 'url'), contact: body.contact })), { tags: ['webstudio'], summary: 'Free website rescue diagnostic — yours whether or not you buy anything' });
 
+  /* ================= Business Site Studio ================= */
+
+  router.get('/api/sites/templates', () => ({
+    templates: mp.businessSites.templates(),
+    sectionKinds: mp.businessSites.playbook().sectionKinds,
+    bookingIntake: mp.businessSites.playbook().bookingIntake,
+  }), { tags: ['sites'], summary: 'Industry site templates: sections, booking schemas, theme presets' });
+
+  router.get('/api/sites/plans', () => ({
+    promise: mp.businessSites.playbook().promise,
+    positioning: mp.businessSites.playbook().positioning,
+    plans: mp.businessSites.plans(),
+    comparison: mp.businessSites.playbook().comparison,
+  }), { tags: ['sites', 'money'], summary: 'Monthly website plans, update allowances and the honest boundaries' });
+
+  router.get('/api/sites/playbook', () => mp.businessSites.playbook(), { tags: ['sites'], summary: 'The full studio playbook: pricing strategy, pitch, permission checklist, AI image workflow, deploy targets' });
+
+  router.get('/api/sites/stats', () => mp.businessSites.stats(), { tags: ['sites'], summary: 'Business Site Studio telemetry: sites, bookings, MRR, permission gates' });
+
+  router.get('/api/sites/gallery', ({ query }) => mp.businessSites.renderSitesIndexHtml(), { tags: ['sites'], summary: 'HTML gallery of every studio site (server-rendered, no JS)' });
+
+  router.get('/api/sites/export-bundle', () => mp.businessSites.exportBundle(), { tags: ['sites'], summary: 'Deploy bundle: one self-contained HTML file per site plus index, sitemap and a GitHub Pages workflow' });
+
+  router.get('/api/sites/bookings', ({ query }) => mp.businessSites.listBookings({ status: query.status || null, limit: query.limit ? Number(query.limit) : 100 }), { tags: ['sites'], summary: 'Every booking taken on a studio site' });
+
+  router.get('/api/sites', ({ query }) => mp.businessSites.list({
+    status: query.status || null,
+    templateId: query.templateId || null,
+    proId: query.proId || null,
+    leadId: query.leadId || null,
+    publicOnly: query.publicOnly === 'true',
+    limit: query.limit ? Number(query.limit) : 100,
+  }), { tags: ['sites'], summary: 'List business sites (publicOnly=true returns only published ones)' });
+
+  router.post('/api/sites', wrap(async ({ body }) => mp.businessSites.scaffold({
+    templateId: require_(body.templateId, 'templateId'),
+    businessName: require_(body.businessName, 'businessName'),
+    tagline: body.tagline, description: body.description, contact: body.contact || {},
+    suburbId: body.suburbId || null, suburbName: body.suburb || null,
+    themeId: body.themeId || null, planId: body.planId || 'essential',
+    proId: body.proId || null, leadId: body.leadId || null,
+    useSampleContent: body.useSampleContent !== false,
+  })), { tags: ['sites'], summary: 'Scaffold a full business site from an industry template — R0 taken' });
+
+  router.get('/api/sites/:siteId', ({ params, query }) => {
+    const site = mp.businessSites.get(params.siteId);
+    if (query.html === 'true') return { html: mp.businessSites.renderSiteHtml(site.siteId, { preview: site.status !== 'LIVE' }) };
+    return { ...require('../../kernel/util').deepClone(site), assets: mp.businessSites.assets(site.siteId), permissionState: mp.businessSites.permissionState(site.siteId), updates: mp.businessSites.updateHistory(site.siteId), bookings: mp.businessSites.listBookings({ siteId: site.siteId, limit: 20 }) };
+  }, { tags: ['sites'], summary: 'Full site record with assets, permission state, updates and bookings' });
+
+  router.patch('/api/sites/:siteId/content', wrap(async ({ params, body, query }) => {
+    // Control flags travel with the patch but are not content: separating them
+    // here is what lets a client approve a billed extra update in one call.
+    const { actorId, note, approveExtra, consumeCredit, ...patch } = body || {};
+    return mp.businessSites.updateContent(params.siteId, patch, {
+      actorId: actorId || 'studio',
+      note: note || null,
+      approveExtra: query.approveExtra === 'true' || approveExtra === true,
+      consumeCredit: consumeCredit !== false,
+    });
+  }), { tags: ['sites'], summary: 'Edit site content — consumes an update credit on a live site (policy WEB-001). Send approveExtra:true to pay for one beyond the allowance.' });
+
+  router.patch('/api/sites/:siteId/theme', wrap(async ({ params, body }) => mp.businessSites.updateTheme(params.siteId, body)), { tags: ['sites'], summary: 'Apply a theme preset or custom colours, with a WCAG contrast check' });
+
+  router.get('/api/sites/:siteId/assets', ({ params }) => mp.businessSites.assets(params.siteId), { tags: ['sites'], summary: 'Asset library with auto-classification and permission state' });
+
+  router.post('/api/sites/:siteId/assets', wrap(async ({ params, body }) => mp.businessSites.addAsset(params.siteId, {
+    filename: require_(body.filename, 'filename'), caption: body.caption, source: body.source, contentType: body.contentType,
+    bytes: body.bytes, aiGenerated: Boolean(body.aiGenerated), credit: body.credit, dataUrl: body.dataUrl,
+  })), { tags: ['sites'], summary: 'Add an asset — it is classified against the industry vocabulary and flagged as needing permission' });
+
+  router.post('/api/sites/:siteId/assets/:assetId/classify', wrap(async ({ params, body }) => mp.businessSites.classifyAsset(params.siteId, params.assetId, { caption: body.caption ?? null, override: body.override ?? null })), { tags: ['sites'], summary: 'Re-classify an asset, optionally with a manual override' });
+
+  router.get('/api/sites/:siteId/permissions', ({ params }) => ({ state: mp.businessSites.permissionState(params.siteId), records: mp.store.find('sitePermissions', (r) => r.siteId === mp.businessSites.get(params.siteId).siteId).map((r) => require('../../kernel/util').deepClone(r)), checklist: mp.businessSites.playbook().permissions }), { tags: ['sites', 'compliance'], summary: 'Permission and POPIA consent state — the publish gate' });
+
+  router.post('/api/sites/:siteId/permissions', wrap(async ({ params, body }) => mp.businessSites.recordPermission(params.siteId, {
+    assetIds: body.assetIds || [], grantedBy: require_(body.grantedBy, 'grantedBy'), role: body.role, method: body.method,
+    scope: body.scope, popiaConsent: Boolean(body.popiaConsent), identifiablePeople: Boolean(body.identifiablePeople),
+    evidenceHash: body.evidenceHash, notes: body.notes, licence: body.licence, creditRequired: body.creditRequired,
+  })), { tags: ['sites', 'compliance'], summary: 'Record copyright permission and POPIA consent — hash-chained, gates publishing (WEB-002)' });
+
+  router.get('/api/sites/:siteId/ai-prompt', ({ params, query }) => mp.businessSites.aiImagePrompt(params.siteId, { itemId: query.itemId || null, itemText: query.itemText || null, style: query.style || null }), { tags: ['sites'], summary: 'AI image prompt for a catalogue item, with the mandatory labelling rule' });
+
+  router.post('/api/sites/:siteId/preview', wrap(async ({ params }) => mp.businessSites.preview(params.siteId)), { tags: ['sites'], summary: 'Generate the unlisted preview URL — the pitch asset' });
+
+  router.post('/api/sites/:siteId/publish', wrap(async ({ params, body }) => mp.businessSites.publish(params.siteId, { actorId: body?.actorId || 'studio', force: Boolean(body?.force) })), { tags: ['sites', 'compliance'], summary: 'Publish — refused while any asset lacks permission (policy WEB-002)' });
+
+  router.post('/api/sites/:siteId/pause', wrap(async ({ params, body }) => mp.businessSites.pause(params.siteId, { reason: body?.reason, actorId: body?.actorId || 'studio' })), { tags: ['sites'], summary: 'Pause a published site' });
+
+  router.post('/api/sites/:siteId/archive', wrap(async ({ params, body }) => mp.businessSites.archive(params.siteId, { reason: body?.reason })), { tags: ['sites'], summary: 'Archive a site' });
+
+  router.get('/api/sites/:siteId/html', ({ params, query }) => ({ html: mp.businessSites.renderSiteHtml(params.siteId, { preview: query.preview === 'true', inlineAssets: query.inline === 'true' }), note: 'Also served as a real page at /s/<slug> (live) and /preview/<slug> (unlisted).' }), { tags: ['sites'], summary: 'Server-rendered site HTML — zero dependencies, works without JavaScript' });
+
+  router.get('/api/sites/:siteId/export', ({ params, query }) => {
+    const exported = mp.businessSites.exportSite(params.siteId, { inlineAssets: query.inline !== 'false' });
+    return query.includeHtml === 'false' ? { ...exported, html: undefined } : exported;
+  }, { tags: ['sites'], summary: 'Self-contained single-file export (CSS and assets inlined) — the client owns this file' });
+
+  // The generated site posts its form fields flat; an API client may nest them
+  // under `values`. Both are accepted, because the form must never 400.
+  router.post('/api/sites/:siteId/bookings', wrap(async ({ params, body, req }) => mp.businessSites.submitBooking(params.siteId, body?.values || body || {}, {
+    source: body?.source || 'website', ip: req.socket?.remoteAddress || null, userAgent: req.headers?.['user-agent'] || null,
+  })), { tags: ['sites', 'public'], summary: 'Public booking intake from a generated site — creates a reservation, or a real escrow-ready job' });
+
+  router.get('/api/sites/:siteId/bookings', ({ params, query }) => mp.businessSites.listBookings({ siteId: params.siteId, status: query.status || null }), { tags: ['sites'], summary: 'Bookings taken on this site' });
+
+  router.post('/api/sites/:siteId/subscribe', wrap(async ({ params, body }) => mp.businessSites.subscribe(params.siteId, {
+    planId: body?.planId || null, paymentProvider: body?.paymentProvider || 'paystack', reference: body?.reference || null,
+    method: body?.method || 'card', customerId: body?.customerId || null,
+  })), { tags: ['sites', 'money'], summary: 'Start the monthly subscription — first month held in escrow until the site is live' });
+
+  router.post('/api/sites/:siteId/renew', wrap(async ({ params, body }) => mp.businessSites.renewSubscription(params.siteId, { reference: body?.reference || null, method: body?.method || 'card' })), { tags: ['sites', 'money'], summary: 'Bill the next month and reset the update allowance' });
+
+  router.post('/api/sites/:siteId/cancel-subscription', wrap(async ({ params, body }) => mp.businessSites.cancelSubscription(params.siteId, { reason: body?.reason || null })), { tags: ['sites', 'money'], summary: 'Cancel — the site stays exportable, the content belongs to the client' });
+
+  router.get('/api/sites/:siteId/updates', ({ params }) => mp.businessSites.updateHistory(params.siteId), { tags: ['sites'], summary: 'Update-credit history for this site' });
+
+  router.post('/api/sites/:siteId/updates', wrap(async ({ params, body }) => mp.businessSites.logUpdate(params.siteId, { summary: require_(body.summary, 'summary'), actorId: body.actorId || 'studio', approveExtra: Boolean(body.approveExtra) })), { tags: ['sites', 'money'], summary: 'Log an update against the monthly allowance; extra updates are billed (policy WEB-001)' });
+
+  router.get('/api/site-bookings/:bookingId', ({ params }) => mp.businessSites.getBooking(params.bookingId), { tags: ['sites'], summary: 'A single site booking by id or reference' });
+
+  router.post('/api/site-bookings/:bookingId/decision', wrap(async ({ params, body }) => mp.businessSites.decideBooking(params.bookingId, { decision: require_(body.decision, 'decision'), actorId: body.actorId || 'owner', note: body.note || null })), { tags: ['sites'], summary: 'Confirm, decline, complete or cancel a booking' });
+
+  /* ================= Sales desk (Web Studio CRM) ================= */
+
+  router.get('/api/leads/stages', () => ({ stages: mp.salesDesk.stages(), websiteStatuses: mp.salesDesk.websiteStatuses(), priorityGuide: mp.businessSites.playbook().priorityGuide }), { tags: ['sales'], summary: 'Pipeline stages, the website-status vocabulary and the priority guide' });
+
+  router.get('/api/leads/stats', () => mp.salesDesk.stats(), { tags: ['sales'], summary: 'Pipeline telemetry: conversion, weighted value, MRR, cycle time' });
+
+  router.get('/api/leads/actions', ({ query }) => mp.salesDesk.nextBestActions({ limit: query.limit ? Number(query.limit) : 10 }), { tags: ['sales'], summary: 'What the sales desk should do next, in order' });
+
+  router.get('/api/leads', ({ query }) => mp.salesDesk.list({
+    stage: query.stage || null, priority: query.priority ? Number(query.priority) : null,
+    source: query.source || null, templateId: query.templateId || null,
+    dueOnly: query.dueOnly === 'true', limit: query.limit ? Number(query.limit) : 100,
+  }), { tags: ['sales'], summary: 'List leads' });
+
+  router.post('/api/leads', wrap(async ({ body }) => mp.salesDesk.capture({
+    businessName: require_(body.businessName, 'businessName'), industry: body.industry, templateId: body.templateId,
+    url: body.url, contactName: body.contactName, phone: body.phone, email: body.email, suburb: body.suburb, metro: body.metro,
+    source: body.source, websiteStatus: body.websiteStatus, priority: body.priority, notes: body.notes, owner: body.owner, consent: body.consent || {},
+  })), { tags: ['sales'], summary: 'Capture a lead — status, priority and next action are computed' });
+
+  router.get('/api/leads/:leadId', ({ params }) => require('../../kernel/util').deepClone(mp.salesDesk.get(params.leadId)), { tags: ['sales'], summary: 'Full lead record with outreach history and diagnostic' });
+
+  router.patch('/api/leads/:leadId', wrap(async ({ params, body }) => mp.salesDesk.update(params.leadId, body, { actorId: body.actorId || 'sales-desk' })), { tags: ['sales'], summary: 'Move a lead through the pipeline' });
+
+  router.post('/api/leads/:leadId/diagnose', wrap(async ({ params, body }) => mp.salesDesk.diagnose(params.leadId, { url: body?.url || null })), { tags: ['sales', 'webstudio'], summary: 'Run the free diagnostic and let it pick the status, priority and plan to pitch' });
+
+  router.post('/api/leads/:leadId/demo', wrap(async ({ params, body }) => mp.salesDesk.buildDemo(params.leadId, body || {})), { tags: ['sales', 'sites'], summary: 'Build the unlisted preview site before the meeting — the "show, don’t tell" beat' });
+
+  router.get('/api/leads/:leadId/pitch-kit', ({ params, query }) => mp.salesDesk.pitchKit(params.leadId, { agentName: query.agentName || null }), { tags: ['sales'], summary: '60-second script, timing window, objections, recommended plan and preview link' });
+
+  router.post('/api/leads/:leadId/outreach', wrap(async ({ params, body }) => mp.salesDesk.logOutreach(params.leadId, {
+    channel: body?.channel || 'WHATSAPP', template: body?.template || null, note: body?.note || null,
+    scheduledFor: body?.scheduledFor || null, actorId: body?.actorId || 'sales-desk',
+  })), { tags: ['sales', 'compliance'], summary: 'Log an outreach touch — blocked after a POPIA opt-out (LEAD-001)' });
+
+  router.post('/api/leads/:leadId/opt-out', wrap(async ({ params, body }) => mp.salesDesk.optOut(params.leadId, { reason: body?.reason || null, requestedVia: body?.requestedVia || 'phone' })), { tags: ['sales', 'compliance'], summary: 'Record a POPIA objection — every channel is then blocked for this lead' });
+
+  router.post('/api/leads/:leadId/convert', wrap(async ({ params, body }) => mp.salesDesk.convert(params.leadId, body || {})), { tags: ['sales', 'money', 'sites'], summary: 'Win the lead: build the site and start the subscription with month one in escrow' });
+
+  router.post('/api/leads/:leadId/lose', wrap(async ({ params, body }) => mp.salesDesk.lose(params.leadId, { reason: body?.reason || 'not interested' })), { tags: ['sales'], summary: 'Mark a lead lost with a reason' });
+
   /* ================= public data & integrations ================= */
 
   router.get('/api/integrations', () => ({
@@ -553,6 +717,8 @@ function buildApiRoutes({ marketplace }) {
     bookings: mp.bookings.stats(),
     vehicles: mp.vehicles.stats(),
     webStudio: mp.webStudio.stats(),
+    businessSites: mp.businessSites.stats(),
+    salesDesk: mp.salesDesk.stats(),
     escrow: mp.kernel.escrow.portfolioStats(),
     policy: mp.kernel.policy.stats(),
     risk: mp.kernel.risk.stats(),

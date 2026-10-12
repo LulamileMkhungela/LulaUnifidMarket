@@ -210,6 +210,98 @@ const POLICY_RULES = Object.freeze([
     },
   },
   {
+    id: 'WEB-001',
+    name: 'website_update_allowance_is_metered',
+    protects: 'Both parties',
+    statement: 'Content updates to a live business site are metered against the plan\'s monthly allowance. Once the allowance is used the update needs approval — an upgrade, a renewal, or a paid extra update at the published per-update rate. Nobody gets silently billed and nobody gets free unlimited work.',
+    effect: POLICY_EFFECT.REQUIRE_APPROVAL,
+    severity: 'MEDIUM',
+    appliesTo: ['website'],
+    test: ({ site, update, action }) => {
+      if (action && action !== 'UPDATE') return { fired: false };
+      const plan = site?.plan;
+      if (!plan || plan.updateCreditsTotal === -1) return { fired: false };
+      const used = Number(plan.updateCreditsUsed || 0);
+      const total = Number(plan.updateCreditsTotal || 0);
+      return {
+        fired: used >= total,
+        reason: `${plan.planName} allows ${total} update(s) a month and ${used} have been used this period`,
+        detail: { used, total, extraUpdateCents: plan.extraUpdateCents, update: update?.summary || null },
+      };
+    },
+  },
+  {
+    id: 'WEB-002',
+    name: 'assets_must_have_permission_before_publish',
+    protects: 'Business and third parties',
+    statement: 'A business site may not be published while any asset it uses lacks a recorded permission from the rights holder. Credit is not permission, and where an identifiable person appears, POPIA consent is required in addition to copyright clearance.',
+    effect: POLICY_EFFECT.BLOCK,
+    severity: 'HIGH',
+    appliesTo: ['website'],
+    test: ({ site, action }) => {
+      if (action && action !== 'PUBLISH') return { fired: false };
+      const permissions = site?.permissions;
+      if (!permissions) return { fired: false };
+      const uncleared = Number(permissions.assetsUncleared || 0);
+      const popia = Number(permissions.popiaOutstanding || 0);
+      return {
+        fired: uncleared > 0 || popia > 0,
+        reason: uncleared > 0
+          ? `${uncleared} asset(s) have no permission record: ${(permissions.unclearedFiles || []).slice(0, 4).join(', ')}`
+          : `${popia} asset(s) show identifiable people without recorded POPIA consent`,
+        detail: { uncleared, popiaOutstanding: popia, files: permissions.unclearedFiles || [] },
+      };
+    },
+  },
+  {
+    id: 'WEB-003',
+    name: 'ai_images_must_be_labelled',
+    protects: 'Consumer',
+    statement: 'An AI-generated image on a published business site must be labelled as illustrative. A generated steak must never stand in for a real one without saying so.',
+    effect: POLICY_EFFECT.WARN,
+    severity: 'MEDIUM',
+    appliesTo: ['website'],
+    test: ({ site }) => {
+      const unlabelled = Number(site?.permissions?.aiUnlabelled || 0);
+      return { fired: unlabelled > 0, reason: `${unlabelled} AI-generated asset(s) are not labelled as illustrative`, detail: { unlabelled } };
+    },
+  },
+  {
+    id: 'LEAD-001',
+    name: 'popia_objection_blocks_all_outreach',
+    protects: 'Lead',
+    statement: 'Once a lead objects to being contacted, every outreach channel is blocked. The objection is recorded in the audit ledger and survives a change of salesperson.',
+    effect: POLICY_EFFECT.BLOCK,
+    severity: 'CRITICAL',
+    appliesTo: ['lead'],
+    test: ({ lead }) => ({
+      fired: Boolean(lead?.consent?.optOut),
+      reason: `${lead?.businessName || 'This lead'} objected to further contact${lead?.consent?.optOutAt ? ` on ${String(lead.consent.optOutAt).slice(0, 10)}` : ''} — POPIA s11(3) objection recorded`,
+      detail: { optOutAt: lead?.consent?.optOutAt || null, reason: lead?.consent?.optOutReason || null },
+    }),
+  },
+  {
+    id: 'LEAD-002',
+    name: 'outreach_respects_business_hours',
+    protects: 'Lead',
+    statement: 'Cold outreach outside 08:00–18:00 South African time is flagged. A cold WhatsApp at 21:00 is how a brand gets blocked, and a blocked number is a lost lead.',
+    effect: POLICY_EFFECT.WARN,
+    severity: 'LOW',
+    appliesTo: ['lead'],
+    test: ({ outreach }) => {
+      if (!outreach?.at) return { fired: false };
+      if (outreach.channel === 'MEETING' || outreach.channel === 'WALK_IN') return { fired: false };
+      const hour = new Date(outreach.at).getUTCHours() + 2; // SAST is UTC+2, no DST
+      const localHour = ((hour % 24) + 24) % 24;
+      const weekend = [0, 6].includes(new Date(outreach.at).getUTCDay());
+      return {
+        fired: localHour < 8 || localHour >= 18 || weekend,
+        reason: `${localHour}:00 SAST${weekend ? ' on a weekend' : ''} is outside business hours for cold outreach`,
+        detail: { localHour, weekend, channel: outreach.channel },
+      };
+    },
+  },
+  {
     id: 'VCL-001',
     name: 'vehicle_identifier_tamper_removal',
     protects: 'Buyer',

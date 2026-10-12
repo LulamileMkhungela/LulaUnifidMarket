@@ -1,4 +1,4 @@
-# Innovative features — 18 things no competitor does
+# Innovative features — 25 things no competitor does
 
 Each entry states the customer or pro pain, the mechanism, the public data or
 partner it rides on, and where it lives in the code. Nothing here is a slogan:
@@ -159,6 +159,118 @@ work is captured.
 failed mutations are queued on-device and replayed on reconnect; the connectivity
 pill and toasts tell the user exactly what is cached versus live.
 **Code:** `pwa/sw.js`, `pwa/js/api.js`.
+**Test:** `test/pwa-screens.test.js` loads the screen modules into a DOM shim
+against a live server and fails if any screen renders `undefined`, `NaN` or
+`[object Object]` — the class of bug that otherwise ships as a blank panel on
+somebody's phone.
+
+## 19. The booking-to-escrow bridge — a website that opens jobs
+**Pain:** every small-business website in South Africa has the same dead end: a
+"book now" button that opens a mail client, or a form that emails nobody. The
+reference demos do exactly this — `BookingModal.jsx` shows a toast and closes.
+**Mechanism:** the booking form on a generated site posts to the platform, is
+validated against the template's own schema, and produces a `BKG-nnnnnn`
+reference immediately. When the site is linked to a verified pro, the same
+submit creates a **real marketplace job**: the visitor becomes a customer
+account, the category is resolved from their own words, budget and urgency carry
+across, the pro is notified, and the job is bid-able into escrow with the 5%
+workmanship holdback and geosealed proof of work behind it. A booking on a site
+that is not live becomes a priority-5 sales lead instead of disappearing.
+**Why nobody else can copy it:** it requires a verified marketplace on the other
+end of the form. A website builder has no pros; a marketplace has no websites.
+**Code:** `businessSites.submitBooking`, `#convertToJob`, `#createLeadFromBooking`.
+**Test:** `test/businessSites.test.js` (service), `test/pwa-screens.test.js` (over HTTP).
+
+## 20. Permission-gated publishing (WEB-002)
+**Pain:** agencies ship client sites with photos lifted from social media. The
+reference playbook knows it — "giving credit is not a substitute for permission"
+— and solves it with a markdown checklist, which is to say it does not solve it.
+**Mechanism:** policy `WEB-002` refuses to publish a site while any asset lacks
+a permission record. `recordPermission()` writes a checklist-backed record
+(owner permission, copyright cleared, POPIA consent, AI disclosure, model
+release, source logged), seals it with a sha256 over the asset list and the
+grant, and appends it to the hash-chained ledger. Where an image contains
+identifiable people, copyright clearance is not sufficient: POPIA s11(3) consent
+is a separate condition and the gate stays closed without it. Previews stay
+ungated on purpose, because the pitch depends on being able to build one in ten
+minutes.
+**Code:** `kernel/policy.js WEB-002`, `businessSites.recordPermission`,
+`permissionState`.
+**Test:** `test/businessSites.test.js` — a blocked publish, a sealed grant, and a
+face without consent keeping the gate shut.
+
+## 21. Metered update credits with a published extra rate (WEB-001)
+**Pain:** "unlimited small updates" is how a website agency quietly goes out of
+business, and "R450 per change" is how a client stops updating and the site
+rots. Both sides lose, and neither can see the meter.
+**Mechanism:** each plan carries `updateCreditsPerMonth`; an edit on a live site
+consumes one and writes a `SITE_UPDATE_CHARGED` ledger entry. When the allowance
+runs out the edit is refused with the reason and the options — renew, upgrade,
+or approve a single extra update at the published R150 — returned in the policy
+decision so the UI can offer them as buttons. Approving an extra bills it and
+does not consume a credit. Nothing is ever silently absorbed and nothing is
+ever silently invoiced.
+**Code:** `kernel/policy.js WEB-001`, `businessSites.updateContent`, `logUpdate`.
+**Test:** `test/businessSites.test.js`, and over HTTP in `test/pwa-screens.test.js`.
+
+## 22. AI-image labelling that is enforced, not recommended (WEB-003)
+**Pain:** generated food photography is now good enough to sell a dish that does
+not exist. The reference workflow documents the tooling and says nothing about
+the customer who orders it.
+**Mechanism:** an `aiGenerated` asset renders an "Illustrative image" note
+wherever it appears — catalogue item, gallery, hero. Where there is nowhere to
+put a note (a full-bleed hero with the image nowhere else), the asset is counted
+as `aiUnlabelled` and flagged before publish. `aiImagePrompt()` returns the
+prompt, the budget stack and the labelling rule in one response, so the rule
+travels with the prompt instead of living in a document nobody opens.
+**Code:** `kernel/policy.js WEB-003`, `businessSites.addAsset`,
+`#unlabelledPlacement`, `aiImagePrompt`.
+**Test:** `test/businessSites.test.js` asserts both the rendered note and the
+unlabelled-hero flag.
+
+## 23. The honest diagnostic, and a pitch kit generated from it
+**Pain:** a "free website audit" that invents a score is a lie with a landing
+page, and a salesperson walking in with a generic deck is selling nothing.
+**Mechanism:** `diagnose()` runs nine real checks against the URL. When the
+network is off it returns `simulated: true`, `healthScore: null`, a note naming
+the environment variable, and it **keeps the field research** instead of
+overwriting it with a fabricated "site is down" — the lead lands in `RESEARCHED`
+rather than `DIAGNOSED`. When it can measure, the score picks the website
+status, the priority and the plan worth pitching; a healthy site is reported as
+healthy with "do not sell a rebuild" attached. `pitchKit()` then returns the
+timing window, the beat-by-beat script with this lead's numbers substituted (and
+a different hook until a demo actually exists), the objection answers, the
+recommended plan with its honest boundary, the cold email, the WhatsApp opener,
+the permission checklist and the AI-image budget — one call, everything for the
+door.
+**Code:** `webstudio.rescueDiagnostic`, `leads.diagnose`, `leads.pitchKit`.
+**Test:** `test/leads.test.js`.
+
+## 24. The fleet bridge — one platform's evidence, two products
+**Pain:** a shuttle operator's website lists vehicles with stock photos and no
+proof, while the same operator's verified listings sit in a marketplace nobody
+connects to the site.
+**Mechanism:** a transport or tours template renders the operator's vehicles
+straight from the vehicles vertical, with each listing's verification state,
+sealed passport references and odometer — live data, not a photo of a bakkie.
+Dead, disputed or removed listings are excluded automatically.
+**Code:** `businessSites.#fleetFor`, `FLEET` section kind.
+**Test:** `test/businessSites.test.js` — the section is omitted with no vehicles
+and appears once one is verified.
+
+## 25. Assets that file themselves, and admit when they cannot
+**Pain:** a client sends 40 WhatsApp photos named `IMG_4412.jpg`. Somebody has
+to decide which is the steak and which is the dining room, and that somebody is
+usually nobody.
+**Mechanism:** `addAsset()` classifies the caption and filename against the
+industry vocabulary and returns a category, a confidence score and an explicit
+`placement` — `CATALOGUE` files the photo onto the best-matching item that has
+no image yet (so the menu gets illustrated), `GALLERY` keeps ambience, interiors,
+fleet and credentials. When nothing matches, the category is `uncategorised`
+with `needsReview: true` and a note that says a human must decide. Guessing is
+recorded as guessing.
+**Code:** `businessSites.classify`, `#attachToCatalogue`.
+**Test:** `test/businessSites.test.js`.
 
 ---
 
@@ -170,3 +282,6 @@ pill and toasts tell the user exactly what is cached versus live.
 | AI chatbot dispute adjudication | Disputes decide money; the weighting is published and a human signs it |
 | Selling leads | The business model contradiction that keeps Snupit/Bark pros poor |
 | A native app first | A PWA installs in one tap, updates without a store, and works on a R1,500 Android — the device most South Africans actually hold |
+| Shopping cart and checkout on generated sites | Listed as an Enterprise inclusion with its boundary attached; the escrow and provider adapters exist, a cart UI does not, and nothing demos it as working |
+| An AI booking assistant that confirms reservations | A bot that confirms a table or a transfer is making a commitment on the business's behalf. Until it can be labelled, bounded and escalated reliably, a booking lands with a human |
+| Auto-publishing a site without a permission record | It would be faster and it would be the thing that gets a client sued. The gate stays |

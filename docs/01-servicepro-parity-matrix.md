@@ -57,14 +57,40 @@ mechanism).
 | 31 | Posters & Brand Kit — R499 | Same scope; banking details on the price card replaced by a ProVeri payment link | + | `data/webstudio.json` |
 | 32 | WhatsApp enquiry capture (wa.me link) | Same, plus Web Share Target so any chat can post a job into ProVeri | + | `manifest.webmanifest share_target` |
 
+## Business Site Studio (reference: the MyServicePro_Demos repository)
+
+Rows 33–46 are parity with the *working* parts of
+[MyServicePro_Demos](https://github.com/Albert-Machuene-Dev/MyServicePro_Demos)
+— the seven demo sites, the restaurant template, the scaffolder and the six
+markdown playbooks. Detail in [`12-business-site-studio.md`](12-business-site-studio.md).
+
+| # | Reference implementation | ProVeri | Status | Where |
+| --- | --- | --- | --- | --- |
+| 33 | One `restaurant.json` per demo drives menu, hours, gallery, theme | Ten industry templates with sections, booking schemas, sample catalogues and theme presets, served by API | + | `data/webstudio-templates.json`, `GET /api/sites/templates` |
+| 34 | `BookingModal.jsx` shows a toast and closes | Three intake kinds with schema validation, a reference number, a quote, an owner notification and a ledger entry | **→** | `businessSites.submitBooking` |
+| 35 | Enterprise tier promises ordering, CRM, analytics and an AI assistant | CRM and analytics are live; ordering, checkout and the assistant are declared with their boundaries and **not** demoed as working | → | `data/webstudio-plans.json`, docs/12 §10 |
+| 36 | Pricing: R999 / R1,799 / R2,999+, zero upfront, 2/5/unlimited updates | Same prices and allowances, enforced by policy with a published extra-update rate | + | policy `WEB-001` |
+| 37 | `lead-list-template.md`: a spreadsheet with a status vocabulary | 11 weighted stages, the same vocabulary, priority-derived follow-ups, next-best-actions, forecast | + | `leads.js`, `/api/leads*` |
+| 38 | `pitch-script.md`: 60 seconds, 14:30–16:30, show-don't-tell | `pitchKit()` returns that script with this lead's numbers substituted, plus objections, plan, cold email, WhatsApp opener, permission checklist and AI budget | + | `leads.pitchKit` |
+| 39 | `permission-checklist.md`: markdown, "credit is not permission" | Hash-chained permission record that **blocks publishing** (WEB-002), with POPIA consent as a separate condition for identifiable people | + | `businessSites.recordPermission` |
+| 40 | `ai-image-workflow.md`: FoodShot AI / FLUX Schnell / Upscayl + a prompt template | Prompt generator per catalogue item, the same budget stack, and a labelling rule enforced on the rendered page (WEB-003) | + | `businessSites.aiImagePrompt` |
+| 41 | `classification.json`: a human labels each image | Classification on intake with confidence, explicit placement, `needsReview` when it is a guess, and auto-filing onto the matching catalogue item | + | `businessSites.classify` |
+| 42 | `scripts/create-restaurant.js`, `deploy-all`, `inline-images` | Scaffold, single-file export with assets inlined and a sha256, bundle export with index + sitemap + README + Actions workflow | = | `businessSites.exportSite/exportBundle` |
+| 43 | GitHub Pages deployment via `.github/workflows/deploy.yml` | The workflow is generated into the export bundle, per client repo | = | `GITHUB_ACTIONS_WORKFLOW` |
+| 44 | Every demo uses the same monochrome theme | Per-template palettes and presets, with a WCAG AA contrast check on custom colours | + | `businessSites.updateTheme` |
+| 45 | Demos are React SPAs (a JavaScript bundle per site) | Zero-dependency server-rendered HTML: works with JavaScript off, CSS-only tabs and lightbox, LocalBusiness JSON-LD | **→** | `businessSites.renderSiteHtml` |
+| 46 | Nothing in a demo connects to a marketplace | A booking on a pro-linked site opens a real job into bid → escrow → proof of work → review; a transport site renders its verified fleet from the vehicles vertical | + | `#convertToJob`, `#fleetFor` |
+
 ## Where ProVeri goes past parity
 
 The matrix above is the floor. The differentiators — load-shedding-aware
 scheduling, weather-aware quoting, geosealed proof of work, the workmanship
 warranty holdback, the arrival-code identity handshake, Fair-Price
 Intelligence, the Vehicle Service Passport, Remit-a-Job, the SARS-ready income
-summary, the free microsite, the cross-vertical evidence bridge and the
-published fairness guard — are detailed in
+summary, the free microsite, the cross-vertical evidence bridge, the published
+fairness guard, the booking-to-escrow bridge, the permission-gated publish,
+metered update credits, enforced AI-image labelling, the honest offline
+diagnostic and the pitch-kit generator — are detailed in
 [`03-innovative-features.md`](03-innovative-features.md).
 
 ## Honest gaps (declared, not hidden)

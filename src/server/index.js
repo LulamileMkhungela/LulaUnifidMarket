@@ -104,6 +104,55 @@ async function boot() {
         return res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' }).end(html);
       }
 
+      /* ---------------- generated business sites (studio) ---------------- */
+      const sendHtml = (html, { download = null } = {}) => {
+        const body = Buffer.from(html);
+        res.writeHead(200, {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Content-Length': String(body.length),
+          'Cache-Control': 'no-cache',
+          'X-Request-Id': correlationId,
+          ...(download ? { 'Content-Disposition': `attachment; filename="${download}"` } : {}),
+        });
+        res.end(body);
+      };
+
+      if (pathname === '/sites' || pathname === '/sites/') {
+        return sendHtml(marketplace.businessSites.renderSitesIndexHtml());
+      }
+
+      const liveSite = /^\/s\/([a-z0-9-]+)\/?$/.exec(pathname);
+      if (liveSite) {
+        const site = marketplace.store.findOne('businessSites', (s) => s.slug === liveSite[1]);
+        if (!site) return send(404, { error: 'NOT_FOUND', message: `No business site at /s/${liveSite[1]}` });
+        if (site.status !== 'LIVE') {
+          return send(404, {
+            error: 'NOT_PUBLISHED',
+            message: `${site.name} is not published yet (status ${site.status}).`,
+            previewUrl: `/preview/${site.slug}`,
+            reason: site.status === 'BLOCKED' ? 'Publishing is blocked until every asset has a permission record — policy WEB-002.' : null,
+          });
+        }
+        site.stats.views += 1;
+        return sendHtml(marketplace.businessSites.renderSiteHtml(site.siteId));
+      }
+
+      const previewSite = /^\/preview\/([a-z0-9-]+)\/?$/.exec(pathname);
+      if (previewSite) {
+        const site = marketplace.store.findOne('businessSites', (s) => s.slug === previewSite[1]);
+        if (!site) return send(404, { error: 'NOT_FOUND', message: `No business site at /preview/${previewSite[1]}` });
+        return sendHtml(marketplace.businessSites.renderSiteHtml(site.siteId, { preview: true }));
+      }
+
+      const exportSite = /^\/export\/([a-z0-9-]+)\/?$/.exec(pathname);
+      if (exportSite) {
+        const site = marketplace.store.findOne('businessSites', (s) => s.slug === exportSite[1]);
+        if (!site) return send(404, { error: 'NOT_FOUND', message: `No business site at /export/${exportSite[1]}` });
+        const exported = marketplace.businessSites.exportSite(site.siteId);
+        log(`export ${site.slug} → ${(exported.bytes / 1024).toFixed(1)} KB`);
+        return sendHtml(exported.html, { download: exported.filename });
+      }
+
       if (pathname === '/robots.txt') {
         return send(200, 'User-agent: *\nAllow: /\nSitemap: /sitemap.xml\n', { 'Content-Type': 'text/plain; charset=utf-8' });
       }
@@ -114,6 +163,9 @@ async function boot() {
           '<url><loc>/find-a-pro</loc><priority>0.9</priority></url>',
           '<url><loc>/vehicles</loc><priority>0.8</priority></url>',
           '<url><loc>/web-studio</loc><priority>0.8</priority></url>',
+          '<url><loc>/business-studio</loc><priority>0.8</priority></url>',
+          '<url><loc>/sites</loc><priority>0.7</priority></url>',
+          ...marketplace.store.all('businessSites').filter((s) => s.status === 'LIVE').map((s) => `<url><loc>/s/${s.slug}</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>`),
           '<url><loc>/trust</loc><priority>0.7</priority></url>',
           ...pros.map((p) => `<url><loc>/p/${p.slug}</loc><changefreq>daily</changefreq><priority>0.6</priority></url>`),
           '</urlset>'].join('\n');
@@ -136,7 +188,25 @@ async function boot() {
           correlationId,
         });
       }
-      const isKnown = /not found|is required|must be|cannot|invalid|unknown|already|exceeds|Too many/i.test(error.message || '');
+      // A policy refusal is a conflict the client can act on — never a 500, and
+      // always carrying the decision so the UI can explain itself.
+      if (error.decision || error.code === 'BLOCKED') {
+        log(`${req.method} ${pathname} → 409 ${error.message}`);
+        return send(409, {
+          error: 'POLICY_OR_STATE_CONFLICT',
+          message: error.message,
+          details: error.decision?.firedRules || null,
+          policyDecision: error.decision?.decision || null,
+          code: error.code || null,
+          correlationId,
+        });
+      }
+      // "x not found" is a 404: the client asked for a thing that does not exist.
+      if (/not found/i.test(error.message || '')) {
+        log(`${req.method} ${pathname} → 404 ${error.message}`);
+        return send(404, { error: 'NOT_FOUND', message: error.message, correlationId });
+      }
+      const isKnown = /is required|must be|cannot|invalid|unknown|already|exceeds|Too many/i.test(error.message || '');
       log(`${req.method} ${pathname} → ${isKnown ? 400 : 500} ${error.message}`);
       return send(isKnown ? 400 : 500, {
         error: isKnown ? 'BAD_REQUEST' : 'INTERNAL_ERROR',
@@ -161,6 +231,9 @@ async function boot() {
     log(`  OpenAPI     http://localhost:${address.port}/api/openapi.json`);
     log(`  Trust       http://localhost:${address.port}/trust`);
     log(`  Admin       http://localhost:${address.port}/admin`);
+    log(`  Studio      http://localhost:${address.port}/business-studio`);
+    log(`  Sites       http://localhost:${address.port}/sites`);
+    log(`  Sales desk  http://localhost:${address.port}/sales-desk`);
     log('');
     log(`  integrations: ${require('../integrations').MODE} · configured partners: ${JSON.stringify(require('../integrations').configuredPartners())}`);
     log(`  verticals: ${marketplace.verticals().map((v) => `${v.id}=${v.status}`).join(' ')}`);

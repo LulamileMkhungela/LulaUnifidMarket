@@ -1,0 +1,625 @@
+{
+  "version": "1.0.0",
+  "source": "Industry template library. Section sets, booking schemas and sample copy generalised from the working MyServicePro demo sites (github.com/Albert-Machuene-Dev/MyServicePro_Demos: restaurant, B&B, wine estate, fashion retail, airport transfers, tours) and extended to every ProVeri trade category.",
+  "sectionKinds": {
+    "SPLASH": "Branded loading screen. Cosmetic — off by default because it costs a first-time visitor 2.8s on a cold 3G connection.",
+    "HEADER_NAV": "Sticky header with a slide-out navigation panel. Works without JavaScript via CSS :target.",
+    "HERO": "Full-bleed hero: headline, tagline, primary and secondary call to action.",
+    "CATALOGUE": "Tabbed catalogue — menu, rooms, treatments, services or collection. CSS-only tabs, so it works with JavaScript disabled.",
+    "GALLERY": "Photo grid with a lightbox. Images are lazy-loaded and permission-checked before publish.",
+    "ABOUT": "Story, image and up to three hard stats.",
+    "TESTIMONIALS": "Customer quotes. When the site is linked to a verified pro, only escrow-backed reviews are eligible.",
+    "HOURS_LOCATION": "Opening hours, address, click-to-call and a map link.",
+    "BOOKING": "Live booking form. Submissions create a real record — a reservation, an enquiry, or an escrow-ready ProVeri job.",
+    "TRUST_BLOCK": "ProVeri exclusive: verification checks, escrow explanation and verified reviews pulled live from the audit ledger.",
+    "FLEET": "ProVeri exclusive: verified vehicles from the vehicles vertical, with Service Passport state.",
+    "FAQ": "Short answers to the questions that stop people booking.",
+    "CONTACT": "Contact channels, WhatsApp click-to-chat and social links.",
+    "FLOATING_CTA": "Persistent mobile call-to-action button.",
+    "FOOTER": "Business details, ProVeri attribution and publish state."
+  },
+  "bookingIntake": {
+    "JOB": "Creates a real marketplace job with the linked pro, so the booking lands in the same bid → escrow → proof-of-work → review pipeline as every other ProVeri job.",
+    "RESERVATION": "Creates a reservation the business confirms or declines. The visitor gets a reference number immediately.",
+    "ENQUIRY": "Creates a qualified enquiry plus a follow-up task for the business, and a sales lead if the site is still a demo."
+  },
+  "templates": [
+    {
+      "id": "restaurant",
+      "label": "Restaurant & eatery",
+      "icon": "🍽️",
+      "audience": "Restaurants, cafés with table service, takeaways that want bookings",
+      "blurb": "Menu that loads on any phone, a table booking that actually reaches the kitchen, and a gallery that makes the food look like it tastes.",
+      "catalogueLabel": "Menu",
+      "itemNoun": "dish",
+      "sections": ["HEADER_NAV", "HERO", "CATALOGUE", "GALLERY", "ABOUT", "TESTIMONIALS", "HOURS_LOCATION", "BOOKING", "FAQ", "CONTACT", "FLOATING_CTA", "FOOTER"],
+      "booking": {
+        "label": "Book a table",
+        "submitLabel": "Request booking",
+        "intake": "RESERVATION",
+        "confirmation": "Table requested. The restaurant confirms by WhatsApp or phone — your reference is below.",
+        "fields": [
+          { "name": "name", "label": "Name", "type": "text", "required": true, "placeholder": "Your name" },
+          { "name": "phone", "label": "Mobile", "type": "tel", "required": true, "placeholder": "082 000 0000" },
+          { "name": "date", "label": "Date", "type": "date", "required": true },
+          { "name": "time", "label": "Time", "type": "time", "required": true },
+          { "name": "guests", "label": "Guests", "type": "select", "required": true, "default": "2", "options": ["1", "2", "3", "4", "5", "6", "7", "8", "10", "12", "15", "20+"] },
+          { "name": "notes", "label": "Anything we should know?", "type": "textarea", "required": false, "placeholder": "Allergies, birthday, high chair, wheelchair access" }
+        ]
+      },
+      "themePresets": [
+        { "id": "charcoal-gold", "name": "Charcoal & gold", "primary": "#8B0000", "secondary": "#A3A3A3", "accent": "#D4AF37", "dark": "#141010", "light": "#F5F5DC", "fontDisplay": "Playfair Display" },
+        { "id": "ocean-linen", "name": "Ocean & linen", "primary": "#0E5C63", "secondary": "#7A8B8C", "accent": "#E4B363", "dark": "#0B1F22", "light": "#FBF7F0", "fontDisplay": "Fraunces" },
+        { "id": "kasi-sunset", "name": "Kasi sunset", "primary": "#C1440E", "secondary": "#8A6A5B", "accent": "#F2A65A", "dark": "#1E1210", "light": "#FFF4E8", "fontDisplay": "Bricolage Grotesque" }
+      ],
+      "sample": {
+        "tagline": "Fire, salt and a view worth the drive",
+        "description": "A neighbourhood kitchen cooking over open fire. Sourced from small farms in the district, priced so a family can eat out twice a month, not twice a year.",
+        "hours": [{ "day": "Monday – Thursday", "time": "12:00 – 22:00" }, { "day": "Friday – Saturday", "time": "12:00 – 23:30" }, { "day": "Sunday", "time": "12:00 – 21:00" }],
+        "catalogue": [
+          { "name": "Starters", "items": [
+            { "name": "Grilled calamari", "description": "Lemon butter, chilli, charred spring onion", "price": "R135", "priceCents": 13500, "tags": ["seafood"] },
+            { "name": "Slap chips & aioli", "description": "Hand-cut, double-fried, roasted garlic aioli", "price": "R72", "priceCents": 7200, "tags": ["vegetarian"] }
+          ]},
+          { "name": "From the fire", "items": [
+            { "name": "300g dry-aged sirloin", "description": "Herb butter, vine tomatoes, potato fondant", "price": "R285", "priceCents": 28500, "tags": ["signature", "beef"] },
+            { "name": "Whole grilled linefish", "description": "Catch of the day, lemon, sea salt, salsa verde", "price": "R245", "priceCents": 24500, "tags": ["seafood"] }
+          ]},
+          { "name": "Desserts", "items": [
+            { "name": "Malva pudding", "description": "Warm, with Amarula cream", "price": "R85", "priceCents": 8500, "tags": ["dessert"] }
+          ]}
+        ],
+        "testimonials": [
+          { "text": "The view alone is worth the trip, and the sirloin is the best on this side of the mountain.", "author": "Regular since 2022", "source": "Google review" }
+        ],
+        "aboutStats": [{ "value": "12", "label": "Local suppliers" }, { "value": "4.8★", "label": "Average rating" }, { "value": "0", "label": "Frozen chips" }],
+        "faq": [
+          { "q": "Do you take walk-ins?", "a": "Yes — roughly a third of the floor is kept for walk-ins. Bookings are safer on Friday and Saturday." },
+          { "q": "Is there parking?", "a": "Free parking behind the building, and the guard is paid by the restaurant, not by you." },
+          { "q": "Do you cater for dietary needs?", "a": "Tell us in the booking note. Vegetarian, vegan, gluten-free and halal options are all available with a day's notice." }
+        ]
+      },
+      "assetKeywords": {
+        "starters": ["starter", "calamari", "prawn", "oyster", "soup", "salad", "bruschetta"],
+        "mains": ["steak", "fillet", "beef", "lamb", "ribs", "burger", "curry", "pasta", "main", "grill"],
+        "seafood": ["seafood", "fish", "linefish", "salmon", "kingklip", "platter", "paella", "mussel", "lobster"],
+        "dessert": ["dessert", "cake", "chocolate", "pudding", "panna cotta", "crème brûlée", "sweet", "malva"],
+        "drinks": ["cocktail", "wine", "gin", "spritz", "mojito", "beer", "coffee", "bar"],
+        "breakfast": ["breakfast", "eggs", "benedict", "florentine", "toast", "shakshuka", "morning"],
+        "ambiance": ["interior", "dining room", "view", "sunset", "ocean", "deck", "patio", "table", "ambiance", "bar counter"]
+      },
+      "aiPrompt": "Professional food photography, {item}, plated elegantly on a white ceramic plate, steam rising, shallow depth of field, warm ambient restaurant lighting, wooden table surface, garnish, appetizing, 4K, photorealistic, shot from a 45-degree angle",
+      "seo": {
+        "titlePattern": "{name} — {industry} in {suburb} | Menu & bookings",
+        "descriptionPattern": "{name} in {suburb}: {tagline}. See the full menu, opening hours and book a table online. Powered by Lula ProVeri.",
+        "keywords": ["menu", "book a table", "restaurant", "{suburb}", "{metro}"]
+      },
+      "growthHooks": ["google-maps", "lead-campaigns", "whatsapp-automation"]
+    },
+    {
+      "id": "cafe-bakery",
+      "label": "Café, bakery & deli",
+      "icon": "🥐",
+      "audience": "Coffee shops, bakeries, delis, cake studios",
+      "blurb": "Today's counter, pre-orders for cakes and catering, and a WhatsApp order link that lands in one inbox instead of five.",
+      "catalogueLabel": "On the counter",
+      "itemNoun": "item",
+      "sections": ["HEADER_NAV", "HERO", "CATALOGUE", "GALLERY", "ABOUT", "TESTIMONIALS", "HOURS_LOCATION", "BOOKING", "CONTACT", "FLOATING_CTA", "FOOTER"],
+      "booking": {
+        "label": "Pre-order",
+        "submitLabel": "Send pre-order",
+        "intake": "ENQUIRY",
+        "confirmation": "Pre-order received. We confirm availability and send a payment link by WhatsApp.",
+        "fields": [
+          { "name": "name", "label": "Name", "type": "text", "required": true },
+          { "name": "phone", "label": "Mobile / WhatsApp", "type": "tel", "required": true },
+          { "name": "orderType", "label": "What do you need?", "type": "select", "required": true, "options": ["Cake (custom)", "Bakery box", "Catering platter", "Coffee beans", "Table for later"] },
+          { "name": "date", "label": "Collection / delivery date", "type": "date", "required": true },
+          { "name": "notes", "label": "Details", "type": "textarea", "required": true, "placeholder": "Flavour, size, message on the cake, allergies, delivery address" }
+        ]
+      },
+      "themePresets": [
+        { "id": "roast-cream", "name": "Roast & cream", "primary": "#6F4E37", "secondary": "#9C8570", "accent": "#D9A441", "dark": "#241A14", "light": "#FFF8EE", "fontDisplay": "Fraunces" },
+        { "id": "sage-butter", "name": "Sage & butter", "primary": "#4F6F52", "secondary": "#8A9B8C", "accent": "#EFD75E", "dark": "#1B211C", "light": "#FBFBF3", "fontDisplay": "Bricolage Grotesque" }
+      ],
+      "sample": {
+        "tagline": "Baked at 4am, gone by 11",
+        "description": "Sourdough, croissants and celebration cakes. Everything is made in the back room you can see through the glass.",
+        "hours": [{ "day": "Monday – Friday", "time": "06:30 – 16:00" }, { "day": "Saturday", "time": "07:00 – 14:00" }, { "day": "Sunday", "time": "Closed" }],
+        "catalogue": [
+          { "name": "Bread", "items": [{ "name": "Country sourdough", "description": "36-hour ferment, stone-baked", "price": "R62", "priceCents": 6200, "tags": ["bestseller"] }] },
+          { "name": "Pastries", "items": [{ "name": "Almond croissant", "description": "Double-baked with frangipane", "price": "R45", "priceCents": 4500, "tags": [] }] },
+          { "name": "Cakes", "items": [{ "name": "Custom celebration cake", "description": "Two tiers, your message, 48 hours' notice", "price": "from R580", "priceCents": 58000, "tags": ["pre-order"] }] }
+        ],
+        "testimonials": [{ "text": "The sourdough is the reason I moved to this street.", "author": "Neighbour", "source": "Google review" }],
+        "aboutStats": [{ "value": "4am", "label": "Ovens on" }, { "value": "36h", "label": "Ferment" }, { "value": "0", "label": "Preservatives" }],
+        "faq": [{ "q": "Can I order a cake for Saturday?", "a": "Yes — 48 hours' notice for custom cakes. Same-day is only possible for the counter cakes." }]
+      },
+      "assetKeywords": {
+        "bread": ["bread", "sourdough", "loaf", "ciabatta", "focaccia"],
+        "pastries": ["croissant", "pastry", "danish", "muffin", "scone", "donut"],
+        "cakes": ["cake", "tart", "gateau", "tier", "icing", "celebration"],
+        "coffee": ["coffee", "latte", "cappuccino", "flat white", "espresso", "barista"],
+        "counter": ["counter", "display", "cabinet", "interior", "shelf"]
+      },
+      "aiPrompt": "Professional bakery photography, {item}, on a rustic wooden board, natural morning light through a window, flour dust, shallow depth of field, appetizing, 4K, photorealistic",
+      "seo": { "titlePattern": "{name} — bakery & café in {suburb} | Order ahead", "descriptionPattern": "{name} in {suburb}: {tagline}. Bread, pastries and custom cakes. Pre-order online and collect.", "keywords": ["bakery", "café", "cake", "{suburb}"] },
+      "growthHooks": ["whatsapp-automation", "google-maps"]
+    },
+    {
+      "id": "accommodation",
+      "label": "Guesthouse, B&B & self-catering",
+      "icon": "🛏️",
+      "audience": "Guesthouses, B&Bs, lodges, Airbnb hosts who want direct bookings",
+      "blurb": "Direct bookings with no OTA commission: rooms, rates, availability and a booking request that lands in your inbox, not Booking.com's.",
+      "catalogueLabel": "Rooms & rates",
+      "itemNoun": "room",
+      "sections": ["HEADER_NAV", "HERO", "CATALOGUE", "GALLERY", "ABOUT", "TESTIMONIALS", "HOURS_LOCATION", "BOOKING", "FAQ", "CONTACT", "FLOATING_CTA", "FOOTER"],
+      "booking": {
+        "label": "Check availability",
+        "submitLabel": "Request this stay",
+        "intake": "RESERVATION",
+        "confirmation": "Request received. You will get a quote and a deposit link within 4 hours — no OTA commission is added.",
+        "fields": [
+          { "name": "name", "label": "Name", "type": "text", "required": true },
+          { "name": "phone", "label": "Mobile", "type": "tel", "required": true },
+          { "name": "email", "label": "Email", "type": "email", "required": false },
+          { "name": "checkIn", "label": "Check-in", "type": "date", "required": true },
+          { "name": "checkOut", "label": "Check-out", "type": "date", "required": true },
+          { "name": "guests", "label": "Guests", "type": "select", "required": true, "default": "2", "options": ["1", "2", "3", "4", "5", "6", "7", "8", "10+"] },
+          { "name": "room", "label": "Room", "type": "select", "required": false, "options": ["Any available"] },
+          { "name": "notes", "label": "Notes", "type": "textarea", "required": false, "placeholder": "Late arrival, dietary needs, airport pickup" }
+        ]
+      },
+      "themePresets": [
+        { "id": "linen-sage", "name": "Linen & sage", "primary": "#5C7158", "secondary": "#9AA79A", "accent": "#C9A227", "dark": "#1D211C", "light": "#FAF8F2", "fontDisplay": "Fraunces" },
+        { "id": "dune-clay", "name": "Dune & clay", "primary": "#A9552F", "secondary": "#B79B8A", "accent": "#E8C39E", "dark": "#231A15", "light": "#FDF6EE", "fontDisplay": "Playfair Display" }
+      ],
+      "sample": {
+        "tagline": "Home-from-home, ten minutes from everything",
+        "description": "Four rooms, a big garden, secure parking behind a gate, and breakfast included. Load-shedding does not reach us — inverter, battery and gas stove.",
+        "hours": [{ "day": "Check-in", "time": "14:00 – 20:00" }, { "day": "Check-out", "time": "by 10:00" }, { "day": "Reception (WhatsApp)", "time": "06:00 – 22:00 daily" }],
+        "catalogue": [
+          { "name": "Rooms", "items": [
+            { "name": "Garden double", "description": "Queen bed, en-suite, private patio, breakfast included", "price": "R980 p/night", "priceCents": 98000, "tags": ["bestseller"] },
+            { "name": "Family room", "description": "Sleeps four, en-suite, extra sleeper couch", "price": "R1,650 p/night", "priceCents": 165000, "tags": [] }
+          ]},
+          { "name": "Included", "items": [
+            { "name": "Full breakfast", "description": "Cooked to order, 07:00 – 09:30", "price": "included", "priceCents": 0, "tags": [] },
+            { "name": "Power backup", "description": "Inverter, battery and gas — Wi-Fi and lights stay on through an outage", "price": "included", "priceCents": 0, "tags": ["load-shedding"] }
+          ]}
+        ],
+        "testimonials": [{ "text": "Quiet, safe, homey, and perfectly central. The power backup alone is worth it.", "author": "Business traveller", "source": "TripAdvisor" }],
+        "aboutStats": [{ "value": "4", "label": "Rooms" }, { "value": "10 min", "label": "To the highway" }, { "value": "4.9★", "label": "Guest rating" }],
+        "faq": [
+          { "q": "Do you have power during load shedding?", "a": "Yes. Inverter, battery bank and a gas stove — lights, Wi-Fi, plugs and hot food continue through a stage 6 outage." },
+          { "q": "Is parking secure?", "a": "Off-street parking behind an automated gate, in the guest's line of sight." }
+        ]
+      },
+      "assetKeywords": {
+        "rooms": ["room", "bed", "double", "suite", "pillow", "headboard", "twin"],
+        "bathrooms": ["bathroom", "shower", "basin", "bath", "towel"],
+        "common": ["lounge", "dining", "breakfast", "kitchen", "fireplace", "living"],
+        "exterior": ["garden", "pool", "facade", "gate", "parking", "patio", "deck", "view"],
+        "detail": ["detail", "flowers", "coffee", "linen", "decor"]
+      },
+      "aiPrompt": "Interior hospitality photography, {item}, bright natural light, crisp white linen, warm neutral palette, wide angle, styled but lived-in, 4K, photorealistic",
+      "seo": { "titlePattern": "{name} — guesthouse in {suburb} | Book direct", "descriptionPattern": "{name} in {suburb}: {tagline}. Book direct and skip the OTA commission. Rooms, rates, breakfast and power backup.", "keywords": ["guesthouse", "B&B", "book direct", "{suburb}", "accommodation"] },
+      "growthHooks": ["google-maps", "lead-campaigns"]
+    },
+    {
+      "id": "wine-estate",
+      "label": "Wine estate, cellar & tasting room",
+      "icon": "🍷",
+      "audience": "Wine estates, craft breweries, distilleries, tasting rooms",
+      "blurb": "Tastings booked to a slot, bottles sold by the case, and an estate story that does the selling for you.",
+      "catalogueLabel": "Tastings & wines",
+      "itemNoun": "wine",
+      "sections": ["HEADER_NAV", "HERO", "CATALOGUE", "GALLERY", "ABOUT", "TESTIMONIALS", "HOURS_LOCATION", "BOOKING", "FAQ", "CONTACT", "FLOATING_CTA", "FOOTER"],
+      "booking": {
+        "label": "Book a tasting",
+        "submitLabel": "Reserve a slot",
+        "intake": "RESERVATION",
+        "confirmation": "Tasting requested. Slots are limited to keep the cellar quiet — we confirm within one business day.",
+        "fields": [
+          { "name": "name", "label": "Name", "type": "text", "required": true },
+          { "name": "phone", "label": "Mobile", "type": "tel", "required": true },
+          { "name": "date", "label": "Date", "type": "date", "required": true },
+          { "name": "time", "label": "Preferred slot", "type": "select", "required": true, "options": ["10:00", "11:30", "13:00", "14:30", "16:00"] },
+          { "name": "guests", "label": "Guests", "type": "select", "required": true, "default": "2", "options": ["1", "2", "3", "4", "5", "6", "8", "10+"] },
+          { "name": "tasting", "label": "Tasting flight", "type": "select", "required": false, "options": ["Cellar flight", "Reserve flight", "Food pairing", "Any — recommend for me"] },
+          { "name": "notes", "label": "Notes", "type": "textarea", "required": false }
+        ]
+      },
+      "themePresets": [
+        { "id": "burgundy-ivory", "name": "Burgundy & ivory", "primary": "#6E1423", "secondary": "#9C8B82", "accent": "#C6A15B", "dark": "#1A0F12", "light": "#FAF6F0", "fontDisplay": "Playfair Display" },
+        { "id": "vine-green", "name": "Vine & stone", "primary": "#3F5D3B", "secondary": "#8B9483", "accent": "#D8C3A5", "dark": "#151B14", "light": "#F7F6F1", "fontDisplay": "Fraunces" }
+      ],
+      "sample": {
+        "tagline": "Rooted in tradition, crafted in precision",
+        "description": "A small cellar on a north-facing slope. Hand-picked, basket-pressed, and bottled without fining agents — which is why the vegan flight exists.",
+        "hours": [{ "day": "Tasting room", "time": "10:00 – 17:00 daily" }, { "day": "Bistro", "time": "12:00 – 15:00 Wed – Sun" }, { "day": "Cellar tours", "time": "11:00 & 15:00" }],
+        "catalogue": [
+          { "name": "Tastings", "items": [
+            { "name": "Cellar flight", "description": "Five wines, 45 minutes, with the winemaker when available", "price": "R120 pp", "priceCents": 12000, "tags": ["bestseller"] },
+            { "name": "Reserve flight", "description": "Three library vintages plus a barrel sample", "price": "R280 pp", "priceCents": 28000, "tags": [] }
+          ]},
+          { "name": "By the bottle", "items": [
+            { "name": "Reserve Cabernet Franc", "description": "2021, 18 months French oak, 94 points", "price": "R340", "priceCents": 34000, "tags": ["award"] }
+          ]},
+          { "name": "Experiences", "items": [
+            { "name": "Blending masterclass", "description": "Two hours, build your own blend, take a bottle home", "price": "R520 pp", "priceCents": 52000, "tags": [] }
+          ]}
+        ],
+        "testimonials": [{ "text": "Quietly sophisticated. Always an 11/10 experience.", "author": "Winemag", "source": "Press" }],
+        "aboutStats": [{ "value": "1974", "label": "First vines" }, { "value": "18", "label": "Ha under vine" }, { "value": "94", "label": "Top score" }],
+        "faq": [{ "q": "Do we need to book?", "a": "Weekends yes, weekdays usually no. Groups of six or more must book." }]
+      },
+      "assetKeywords": {
+        "wines": ["wine", "bottle", "glass", "tasting", "cellar", "barrel", "vine"],
+        "estate": ["estate", "vineyard", "mountain", "view", "slope", "rows"],
+        "tasting_room": ["tasting room", "bar", "interior", "table", "flight", "counter"],
+        "food": ["food", "pairing", "cheese", "plate", "bistro", "lunch"]
+      },
+      "aiPrompt": "Editorial wine photography, {item}, golden hour light over vineyard rows, dark wood and linen surfaces, shallow depth of field, elegant, 4K, photorealistic",
+      "seo": { "titlePattern": "{name} — wine estate in {suburb} | Tastings & cellar", "descriptionPattern": "{name} in {suburb}: {tagline}. Book a tasting, browse the wines and plan a cellar visit.", "keywords": ["wine tasting", "cellar", "wine estate", "{suburb}"] },
+      "growthHooks": ["google-maps", "brand-kit"]
+    },
+    {
+      "id": "fashion-retail",
+      "label": "Fashion, craft & lifestyle retail",
+      "icon": "👕",
+      "audience": "Local designers, craft brands, boutiques, online sellers",
+      "blurb": "A lookbook that sells: collections, sizes, stock status and an order that arrives on WhatsApp with the item and the reference already written out.",
+      "catalogueLabel": "Collections",
+      "itemNoun": "product",
+      "sections": ["HEADER_NAV", "HERO", "CATALOGUE", "GALLERY", "ABOUT", "TESTIMONIALS", "HOURS_LOCATION", "BOOKING", "FAQ", "CONTACT", "FLOATING_CTA", "FOOTER"],
+      "booking": {
+        "label": "Order / reserve",
+        "submitLabel": "Send my order",
+        "intake": "ENQUIRY",
+        "confirmation": "Order sent to the store's WhatsApp with the item and your reference attached. Delivery options and payment follow.",
+        "fields": [
+          { "name": "name", "label": "Name", "type": "text", "required": true },
+          { "name": "phone", "label": "WhatsApp number", "type": "tel", "required": true },
+          { "name": "item", "label": "Item", "type": "text", "required": true, "placeholder": "e.g. Signature tee — charcoal" },
+          { "name": "size", "label": "Size", "type": "select", "required": false, "options": ["XS", "S", "M", "L", "XL", "XXL", "One size", "Not applicable"] },
+          { "name": "fulfilment", "label": "How do you want it?", "type": "select", "required": true, "default": "Courier", "options": ["Courier (R85)", "Collect in store", "Local delivery", "Pudo locker"] },
+          { "name": "notes", "label": "Notes", "type": "textarea", "required": false, "placeholder": "Address, colour preference, gift wrapping" }
+        ]
+      },
+      "themePresets": [
+        { "id": "mono-editorial", "name": "Mono editorial", "primary": "#111111", "secondary": "#A3A3A3", "accent": "#FFFFFF", "dark": "#000000", "light": "#FFFFFF", "fontDisplay": "Bricolage Grotesque" },
+        { "id": "terracotta-sand", "name": "Terracotta & sand", "primary": "#B4552D", "secondary": "#9B8B7C", "accent": "#EAD9C2", "dark": "#201613", "light": "#FCF7F1", "fontDisplay": "Fraunces" }
+      ],
+      "sample": {
+        "tagline": "Curated South African fashion & lifestyle",
+        "blurb2": "",
+        "description": "Small-run pieces made by SA designers and makers. Everything is cut, sewn or finished locally, and every maker is credited on the product.",
+        "hours": [{ "day": "Monday – Friday", "time": "10:00 – 17:00" }, { "day": "Saturday", "time": "10:00 – 15:00" }, { "day": "Sunday", "time": "Closed (online orders still taken)" }],
+        "catalogue": [
+          { "name": "Signature tees", "items": [
+            { "name": "Signature tee — charcoal", "description": "240gsm combed cotton, screen-printed in Cape Town", "price": "R349", "priceCents": 34900, "tags": ["bestseller"] },
+            { "name": "Signature tee — bone", "description": "Same block, unbleached cotton", "price": "R349", "priceCents": 34900, "tags": [] }
+          ]},
+          { "name": "Outerwear", "items": [
+            { "name": "Utility overshirt", "description": "Cotton twill, four pockets, made in Johannesburg", "price": "R890", "priceCents": 89000, "tags": [] }
+          ]},
+          { "name": "Homeware", "items": [
+            { "name": "Hand-thrown mug", "description": "Stoneware, food-safe glaze, by a Karoo potter", "price": "R220", "priceCents": 22000, "tags": ["maker-credited"] }
+          ]}
+        ],
+        "testimonials": [{ "text": "A warm, inviting space that celebrates SA design.", "author": "City improvement district", "source": "Feature" }],
+        "aboutStats": [{ "value": "23", "label": "SA makers" }, { "value": "100%", "label": "Cut & sewn locally" }, { "value": "48h", "label": "Dispatch" }],
+        "faq": [{ "q": "Do you ship nationally?", "a": "Yes — courier R85 nationwide, free over R1,000, dispatched within 48 hours." }, { "q": "Can I exchange a size?", "a": "Within 14 days, unworn, tags on. We cover the courier on the first exchange." }]
+      },
+      "assetKeywords": {
+        "apparel": ["tee", "shirt", "jacket", "dress", "denim", "knit", "hoodie", "outerwear"],
+        "accessories": ["bag", "cap", "hat", "jewellery", "belt", "scarf", "socks"],
+        "homeware": ["mug", "candle", "blanket", "ceramic", "homeware", "vase"],
+        "studio": ["studio", "interior", "rack", "shop", "store", "fitting"],
+        "lookbook": ["model", "street", "editorial", "outfit", "lookbook", "portrait"]
+      },
+      "aiPrompt": "Editorial fashion photography, {item}, natural daylight, neutral studio backdrop, honest colour, medium format look, 4K, photorealistic, no logos",
+      "seo": { "titlePattern": "{name} — {industry} in {suburb} | Shop local", "descriptionPattern": "{name} in {suburb}: {tagline}. Browse collections, check sizes and order on WhatsApp.", "keywords": ["shop", "local", "fashion", "{suburb}"] },
+      "growthHooks": ["lead-campaigns", "whatsapp-automation", "brand-kit"]
+    },
+    {
+      "id": "transport-transfers",
+      "label": "Transport, shuttles & transfers",
+      "icon": "🚐",
+      "audience": "Airport transfers, chauffeur services, shuttle operators, coach hire",
+      "blurb": "Quote a transfer in the form itself, show the fleet with its verification state, and land every request as a job with a reference the dispatcher can see.",
+      "catalogueLabel": "Services & rates",
+      "itemNoun": "service",
+      "sections": ["HEADER_NAV", "HERO", "CATALOGUE", "FLEET", "GALLERY", "ABOUT", "TESTIMONIALS", "HOURS_LOCATION", "BOOKING", "FAQ", "CONTACT", "FLOATING_CTA", "FOOTER"],
+      "booking": {
+        "label": "Book a transfer",
+        "submitLabel": "Request booking",
+        "intake": "JOB",
+        "confirmation": "Transfer requested. A dispatcher confirms the vehicle and price, and the job is held in escrow if you pay through ProVeri.",
+        "fields": [
+          { "name": "name", "label": "Name", "type": "text", "required": true },
+          { "name": "phone", "label": "Mobile", "type": "tel", "required": true },
+          { "name": "pickup", "label": "Pickup", "type": "text", "required": true, "placeholder": "e.g. OR Tambo International, arrivals" },
+          { "name": "dropoff", "label": "Drop-off", "type": "text", "required": true, "placeholder": "e.g. Sandton hotel" },
+          { "name": "date", "label": "Date", "type": "date", "required": true },
+          { "name": "time", "label": "Time", "type": "time", "required": true },
+          { "name": "passengers", "label": "Passengers", "type": "select", "required": true, "default": "2", "options": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "12", "15", "20"] },
+          { "name": "vehicle", "label": "Vehicle", "type": "select", "required": false, "options": ["Sedan (1–3)", "9-seater", "13-seater", "VIP chauffeur", "22-seater coach", "Recommend for me"] },
+          { "name": "notes", "label": "Flight number / notes", "type": "text", "required": false, "placeholder": "e.g. SA 324, 2 large bags, child seat" }
+        ]
+      },
+      "themePresets": [
+        { "id": "jet-black", "name": "Jet black", "primary": "#FFFFFF", "secondary": "#A3A3A3", "accent": "#FFFFFF", "dark": "#000000", "light": "#FFFFFF", "fontDisplay": "Bricolage Grotesque" },
+        { "id": "navi-amber", "name": "Navy & amber", "primary": "#14304A", "secondary": "#8FA3B4", "accent": "#F2A65A", "dark": "#0C1620", "light": "#F6F9FC", "fontDisplay": "Playfair Display" }
+      ],
+      "sample": {
+        "tagline": "On time, every time, with the paperwork to prove it",
+        "description": "Airport transfers, chauffeur hire and group logistics. Every driver is contract-checked and every vehicle carries a valid operating licence and passenger liability cover.",
+        "hours": [{ "day": "Airport desk", "time": "05:00 – 23:00" }, { "day": "24/7 mobile", "time": "Always available" }],
+        "catalogue": [
+          { "name": "Airport transfers", "items": [
+            { "name": "Shared shuttle", "description": "Scheduled shared service, departs every 30 minutes", "price": "R180 pp", "priceCents": 18000, "tags": [] },
+            { "name": "Private transfer — sedan", "description": "1–3 passengers, direct, meet-and-greet at arrivals", "price": "R420", "priceCents": 42000, "tags": ["bestseller"] },
+            { "name": "Private transfer — 9-seater", "description": "Up to 9 passengers with luggage", "price": "R720", "priceCents": 72000, "tags": [] }
+          ]},
+          { "name": "Chauffeur & VIP", "items": [
+            { "name": "VIP chauffeur", "description": "Premium sedan, suit-and-tie driver, hourly or point-to-point", "price": "from R950", "priceCents": 95000, "tags": [] }
+          ]},
+          { "name": "Corporate & events", "items": [
+            { "name": "Conference logistics", "description": "Multi-vehicle scheduling for groups up to 400", "price": "custom quote", "priceCents": 0, "tags": ["quote"] }
+          ]}
+        ],
+        "testimonials": [{ "text": "They moved 240 delegates in two days without a single late pickup.", "author": "Conference organiser", "source": "Corporate client" }],
+        "aboutStats": [{ "value": "38", "label": "Vehicles" }, { "value": "24/7", "label": "Dispatch" }, { "value": "R5m", "label": "Passenger liability" }],
+        "faq": [
+          { "q": "What if my flight is late?", "a": "Give us the flight number. We track it and the driver waits 60 minutes after landing at no extra cost." },
+          { "q": "Are you a licensed operator?", "a": "Yes — operating licences, professional driving permits and passenger liability cover are on file for every vehicle. Ask and we will send the certificate." }
+        ]
+      },
+      "assetKeywords": {
+        "fleet": ["vehicle", "car", "van", "bus", "coach", "sedan", "transfer", "shuttle"],
+        "interior": ["interior", "seat", "cabin", "leather", "dashboard"],
+        "service": ["driver", "airport", "arrivals", "luggage", "meet and greet", "pickup"],
+        "corporate": ["conference", "group", "delegates", "event"]
+      },
+      "aiPrompt": "Premium transport photography, {item}, clean vehicle at golden hour, professional driver in frame, sharp reflections, cinematic, 4K, photorealistic",
+      "seo": { "titlePattern": "{name} — airport transfers in {metro} | Book a shuttle", "descriptionPattern": "{name}: {tagline}. Airport transfers, chauffeur hire and group logistics in {metro}. Book a transfer with a confirmed price.", "keywords": ["airport transfer", "shuttle", "chauffeur", "{metro}"] },
+      "growthHooks": ["google-maps", "whatsapp-automation"],
+      "vehicleBridge": true
+    },
+    {
+      "id": "tours-travel",
+      "label": "Tours, safaris & travel",
+      "icon": "🧭",
+      "audience": "Day-tour operators, safari lodges, travel planners, adventure guides",
+      "blurb": "Itineraries with real prices and real departure days, guide credentials on show, and a request that becomes a job with a deposit held in escrow.",
+      "catalogueLabel": "Tours & packages",
+      "itemNoun": "tour",
+      "sections": ["HEADER_NAV", "HERO", "CATALOGUE", "GALLERY", "ABOUT", "TESTIMONIALS", "HOURS_LOCATION", "BOOKING", "FAQ", "CONTACT", "FLOATING_CTA", "FOOTER"],
+      "booking": {
+        "label": "Request an itinerary",
+        "submitLabel": "Send request",
+        "intake": "ENQUIRY",
+        "confirmation": "Request received. A planner replies with availability, a firm price and a deposit link within one business day.",
+        "fields": [
+          { "name": "name", "label": "Name", "type": "text", "required": true },
+          { "name": "phone", "label": "Mobile", "type": "tel", "required": true },
+          { "name": "email", "label": "Email", "type": "email", "required": true },
+          { "name": "tour", "label": "Tour", "type": "select", "required": false, "options": ["Recommend for me"] },
+          { "name": "date", "label": "Preferred date", "type": "date", "required": true },
+          { "name": "travellers", "label": "Travellers", "type": "select", "required": true, "default": "2", "options": ["1", "2", "3", "4", "5", "6", "8", "10", "12+"] },
+          { "name": "notes", "label": "What are you after?", "type": "textarea", "required": false, "placeholder": "Interests, fitness level, dietary needs, budget" }
+        ]
+      },
+      "themePresets": [
+        { "id": "safari-earth", "name": "Safari earth", "primary": "#7A5C2E", "secondary": "#9E8F73", "accent": "#D9A441", "dark": "#1C1710", "light": "#FAF5EA", "fontDisplay": "Fraunces" },
+        { "id": "coast-teal", "name": "Coast teal", "primary": "#116466", "secondary": "#8AA6A6", "accent": "#F0C987", "dark": "#0A1E1F", "light": "#F5FAFA", "fontDisplay": "Bricolage Grotesque" }
+      ],
+      "sample": {
+        "tagline": "Personalised, breathtaking, unforgettable",
+        "description": "Small-group day tours and multi-day packages with registered field guides. Maximum twelve people per vehicle, and the itinerary bends to the group, not the other way round.",
+        "hours": [{ "day": "Monday – Friday", "time": "07:00 – 18:00" }, { "day": "Saturday", "time": "08:00 – 14:00" }, { "day": "Sunday", "time": "Departures only" }],
+        "catalogue": [
+          { "name": "Day tours", "items": [
+            { "name": "Mountain & peninsula full day", "description": "Cable car, coastal drive, penguin colony, harbour lunch stop", "price": "R1,450 pp", "priceCents": 145000, "tags": ["bestseller"] },
+            { "name": "Winelands tasting day", "description": "Three estates, tastings included, small group", "price": "R1,290 pp", "priceCents": 129000, "tags": [] }
+          ]},
+          { "name": "Multi-day", "items": [
+            { "name": "Garden Route 4 nights", "description": "Guided, boutique stays, all meals except one free evening", "price": "R9,850 pp", "priceCents": 985000, "tags": [] }
+          ]},
+          { "name": "Corporate & incentives", "items": [
+            { "name": "Team-building day", "description": "Facilitated programme, transport, catering, photographer", "price": "custom quote", "priceCents": 0, "tags": ["quote"] }
+          ]}
+        ],
+        "testimonials": [{ "text": "Attention to detail and personal service made this unforgettable.", "author": "Corporate client", "source": "Referral" }],
+        "aboutStats": [{ "value": "12", "label": "Max per vehicle" }, { "value": "9", "label": "Registered guides" }, { "value": "4.9★", "label": "Traveller rating" }],
+        "faq": [
+          { "q": "Are your guides registered?", "a": "Every guide holds a field-guide registration and first-aid level 2. Certificate numbers are printed on the itinerary you receive." },
+          { "q": "What is your cancellation policy?", "a": "Full refund more than 7 days out, 50% within 7 days, and weather cancellations are always refunded or rebooked at your choice." }
+        ]
+      },
+      "assetKeywords": {
+        "landscape": ["mountain", "coast", "sunset", "valley", "beach", "landscape", "view", "peninsula"],
+        "wildlife": ["elephant", "lion", "rhino", "penguin", "whale", "bird", "safari", "wildlife"],
+        "activity": ["hike", "kayak", "boat", "cable car", "tour", "group", "guide", "adventure"],
+        "food_lodge": ["lodge", "room", "breakfast", "dinner", "braai", "table"],
+        "people": ["traveller", "portrait", "smile", "guide"]
+      },
+      "aiPrompt": "Travel photography, {item}, wide landscape with a human element for scale, golden hour, rich natural colour, National Geographic style, 4K, photorealistic",
+      "seo": { "titlePattern": "{name} — tours in {metro} | Day tours & packages", "descriptionPattern": "{name}: {tagline}. Small-group day tours and multi-day packages in {metro} with registered guides. Request an itinerary.", "keywords": ["tours", "day tour", "travel", "{metro}"] },
+      "growthHooks": ["lead-campaigns", "google-maps", "brand-kit"]
+    },
+    {
+      "id": "trade-services",
+      "label": "Trade & home services (ProVeri native)",
+      "icon": "🔧",
+      "audience": "Plumbers, electricians, solar installers, painters, handymen, cleaners, security",
+      "blurb": "The ProVeri microsite with the volume turned up: your certificate, your escrow-backed reviews, your prices, and a booking that opens an escrow-protected job.",
+      "catalogueLabel": "Services & prices",
+      "itemNoun": "service",
+      "sections": ["HEADER_NAV", "HERO", "TRUST_BLOCK", "CATALOGUE", "GALLERY", "ABOUT", "TESTIMONIALS", "HOURS_LOCATION", "BOOKING", "FAQ", "CONTACT", "FLOATING_CTA", "FOOTER"],
+      "booking": {
+        "label": "Book this pro",
+        "submitLabel": "Request the job",
+        "intake": "JOB",
+        "categoryId": null,
+        "confirmation": "Job posted to ProVeri with your details. Money is only held in escrow once you accept a bid — nothing is charged now.",
+        "fields": [
+          { "name": "name", "label": "Your name", "type": "text", "required": true },
+          { "name": "phone", "label": "Mobile", "type": "tel", "required": true },
+          { "name": "email", "label": "Email", "type": "email", "required": false },
+          { "name": "service", "label": "What do you need?", "type": "select", "required": true, "options": [] },
+          { "name": "suburb", "label": "Suburb", "type": "text", "required": true },
+          { "name": "date", "label": "Preferred date", "type": "date", "required": false },
+          { "name": "urgency", "label": "How urgent?", "type": "select", "required": true, "default": "SOON", "options": ["URGENT — today", "SOON — this week", "SCHEDULED — I can wait", "FLEXIBLE — best price wins"] },
+          { "name": "budget", "label": "Budget (R)", "type": "number", "required": false, "placeholder": "e.g. 2500" },
+          { "name": "notes", "label": "Describe the job", "type": "textarea", "required": true, "placeholder": "What is broken, where is it, what access is like" }
+        ]
+      },
+      "themePresets": [
+        { "id": "proveri-green", "name": "ProVeri green", "primary": "#0E7C5A", "secondary": "#8FA79E", "accent": "#F2A65A", "dark": "#0B1A15", "light": "#F4FAF7", "fontDisplay": "Bricolage Grotesque" },
+        { "id": "steel-orange", "name": "Steel & safety orange", "primary": "#1F2A33", "secondary": "#8B98A3", "accent": "#FF6B00", "dark": "#10161B", "light": "#F5F7F9", "fontDisplay": "Bricolage Grotesque" }
+      ],
+      "sample": {
+        "tagline": "Registered, insured, and paid only after you are happy",
+        "description": "Trade work with a certificate number you can check, a price you can see before the callout, and money that stays in escrow until you confirm the job is done.",
+        "hours": [{ "day": "Monday – Friday", "time": "07:00 – 17:30" }, { "day": "Saturday", "time": "08:00 – 13:00" }, { "day": "Emergency callout", "time": "24/7 by arrangement" }],
+        "catalogue": [
+          { "name": "Standard work", "items": [
+            { "name": "Callout & diagnosis", "description": "On-site assessment, written quote, no obligation", "price": "published per pro", "priceCents": 0, "tags": ["transparent"] },
+            { "name": "Hourly labour", "description": "Rate published on the profile and locked into the quote", "price": "published per pro", "priceCents": 0, "tags": [] }
+          ]},
+          { "name": "Compliance", "items": [
+            { "name": "Certificate of Compliance", "description": "Issued only by a registered practitioner, filed with the issuing body", "price": "quoted per job", "priceCents": 0, "tags": ["statutory"] }
+          ]}
+        ],
+        "testimonials": [{ "text": "He sent photos before and after, and the money only left escrow when I confirmed. First plumber I have not had to chase.", "author": "Verified ProVeri customer", "source": "escrow-released job", "verified": true }],
+        "aboutStats": [{ "value": "0", "label": "Reviews that can be bought" }, { "value": "14 days", "label": "Workmanship warranty" }, { "value": "5%", "label": "Held back until it expires" }],
+        "faq": [
+          { "q": "What does the callout cost?", "a": "The callout fee is published on this page and locked into your quote before anyone is dispatched." },
+          { "q": "How does payment protection work?", "a": "You pay into escrow when you accept a bid. The pro is paid after you confirm the work, and 5% is held for a 14-day workmanship warranty." }
+        ]
+      },
+      "assetKeywords": {
+        "before_after": ["before", "after", "renovation", "repair", "installed", "replaced"],
+        "workmanship": ["pipework", "db board", "wiring", "roof", "tiling", "painting", "geyser", "solar", "inverter", "fence", "gate"],
+        "certificates": ["certificate", "coc", "compliance", "permit", "document"],
+        "team": ["team", "bakkie", "van", "tools", "workshop", "site"],
+        "equipment": ["equipment", "plant", "machine", "tool"]
+      },
+      "aiPrompt": "Documentary trade photography, {item}, real South African home or site, honest daylight, worker in PPE, no stock-photo staging, 4K, photorealistic",
+      "seo": { "titlePattern": "{name} — verified {industry} in {suburb} | Book with escrow", "descriptionPattern": "{name}: {tagline}. Verified, insured and escrow-protected. See prices, read escrow-backed reviews and book online.", "keywords": ["verified", "escrow", "{industry}", "{suburb}", "{metro}"] },
+      "growthHooks": ["google-maps", "whatsapp-automation", "lead-campaigns"],
+      "proNative": true
+    },
+    {
+      "id": "beauty-wellness",
+      "label": "Beauty, wellness & fitness",
+      "icon": "💆🏾‍♀️",
+      "audience": "Salons, spas, mobile beauty, personal trainers, studios",
+      "blurb": "Treatment menu with real durations, a booking slot picker, and before/after galleries that are permission-checked before they go public.",
+      "catalogueLabel": "Treatments",
+      "itemNoun": "treatment",
+      "sections": ["HEADER_NAV", "HERO", "CATALOGUE", "GALLERY", "ABOUT", "TESTIMONIALS", "HOURS_LOCATION", "BOOKING", "FAQ", "CONTACT", "FLOATING_CTA", "FOOTER"],
+      "booking": {
+        "label": "Book an appointment",
+        "submitLabel": "Request appointment",
+        "intake": "RESERVATION",
+        "confirmation": "Appointment requested. You will get a confirmation with the exact time and a reminder the day before.",
+        "fields": [
+          { "name": "name", "label": "Name", "type": "text", "required": true },
+          { "name": "phone", "label": "Mobile / WhatsApp", "type": "tel", "required": true },
+          { "name": "treatment", "label": "Treatment", "type": "select", "required": true, "options": [] },
+          { "name": "date", "label": "Date", "type": "date", "required": true },
+          { "name": "time", "label": "Time", "type": "time", "required": true },
+          { "name": "therapist", "label": "Preference", "type": "select", "required": false, "options": ["No preference", "Female practitioner", "Male practitioner"] },
+          { "name": "notes", "label": "Notes", "type": "textarea", "required": false, "placeholder": "Allergies, pregnancy, skin conditions, address if mobile" }
+        ]
+      },
+      "themePresets": [
+        { "id": "blush-nude", "name": "Blush & nude", "primary": "#B76E79", "secondary": "#A99191", "accent": "#E8C1B5", "dark": "#241A1C", "light": "#FDF7F5", "fontDisplay": "Fraunces" },
+        { "id": "deep-spa", "name": "Deep spa", "primary": "#2E5E4E", "secondary": "#8FA79E", "accent": "#D9C7A7", "dark": "#101C18", "light": "#F5F9F7", "fontDisplay": "Playfair Display" }
+      ],
+      "sample": {
+        "tagline": "Booked, on time, and done properly",
+        "description": "Hair, nails, skin and massage — in the studio or at your home. Qualified practitioners, published durations, and no upsell while you are in the chair.",
+        "hours": [{ "day": "Tuesday – Friday", "time": "09:00 – 18:00" }, { "day": "Saturday", "time": "08:00 – 16:00" }, { "day": "Sunday – Monday", "time": "Closed" }],
+        "catalogue": [
+          { "name": "Hair", "items": [{ "name": "Braids — medium box", "description": "2–3 hours, includes hair, protective finish", "price": "R650", "priceCents": 65000, "tags": ["bestseller"] }] },
+          { "name": "Nails", "items": [{ "name": "Acrylic full set", "description": "90 minutes, gel polish included", "price": "R420", "priceCents": 42000, "tags": [] }] },
+          { "name": "Skin & body", "items": [{ "name": "Deep tissue massage", "description": "60 minutes, qualified therapist", "price": "R520", "priceCents": 52000, "tags": [] }] }
+        ],
+        "testimonials": [{ "text": "She arrived on time, brought everything, and my daughter's braids lasted five weeks.", "author": "Verified client", "source": "Booking", "verified": true }],
+        "aboutStats": [{ "value": "NQF 4", "label": "Practitioner level" }, { "value": "9 yrs", "label": "Experience" }, { "value": "4.9★", "label": "Client rating" }],
+        "faq": [{ "q": "Do you come to me?", "a": "Yes, mobile within a 20 km radius for a R150 callout. Home visits are only booked for clients who can be reached on the day." }]
+      },
+      "assetKeywords": {
+        "hair": ["hair", "braids", "blowout", "cut", "colour", "locs", "styling"],
+        "nails": ["nails", "manicure", "pedicure", "acrylic", "gel", "nail art"],
+        "skin": ["facial", "skin", "massage", "spa", "treatment", "lash", "brow"],
+        "studio": ["studio", "salon", "chair", "mirror", "interior", "station"],
+        "before_after": ["before", "after", "transformation", "result"]
+      },
+      "aiPrompt": "Beauty editorial photography, {item}, soft diffused studio light, clean neutral background, diverse South African skin tones rendered accurately, 4K, photorealistic",
+      "seo": { "titlePattern": "{name} — {industry} in {suburb} | Book online", "descriptionPattern": "{name} in {suburb}: {tagline}. Treatment menu with real prices and durations. Book an appointment online.", "keywords": ["salon", "beauty", "book", "{suburb}"] },
+      "growthHooks": ["whatsapp-automation", "google-maps", "brand-kit"]
+    },
+    {
+      "id": "professional-services",
+      "label": "Professional & business services",
+      "icon": "💼",
+      "audience": "Accountants, attorneys, consultants, IT, tutors, financial planners",
+      "blurb": "Credentials front and centre, services priced, and a consultation request that arrives with the client's context already written down.",
+      "catalogueLabel": "Services",
+      "itemNoun": "service",
+      "sections": ["HEADER_NAV", "HERO", "CATALOGUE", "ABOUT", "TESTIMONIALS", "HOURS_LOCATION", "BOOKING", "FAQ", "CONTACT", "FLOATING_CTA", "FOOTER"],
+      "booking": {
+        "label": "Book a consultation",
+        "submitLabel": "Request consultation",
+        "intake": "ENQUIRY",
+        "confirmation": "Request received. You will get three consultation times within one business day.",
+        "fields": [
+          { "name": "name", "label": "Name", "type": "text", "required": true },
+          { "name": "phone", "label": "Mobile", "type": "tel", "required": true },
+          { "name": "email", "label": "Email", "type": "email", "required": true },
+          { "name": "company", "label": "Company", "type": "text", "required": false },
+          { "name": "service", "label": "What do you need help with?", "type": "select", "required": true, "options": [] },
+          { "name": "format", "label": "Meeting format", "type": "select", "required": false, "default": "Video call", "options": ["Video call", "Phone", "In person"] },
+          { "name": "notes", "label": "Context", "type": "textarea", "required": true, "placeholder": "The situation in two sentences — it makes the first call useful" }
+        ]
+      },
+      "themePresets": [
+        { "id": "ink-slate", "name": "Ink & slate", "primary": "#1E2A38", "secondary": "#8595A5", "accent": "#B08D57", "dark": "#0E141B", "light": "#F7F9FB", "fontDisplay": "Playfair Display" },
+        { "id": "proveri-green", "name": "ProVeri green", "primary": "#0E7C5A", "secondary": "#8FA79E", "accent": "#F2A65A", "dark": "#0B1A15", "light": "#F4FAF7", "fontDisplay": "Bricolage Grotesque" }
+      ],
+      "sample": {
+        "tagline": "Advice you can act on, fees you can see",
+        "description": "A small practice with published fees, a named practitioner on every file, and no work started before you have a written scope.",
+        "hours": [{ "day": "Monday – Thursday", "time": "08:00 – 17:00" }, { "day": "Friday", "time": "08:00 – 13:00" }, { "day": "Saturday – Sunday", "time": "Closed" }],
+        "catalogue": [
+          { "name": "Core services", "items": [
+            { "name": "Annual financial statements", "description": "Compilation, review or audit as required by the Companies Act", "price": "from R6,500", "priceCents": 650000, "tags": [] },
+            { "name": "Tax compliance", "description": "VAT, PAYE and income tax registrations, submissions and disputes", "price": "from R1,850", "priceCents": 185000, "tags": ["bestseller"] }
+          ]},
+          { "name": "Advisory", "items": [
+            { "name": "First consultation", "description": "60 minutes, written summary afterwards, fee credited if you proceed", "price": "R950", "priceCents": 95000, "tags": [] }
+          ]}
+        ],
+        "testimonials": [{ "text": "They found R180,000 in overpaid provisional tax the previous firm had missed.", "author": "Small business client", "source": "Referral" }],
+        "aboutStats": [{ "value": "SAICA", "label": "Registered" }, { "value": "11 yrs", "label": "In practice" }, { "value": "100%", "label": "Named practitioner" }],
+        "faq": [{ "q": "Do you charge for the first call?", "a": "R950 for 60 minutes, credited in full against your engagement letter if you proceed. We do not do free calls that turn into sales calls." }]
+      },
+      "assetKeywords": {
+        "team": ["team", "portrait", "office", "meeting", "practitioner", "headshot"],
+        "workspace": ["desk", "office", "boardroom", "workspace", "interior"],
+        "credentials": ["certificate", "registration", "award", "qualification", "letter"],
+        "clients": ["client", "handshake", "signature", "documents"]
+      },
+      "aiPrompt": "Corporate editorial photography, {item}, natural window light in a modern South African office, candid rather than staged, 4K, photorealistic",
+      "seo": { "titlePattern": "{name} — {industry} in {suburb} | Book a consultation", "descriptionPattern": "{name}: {tagline}. Published fees, registered practitioners, consultations booked online in {suburb}.", "keywords": ["{industry}", "consultation", "{suburb}", "{metro}"] },
+      "growthHooks": ["google-maps", "lead-campaigns"]
+    }
+  ]
+}

@@ -13,10 +13,12 @@
     "dev": "node --watch src/server/index.js",
     "demo": "node src/demo.js",
     "demo:vehicle": "node src/demo-vehicle.js",
+    "demo:studio": "node src/demo-studio.js",
     "test": "node --test",
     "test:legacy": "node --test test/legacy.trustEscrowEngine.test.js",
     "seed:reset": "node scripts/reset-store.js",
     "openapi": "node scripts/print-openapi.js",
+    "docs:api": "node scripts/print-api-docs.js",
     "healthcheck": "node scripts/healthcheck.js",
     "integrations:probe": "node scripts/probe-integrations.js"
   },
