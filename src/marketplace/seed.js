@@ -80,10 +80,32 @@ function seedMobile(name, index) {
  * policy (POW-001) is satisfied the same way a real pro would satisfy it.
  * CUSTOMER_CONFIRMATION is excluded — the customer supplies that on acceptance.
  */
+/**
+ * The demo ships representative photographs for its evidence trail, labelled
+ * illustrative. In production these bytes are the pro's own geotagged upload.
+ * The image goes on the "after" shot so a card can show the result while the
+ * product page keeps the sealed before-record beside it.
+ */
+const EVIDENCE_IMAGES = {
+  plumbing: 'burst-pipe-repair.jpg',
+  painting: 'lounge-repaint.jpg',
+  'web-digital': 'business-website.jpg',
+  'electric-fence-security': 'cctv-fence.jpg',
+  'beauty-mobile': 'beauty-kit.jpg',
+  'solar-inverter': 'solar-inverter.jpg',
+  'cleaning-home': 'deep-clean.jpg',
+  'auto-mechanical': 'brake-service.jpg',
+  electrical: 'db-board-electrical.jpg',
+  'vehicle-inspection': 'vehicle-inspection.jpg',
+};
+
 function evidenceForBooking({ bookingId, category, suburb, notes = {} }) {
   const { EVIDENCE_TYPES } = require('./bookings');
   const geo = suburb ? { lat: suburb.lat, lon: suburb.lon, accuracyM: 6 } : null;
   const wanted = [...new Set([...(category.evidenceRequired || []), 'AFTER_PHOTO'])];
+  const photoTypes = wanted.filter((type) => ['BEFORE_PHOTO', 'AFTER_PHOTO', 'COMPLETION_PHOTO', 'COMPLETION_VIDEO'].includes(type));
+  const imageType = photoTypes.includes('AFTER_PHOTO') ? 'AFTER_PHOTO' : photoTypes[photoTypes.length - 1];
+  const image = EVIDENCE_IMAGES[category.id] || null;
   return wanted
     .filter((type) => EVIDENCE_TYPES[type] && type !== 'CUSTOMER_CONFIRMATION')
     .map((type) => ({
@@ -92,6 +114,8 @@ function evidenceForBooking({ bookingId, category, suburb, notes = {} }) {
       geo: EVIDENCE_TYPES[type].geoSealed ? geo : null,
       capturedAt: nowIso(),
       hash: `${bookingId}-${type}`,
+      imageUrl: image && type === imageType ? `/img/work/${image}` : null,
+      illustrative: Boolean(image && type === imageType),
     }));
 }
 
@@ -933,7 +957,7 @@ async function seed(marketplace, { withLiveIntegrations = false } = {}) {
       priceCents: 695000, priceNote: 'typical price for a 150L replacement with materials',
     },
     {
-      proName: 'Anwar Patel', file: 'db-board-electrical.jpg',
+      proName: 'Anwar Patel', file: null,
       title: 'Old fuse board replaced with a full DB and surge protection',
       description: 'Rewirable fuse board from the 1970s swapped for a 12-way DB with earth-leakage and surge protection. Every circuit tested and labelled, CoC issued.',
       priceCents: 845000, priceNote: 'board, breakers, labour and CoC',
@@ -949,6 +973,12 @@ async function seed(marketplace, { withLiveIntegrations = false } = {}) {
       title: 'Front garden cleared, levelled and laid with fresh grass',
       description: 'Cleared the rubble and weeds, levelled the bed, added compost and topsoil, laid instant lawn and edging. Irrigation line run to the far corner.',
       priceCents: 460000, priceNote: 'small front garden, materials included',
+    },
+    {
+      proName: 'Yusuf Adams', file: 'roof-gutters.jpg',
+      title: 'New gutters, fascia and downpipes on a tile roof',
+      description: 'Stripped the rusted gutters, fitted new charcoal aluminium gutters and fascia with a clean downpipe run. Ladder access only, no scaffolding needed.',
+      priceCents: 930000, priceNote: 'materials and labour, single-storey',
     },
     {
       proName: 'Thabo Mokoena', file: 'bathroom-tiling.jpg',
@@ -969,12 +999,14 @@ async function seed(marketplace, { withLiveIntegrations = false } = {}) {
       priceCents: work.priceCents,
       priceNote: work.priceNote,
       completedAt: addDays(nowIso(), -14 - (summary.portfolioUploaded % 5) * 9),
-      photos: [{
-        url: `/img/work/${work.file}`,
-        caption: work.title,
-        illustrative: true,
-        capturedAt: addDays(nowIso(), -14 - (summary.portfolioUploaded % 5) * 9),
-      }],
+      photos: work.file
+        ? [{
+          url: `/img/work/${work.file}`,
+          caption: work.title,
+          illustrative: true,
+          capturedAt: addDays(nowIso(), -14 - (summary.portfolioUploaded % 5) * 9),
+        }]
+        : [{ hash: `upload-${work.proName.replace(/\s+/g, '-').toLowerCase()}-db`, caption: 'Finished board, labelled circuits', illustrative: false }],
     });
     summary.portfolioUploaded += 1;
   }

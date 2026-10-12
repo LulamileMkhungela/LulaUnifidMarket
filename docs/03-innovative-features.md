@@ -316,7 +316,7 @@ capture time, geo, distance from the address, seal. The card renders a
 *sealed-evidence tile* — trade, suburb, date, seal prefix, tier — that is visibly
 not a photograph and carries more information than one. Uploaded photos render as
 photos, and any image that is not the pro's own client work (the five demo
-photographs in `pwa/img/work/`) carries an **Illustrative photo** chip, the same
+photographs in `pwa/img/work/`) carries an **Demo photo** chip, the same
 labelling discipline `WEB-003` enforces on generated site assets. The product page
 prints the ledger seal, so a customer can quote a receipt back to the trust desk.
 **Code:** `pwa/js/screens-shop.js` (`workThumb`), `pwa/js/screens-market.js`

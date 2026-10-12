@@ -19,6 +19,13 @@ interface (four tabs and one action button) plus a **zero-dependency REST API**
 (184 operations across 164 paths), runs on **one Node 22 process with no
 `node_modules`**, and is enforced by **200 tests**.
 
+The interface is built like a shop, not a brochure: a translucent header and a
+five-slot tab bar with the action button sitting in a notch, an inline SVG icon
+set (no emoji in the chrome), gold half-star ratings, photo-first work cards that
+name their verification tier exactly once, and 480 px thumbnails so a grid of
+twelve jobs costs ~250 KB instead of ~2 MB. Light and dark themes share one token
+set. `docs/13` §5.1 records the whole design system.
+
 It also ships a **Business Site Studio**: ten industry templates that produce a
 live, server-rendered business website at R0 build cost, where the booking form
 is not a dead button — it creates a reservation with a reference number, or a
@@ -127,17 +134,21 @@ test/              200 tests across 10 files
 
 ## Highlights you should click on first
 
-- **`/`** — the storefront: a search box, trade chips and six pieces of real work
-  (proven first), plus one line telling you how much of the feed is proven.
-- **`/browse`** — the shop floor: filter by trade, suburb and tier. Proven work
-  outranks uploads; uploads are labelled, never hidden.
+- **`/`** — the storefront: one line of copy, a pill search bar, a trade rail of
+  nine circles, a full-bleed **hero job** (photo, price, pro, gold stars) and six
+  more pieces of real work beneath it, plus one line telling you how much of the
+  feed is proven.
+- **`/browse`** — the shop floor: filter by trade, suburb (grouped by metro) and
+  tier. Proven work outranks uploads; uploads are labelled, never hidden.
 - **`/work/<id>`** — a product page for one job: the photos (or the sealed
   evidence record when there is no image), what the badge means, the pro, and two
   buttons: *Message about this* and *Hire for my job*.
-- **`/upload-work`** — the pro side: pick photos, say what you did, optionally
-  link a ProVeri job and watch the item earn its tier.
+- **`/upload-work`** — the pro side: a tap-to-add photo dropzone with local
+  previews, what you did, and an optional ProVeri job link that earns the item its
+  tier.
 - **`/orders`** and **`/order/<id>`** — order tracking with a six-step escrow
-  progress bar and "where your money is" in plain words.
+  progress bar and a receipt for your money: total, released, warranty holdback
+  with its date, the 10% fee, who holds it, and when it auto-releases.
 - **`/me`** — everything that is not browsing or ordering, so the tab bar stays
   four items wide: wallet, trust and proof, the studios, the verticals, admin.
 - **`/trust`** — the transparency page: ledger receipt, verification outcomes,

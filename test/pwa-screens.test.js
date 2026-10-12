@@ -766,7 +766,7 @@ test('the storefront is the shell: four tabs, one action button, no information 
 
   const sw = fs.readFileSync(path.join(PWA_ROOT, 'sw.js'), 'utf8');
   assert.ok(sw.includes('/js/screens-shop.js'), 'the service worker precaches the shop for offline');
-  assert.match(sw, /VERSION = 'proveri-v3'/, 'and the cache version moved so phones pick it up');
+  assert.match(sw, /VERSION = 'proveri-v4'/, 'and the cache version moved so phones pick it up');
 });
 
 test('the home screen is a search box, categories and work — nothing else', async () => {
@@ -805,7 +805,8 @@ test('the browse screen filters like a shop floor', async () => {
 test('a piece of work renders as a product page with the truth about its badge', async () => {
   const feed = await marketplace.portfolio.list({ limit: 50 });
   const proven = feed.find((i) => i.verified);
-  const declared = feed.find((i) => !i.verified);
+  const declared = feed.find((i) => !i.verified && i.photo?.illustrative);
+  const noPhoto = feed.find((i) => !i.verified && !i.photo?.url && !i.photo?.dataUrl);
 
   const provenNode = await screen('/work/:itemId')({ params: { itemId: proven.itemId }, query: {} });
   const provenText = assertCleanRender(provenNode, `/work/${proven.itemId}`);
@@ -824,7 +825,16 @@ test('a piece of work renders as a product page with the truth about its badge',
   assert.match(declaredText, /Uploaded by the pro/, 'a self-declared item says so on the page');
   assert.match(declaredText, /Nothing on ProVeri corroborates/i);
   assert.ok(!declaredText.includes('Proof of work'), 'and never borrows the badge it did not earn');
-  assert.match(declaredText, /Illustrative photo/, 'demo imagery is labelled as such');
+  assert.match(declaredText, /Demo photo/, 'demo imagery is labelled as such');
+
+  // An upload with no picture of its own must show the sealed evidence tile —
+  // never a stock photo standing in for work nobody photographed.
+  assert.ok(noPhoto, 'the seed keeps one upload with no photo at all');
+  const sealedNode = await screen('/work/:itemId')({ params: { itemId: noPhoto.itemId }, query: {} });
+  const sealedText = assertCleanRender(sealedNode, `/work/${noPhoto.itemId}`);
+  assert.ok(sealedNode.querySelector('.photo.sealed'), 'the seal stands in for the missing photo');
+  assert.match(sealedText, /Uploaded by the pro/);
+  assert.ok(!sealedText.includes('Demo photo'), 'and it does not borrow demo imagery');
 });
 
 test('the pro profile leads with their published work', async () => {
@@ -852,7 +862,7 @@ test('orders is the tracking view, and it asks you to sign in first', async () =
   assert.ok(node.querySelector('.seg'), 'the two sides of the market are one tap apart');
   if (node.querySelector('.order-row')) {
     assert.ok(node.querySelectorAll('.track-step').length >= 5, 'each order shows where it is');
-    assert.match(text, /Money in escrow|You confirmed|Pro paid/);
+    assert.match(text, /In escrow|Confirmed|Paid out/);
   } else {
     assert.match(text, /No orders yet|Browse work/);
   }
@@ -863,6 +873,21 @@ test('orders is the tracking view, and it asks you to sign in first', async () =
   assert.match(orderText, /Where your money is/, 'the money is explained in words');
   assert.match(orderText, /Nobody is paid before you confirm/);
   assert.ok(orderNode.querySelectorAll('.track-step').length >= 5);
+
+  // The full booking record nests the money under price/escrow/payout — a page
+  // that reads booking.totalCents renders "—" and quietly tells a lie.
+  const record = marketplace.store.all('bookings').find((b) => b.bookingId === booking.bookingId);
+  const expectedTotal = record?.price?.totalCents || 0;
+  assert.ok(expectedTotal > 0, 'the seeded booking has a real price');
+  const formatted = new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', maximumFractionDigits: 0 })
+    .format(expectedTotal / 100);
+  assert.ok(orderText.includes(formatted), `the order page shows the actual money (${formatted})`);
+  assert.match(orderText, /Total for this job/, 'as a receipt line, not a dash');
+  assert.ok(!orderText.includes('Total for this job—'), 'never a dash where money belongs');
+  if (record.payout) {
+    assert.match(orderText, /Released to the pro/, 'and what has actually been paid out');
+    assert.match(orderText, /Warranty holdback/, 'with the holdback named');
+  }
   global.window.ProVeri.api.setSession(null);
 });
 

@@ -463,7 +463,10 @@ class PortfolioService {
       completedAt: item.completedAt,
       priceCents: item.priceCents,
       priceNote: item.priceNote,
-      photo: item.photos[0] ? { url: item.photos[0].url, dataUrl: item.photos[0].dataUrl, caption: item.photos[0].caption, illustrative: item.photos[0].illustrative } : null,
+      photo: (() => {
+        const best = item.photos.find((p) => p.url || p.dataUrl) || item.photos[0];
+        return best ? { url: best.url, dataUrl: best.dataUrl, caption: best.caption, illustrative: best.illustrative, hash: best.hash } : null;
+      })(),
       photoCount: item.photos.length,
       tier: item.tier,
       tierLabel: TIER_LABEL[item.tier],
@@ -637,7 +640,9 @@ class PortfolioService {
     return photoEvidence.slice(0, MAX_PHOTOS).map((evidence, index) => ({
       photoId: idFor('pht'),
       dataUrl: null,
-      url: null,
+      // In production the evidence record carries the uploaded bytes; the seed
+      // ships representative photographs and labels them illustrative.
+      url: evidence.imageUrl || null,
       source: 'proof-of-work',
       caption: evidence.note || evidence.label,
       evidenceType: evidence.type,
@@ -647,7 +652,7 @@ class PortfolioService {
       seal: evidence.seal,
       distanceFromJobKm: evidence.distanceFromJobKm,
       geoVerified: evidence.geoVerified,
-      illustrative: false,
+      illustrative: Boolean(evidence.illustrative),
       order: index,
     }));
   }

@@ -17,7 +17,7 @@
  * The worker is served with Cache-Control: no-cache, so a deploy always wins.
  */
 
-const VERSION = 'proveri-v3';   // v3: the shop — portfolio feed, browse, orders, upload work
+const VERSION = 'proveri-v4';   // v4: the redesign — SVG chrome, hero feed, photo-first cards
 const SHELL_CACHE = `${VERSION}-shell`;
 const DATA_CACHE = `${VERSION}-data`;
 const QUEUE_KEY = `${VERSION}-mutation-queue`;

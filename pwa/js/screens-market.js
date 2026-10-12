@@ -16,6 +16,7 @@ window.ProVeri.screens = window.ProVeri.screens || {};
   const {
     h, money, moneyBig, timeAgo, dateShort, countdown, stars, badge, trustBadge,
     toast, sheet, loading, loadingCards, empty, navigate, formValues, withButton, trustBar, sectionHead,
+    icon, photoImg,
   } = window.ProVeri.ui;
 
   const screens = window.ProVeri.screens;
@@ -140,12 +141,12 @@ window.ProVeri.screens = window.ProVeri.screens || {};
           ? h('div.scroller-x', work.slice(0, 10).map((item) => h('a.work-card.mini', { href: `/work/${item.itemId}`, style: { width: '210px' } }, [
             item.url
               ? h('div.work-thumb.card', [
-                h('img', { src: item.url, alt: item.caption || item.title, loading: 'lazy' }),
-                item.illustrative ? h('span.thumb-note', 'Illustrative photo') : null,
+                photoImg(item.url, item.caption || item.title),
+                item.illustrative ? h('span.thumb-note', 'Demo photo') : null,
                 h('span.thumb-tier', { class: item.tier === 'SELF_DECLARED' ? 'plain' : 'proven' }, item.tierLabel),
               ])
               : h('div.work-thumb.sealed.card', [
-                h('span.seal-ico', item.tier === 'CLIENT_CONFIRMED' ? '🛡️' : '📸'),
+                h('span.seal-ico', icon(item.tier === 'CLIENT_CONFIRMED' ? 'shield' : 'camera', 20)),
                 h('span.seal-title', profile.primaryCategoryLabel || 'Trade work'),
                 h('span.seal-line', `Sealed ${item.seal || '—'}`),
                 h('span.thumb-tier.proven', item.tierLabel),
@@ -153,14 +154,13 @@ window.ProVeri.screens = window.ProVeri.screens || {};
             h('div.work-body', [
               h('div.work-title', item.title),
               h('div.price', item.priceCents ? h('strong', money(item.priceCents)) : 'Quote on request'),
-              h('div.work-foot', [h('span.tier-pill', { class: item.tier === 'SELF_DECLARED' ? 'plain' : 'proven' }, item.tierLabel)]),
             ]),
           ])))
           : h('p.small.muted', 'This pro has not published any past work yet. Their verified reviews and proof-of-work records are below.'),
       ]));
 
       root.append(h('div.card', [
-        h('div.kicker', '🪪 Verification — every check, its source'),
+        h('div.kicker', [icon('shield', 14), 'Verification — every check, its source']),
         h('div.row.between', [h('span.money.big', `${profile.trustScore}/100`), h('span.tiny.muted', 'ProVeri trust score')]),
         trustBar(profile.trustScore),
         h('ul', { style: { marginTop: '12px', paddingLeft: '18px' } }, (profile.explanation?.reasons || []).map((r) =>

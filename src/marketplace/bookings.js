@@ -618,6 +618,10 @@ class BookingService {
         distanceFromJobKm: km,
         geoVerified: km == null ? null : km <= 2,
         note: item.note || null,
+        // Production evidence carries the uploaded bytes; the seed ships a
+        // representative photograph for its demo evidence trail.
+        imageUrl: item.imageUrl || null,
+        illustrative: Boolean(item.illustrative),
         uploadedBy: proId,
         uploadedAt: nowIso(),
         seal: sha256({ type, hash: item.hash || '', geo: item.geo || null, bookingId, capturedAt: item.capturedAt || '' }).slice(0, 16),

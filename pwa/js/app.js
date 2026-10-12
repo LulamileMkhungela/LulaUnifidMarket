@@ -67,7 +67,7 @@
     } catch (error) {
       if (token !== currentRender) return;
       main.innerHTML = '';
-      main.append(h('div.banner.danger', [h('span.ico', '⛔'), h('div', [h('strong', 'Could not load this screen'), h('div.small', error.message)])]),
+      main.append(h('div.banner.danger', [h('span.ico', window.ProVeri.ui.icon('close', 18)), h('div', [h('strong', 'Could not load this screen'), h('div.small', error.message)])]),
         h('button.btn.ghost', { style: { marginTop: '12px' }, onclick: render }, 'Try again'));
     }
   }
@@ -116,7 +116,14 @@
     nav.querySelectorAll('button').forEach((button) => {
       button.classList.toggle('active', button.dataset.nav === active);
     });
+    // Mid-task screens carry their own primary action, so the + button steps
+    // aside instead of floating over a sticky bar.
+    const plus = document.getElementById('fab');
+    if (plus) plus.hidden = FOCUS_ROUTES.test(pathname);
   }
+
+  /** Routes where the floating + would sit on top of the screen's own buttons. */
+  const FOCUS_ROUTES = /^\/(work\/|order\/|booking\/|job\/|post-job|upload-work|pro\/|site\/|vehicle\/|checkout)/;
 
   nav.addEventListener('click', (event) => {
     const button = event.target.closest('button[data-nav]');
@@ -132,14 +139,14 @@
   if (fab) {
     fab.addEventListener('click', () => {
       const session = window.ProVeri.api.session();
-      const { h: make, sheet: openSheet } = window.ProVeri.ui;
+      const { h: make, sheet: openSheet, icon: ico } = window.ProVeri.ui;
       openSheet('What do you want to do?', make('div.col', { style: { gap: '10px' } }, [
         make('button.btn.block', {
           onclick: () => { window.ProVeri.ui.closeSheet(); navigate('/post-job'); },
-        }, '🛠️ I need work done — post a job'),
+        }, [ico('tool', 18), make('span', 'I need work done — post a job')]),
         make('button.btn.block.ghost', {
           onclick: () => { window.ProVeri.ui.closeSheet(); navigate(session && session.role === 'PRO' ? '/upload-work' : '/become-a-pro'); },
-        }, session && session.role === 'PRO' ? '📷 Upload work I have done' : '📷 I am a pro — publish my work'),
+        }, [ico('camera', 18), make('span', session && session.role === 'PRO' ? 'Upload work I have done' : 'I am a pro — publish my work')]),
         make('p.tiny.muted', 'Home owners reach out to pros through the work they publish. Every escrow-released job adds itself to your portfolio automatically.'),
       ]));
     });

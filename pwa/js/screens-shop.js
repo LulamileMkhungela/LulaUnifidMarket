@@ -20,7 +20,7 @@ window.ProVeri.screens = window.ProVeri.screens || {};
   'use strict';
   const { api } = window.ProVeri;
   const {
-    h, money, timeAgo, dateShort, stars, badge, trustBadge, toast, sheet, closeSheet,
+    h, money, timeAgo, dateShort, starRow, icon, photoImg, catIcon, badge, trustBadge, toast, sheet, closeSheet,
     loadingCards, empty, navigate, formValues, withButton, sectionHead,
   } = window.ProVeri.ui;
 
@@ -54,15 +54,15 @@ window.ProVeri.screens = window.ProVeri.screens || {};
     const src = photo?.dataUrl || photo?.url || null;
     if (src) {
       return h(`div.work-thumb.${size || 'card'}`, [
-        h('img', { src, alt: photo?.caption || item.title, loading: 'lazy' }),
-        photo?.illustrative ? h('span.thumb-note', 'Illustrative photo') : null,
+        photoImg(src, photo?.caption || item.title),
+        photo?.illustrative ? h('span.thumb-note', 'Demo photo') : null,
         h('span.thumb-tier', { class: item.verified === false ? 'plain' : 'proven' }, TIER_SHORT[item.tier] || ''),
       ]);
     }
     // No hosted image: this item's proof is a hash-sealed evidence record, and
     // showing a stock photo instead would be exactly the trick we police.
     return h(`div.work-thumb.sealed.${size || 'card'}`, [
-      h('span.seal-ico', item.tier === 'CLIENT_CONFIRMED' ? '🛡️' : '📸'),
+      h('span.seal-ico', icon(item.tier === 'CLIENT_CONFIRMED' ? 'shield' : 'camera', 20)),
       h('span.seal-title', item.categoryLabel || 'Trade work'),
       h('span.seal-line', [
         item.proSuburb || item.suburb || item.metro || 'South Africa',
@@ -78,20 +78,27 @@ window.ProVeri.screens = window.ProVeri.screens || {};
     return h('div.price', [h('strong', money(item.priceCents)), item.priceNote ? h('small', item.priceNote) : null]);
   }
 
-  /** One card in the grid — the whole decision a homeowner makes, in one glance. */
+  /**
+   * One card in the grid — the whole decision a home owner makes, in one
+   * glance: the picture, who did it, how they rate, where, what it cost, and
+   * whether ProVeri evidence stands behind it.
+   */
   function workCard(item) {
     return h('a.work-card', { href: `/work/${item.itemId}` }, [
       workThumb(item),
       h('div.work-body', [
         h('div.work-title', item.title),
-        priceTag(item),
         h('div.work-meta', [
-          h('span.who', `${item.proName || 'Pro'} ${item.proRating ? `· ${stars(item.proRating)}` : ''}`),
+          h('span.who', item.proName || 'A local pro'),
+          item.proRating ? starRow(item.proRating) : null,
+        ]),
+        h('div.work-meta', [
+          icon('pin', 12),
           h('span.where', item.proSuburb || item.suburb || item.metro || 'South Africa'),
         ]),
         h('div.work-foot', [
-          h('span.tier-pill', { class: item.verified ? 'proven' : 'plain' }, item.tierLabel),
-          item.enquiries ? h('span.tiny.muted', `${item.enquiries} enquiry${item.enquiries === 1 ? '' : 's'}`) : null,
+          priceTag(item),
+          item.enquiries ? h('span.tiny.muted', `${item.enquiries} reached out`) : null,
         ]),
       ]),
     ]);
@@ -114,6 +121,19 @@ window.ProVeri.screens = window.ProVeri.screens || {};
     return api.get(`/api/portfolio?${params.toString()}`);
   }
 
+  /**
+   * ~110 suburbs across 11 metros. Flat, that is a scroll marathon; grouped by
+   * metro it is a list a person can actually read on a phone.
+   */
+  function suburbOptions({ selectedId = '', withPostal = false } = {}) {
+    const metros = (api.state.bundle && api.state.bundle.catalog && api.state.bundle.catalog.metros) || [];
+    return metros.map((metro) => h('optgroup', { label: metro.name },
+      (metro.suburbs || []).map((suburb) => h('option', {
+        value: suburb.id,
+        selected: suburb.id === selectedId || undefined,
+      }, withPostal && suburb.postalCode ? `${suburb.name} (${suburb.postalCode})` : suburb.name))));
+  }
+
   async function categories() {
     try {
       return await api.get('/api/categories');
@@ -129,7 +149,7 @@ window.ProVeri.screens = window.ProVeri.screens || {};
         onsubmit(form.querySelector('input[name=q]').value.trim());
       },
     }, [
-      h('span.ico', '🔎'),
+      h('span.ico', icon('search', 19)),
       h('input', { type: 'search', name: 'q', value, placeholder, autocomplete: 'off' }),
       h('button.btn.sm', { type: 'submit' }, 'Search'),
     ]);
@@ -143,7 +163,7 @@ window.ProVeri.screens = window.ProVeri.screens || {};
   function signInGate(title, body, next) {
     return h('div.fade-in.stack', [
       h('div.card.accent', [
-        h('div.kicker', '👤🏾 One quick step'),
+        h('div.kicker', [icon('user', 14), 'One quick step']),
         h('h2', title),
         h('p.small', body),
         h('div.col', [
@@ -156,15 +176,13 @@ window.ProVeri.screens = window.ProVeri.screens || {};
   }
 
   function customerSignup(after) {
-    const bundle = api.state.bundle || {};
-    const suburbs = (bundle.catalog?.metros || []).flatMap((m) => m.suburbs || []);
     const form = h('form.stack', { onsubmit: submit }, [
       h('label.field', [h('span', 'Full name'), h('input', { type: 'text', name: 'fullName', required: true })]),
       h('label.field', [h('span', 'Email'), h('input', { type: 'email', name: 'email', required: true })]),
       h('label.field', [h('span', 'Mobile'), h('input', { type: 'tel', name: 'mobile', required: true, placeholder: '082 123 4567' })]),
       h('label.field', [h('span', 'Suburb'), h('select', { name: 'suburbId' }, [
         h('option', { value: '' }, 'Prefer not to say'),
-        ...suburbs.map((s) => h('option', { value: s.id }, `${s.name} (${s.postalCode || ''})`)),
+        ...suburbOptions({ withPostal: true }),
       ])]),
       h('button.btn.block', { type: 'submit' }, 'Create account'),
       h('p.tiny.muted', 'Email and mobile are confirmed with a one-time PIN. No card needed to browse or enquire.'),
@@ -198,23 +216,24 @@ window.ProVeri.screens = window.ProVeri.screens || {};
 
     root.append(h('section.home-head', [
       h('h1', ['Find someone who has ', h('em', 'already done this'), ' — near you.']),
-      h('p.sub', '📍 In South Africa, for South Africa 🇿🇦 · Connecting local businesses with home owners.'),
+      h('p.sub', '📍 In South Africa, for South Africa 🇿🇦 · Real jobs, real photos, real pros.'),
       searchBar({
         value: query.q || '',
         onsubmit: (q) => navigate(q ? `/browse?q=${encodeURIComponent(q)}` : '/browse'),
       }),
     ]));
 
-    /* categories */
-    const catWrap = h('div.chip-row.scroller', [h('div.skeleton.line', { style: { width: '70%' } })]);
+    /* the trades, as a thumb-reachable rail of circles */
+    const catWrap = h('div.cat-rail', [h('div.skeleton.line', { style: { width: '70%' } })]);
     root.append(h('section.section.tight', catWrap));
-    loadCategoryChips(catWrap, query.category);
+    loadCategoryRail(catWrap, query.category);
 
-    /* the feed */
+    /* one hero job, then the grid — proven work first, newest next */
+    const feat = h('div', [h('div.skeleton.card')]);
     const feedHead = sectionHead('Work done near you', 'See all', '/browse');
     const feed = h('div', [loadingCards(2)]);
-    root.append(h('section.section', [feedHead, feed]));
-    loadHomeFeed(feed, feedHead, query);
+    root.append(feat, h('section.section', [feedHead, feed]));
+    loadHomeFeed(feat, feed, feedHead, query);
 
     /* one honest line about what the feed is made of, then out of the way */
     const proof = h('div.trust-line', [h('div.skeleton.line', { style: { width: '80%' } })]);
@@ -223,52 +242,93 @@ window.ProVeri.screens = window.ProVeri.screens || {};
 
     /* the other side of the market, one card, no lecture */
     root.append(h('section.section', [
-      h('a.card.pad-sm.pro-cta', { href: '/upload-work' }, [
+      h('a.pro-cta', { href: '/upload-work' }, [
         h('div.grow', [
           h('div.t', 'Did the work? Put it here.'),
-          h('div.small.muted', 'Upload your past jobs and home owners reach out to you directly. Proven work gets a badge you cannot buy.'),
+          h('div.small', 'Upload your past jobs and home owners reach out to you directly. Proven work gets a badge you cannot buy.'),
         ]),
-        h('span.arrow', '→'),
+        h('span.arrow', icon('arrow', 20)),
       ]),
     ]));
 
     return root;
   };
 
-  async function loadCategoryChips(container, activeId) {
+  /** What a home owner types into a search bar most often, in that order. */
+  const RAIL_ORDER = [
+    'plumbing', 'electrical', 'painting', 'handyman', 'cleaning-home',
+    'gardening', 'solar-inverter', 'electric-fence-security', 'beauty-mobile',
+  ];
+
+  /** Trade picker: circles you can hit with a thumb, not a wall of text. */
+  async function loadCategoryRail(container, activeId) {
     container.innerHTML = '';
-    const cats = (await categories()).slice(0, 10);
-    container.append(...cats.map((c) => h('button.chip', {
+    const all = await categories();
+    const byId = new Map(all.map((c) => [c.id, c]));
+    const cats = [...RAIL_ORDER.map((id) => byId.get(id)).filter(Boolean),
+      ...all.filter((c) => !RAIL_ORDER.includes(c.id))].slice(0, 9);
+    container.append(...cats.map((c) => h('button.chip.cat-dot', {
       class: c.id === activeId ? 'active' : '',
       onclick: () => navigate(`/browse?category=${c.id}`),
-    }, [c.icon ? h('span.ico', c.icon) : null, h('span', c.label)])));
-    container.append(h('button.chip.ghost', { onclick: () => navigate('/browse') }, 'All work'));
+    }, [
+      h('span.ring', catIcon(c)),
+      h('span.lbl', c.label),
+    ])));
+    container.append(h('button.chip.cat-dot', { onclick: () => navigate('/browse') }, [
+      h('span.ring', icon('sparkle', 24)),
+      h('span.lbl', 'All work'),
+    ]));
   }
 
-  async function loadHomeFeed(container, head, query) {
+  /** The one job worth stopping for: a photo, a price, and who did it. */
+  function featuredCard(item) {
+    const photo = item.photo || item.photos?.[0] || null;
+    const src = photo?.dataUrl || photo?.url || null;
+    return h('a.feat-card', { href: `/work/${item.itemId}` }, [
+      src ? h('img', { src, alt: item.title, loading: 'lazy', decoding: 'async' }) : null,
+      h('div.scrim'),
+      h('div.over', [
+        h('div.kick', [icon(item.verified ? 'shield' : 'sparkle', 13), item.verified ? 'Proven on ProVeri' : 'Just uploaded']),
+        h('div.t', item.title),
+        h('div.m', [
+          h('span.money', item.priceCents == null ? 'Quote on request' : money(item.priceCents)),
+          h('span', `${item.proName || 'A local pro'} · ${item.proSuburb || item.suburb || item.metro || 'South Africa'}`),
+          item.proRating ? starRow(item.proRating) : null,
+        ]),
+      ]),
+    ]);
+  }
+
+  async function loadHomeFeed(featSlot, container, head, query) {
     try {
       // Proven work first, then the newest uploads — so the first screen shows
       // both what the badge is worth and what is arriving right now.
       const [provenWork, recentWork] = await Promise.all([
-        fetchFeed({ ...query, verified: true, sort: 'verified', limit: 4 }),
-        fetchFeed({ ...query, sort: 'recent', limit: 8 }),
+        fetchFeed({ ...query, verified: true, sort: 'verified', limit: 5 }),
+        fetchFeed({ ...query, sort: 'recent', limit: 9 }),
       ]);
       const seen = new Set(provenWork.map((i) => i.itemId));
-      const items = [...provenWork, ...recentWork.filter((i) => !seen.has(i.itemId))].slice(0, 6);
+      const items = [...provenWork, ...recentWork.filter((i) => !seen.has(i.itemId))];
+      const hero = items.find((i) => i.photo?.url || i.photo?.dataUrl) || items[0] || null;
+      const rest = items.filter((i) => i !== hero).slice(0, 6);
+
+      featSlot.innerHTML = '';
+      if (hero) featSlot.append(h('section.section.tight', featuredCard(hero)));
+
       container.innerHTML = '';
-      if (!items.length) {
+      if (!rest.length) {
         container.append(empty('🧰', 'No work posted here yet', 'Be the first: upload a job you have done and home owners in your area will find it.',
           h('button.btn', { onclick: () => navigate('/upload-work') }, 'Upload my work')));
         return;
       }
-      container.append(workGrid(items));
+      container.append(workGrid(rest));
       const proven = items.filter((i) => i.verified).length;
       head.querySelector('h2').textContent = proven === items.length
         ? 'Work done near you — all of it proven'
         : 'Work done near you';
     } catch (error) {
       container.innerHTML = '';
-      container.append(h('div.banner.danger', [h('span.ico', '⛔'), h('div', error.message)]));
+      container.append(h('div.banner.danger', [h('span.ico', icon('close', 16)), h('div', error.message)]));
     }
   }
 
@@ -307,7 +367,7 @@ window.ProVeri.screens = window.ProVeri.screens || {};
     };
 
     const root = h('div.fade-in.stack');
-    root.append(h('div.row.between', [h('h1', 'Browse work'), h('a.btn.sm.ghost', { href: '/find-a-pro' }, 'Browse pros instead')]));
+    root.append(h('h1', 'Browse work'));
     root.append(searchBar({
       value: state.q,
       placeholder: 'Search work: geyser, tiling, painting…',
@@ -316,21 +376,21 @@ window.ProVeri.screens = window.ProVeri.screens || {};
 
     const tierChips = h('div.chip-row', [
       h('button.chip', { class: 'active', onclick: (e) => pickTier(e, '') }, 'All work'),
-      h('button.chip', { onclick: (e) => pickTier(e, 'PROVEN') }, '✓ Proof of work'),
-      h('button.chip', { onclick: (e) => pickTier(e, 'CLIENT_CONFIRMED') }, '✓ Client confirmed'),
+      h('button.chip', { onclick: (e) => pickTier(e, 'PROVEN') }, [icon('shield', 14), h('span', 'Proof of work')]),
+      h('button.chip', { onclick: (e) => pickTier(e, 'CLIENT_CONFIRMED') }, [icon('star', 14), h('span', 'Client confirmed')]),
+      h('button.chip.ghost', { onclick: () => navigate('/find-a-pro') }, [icon('user', 14), h('span', 'Browse pros')]),
     ]);
     root.append(tierChips);
 
     const cats = await categories();
-    const suburbs = (api.state.bundle?.catalog?.metros || []).flatMap((m) => m.suburbs || []);
     const filters = h('div.filters', [
       h('label.field', [h('span', 'Category'), h('select', { name: 'categoryId', onchange: (e) => { state.categoryId = e.target.value; syncUrl(); refresh(); } }, [
         h('option', { value: '' }, 'All categories'),
-        ...cats.map((c) => h('option', { value: c.id, selected: c.id === state.categoryId }, `${c.icon || ''} ${c.label}`)),
+        ...cats.map((c) => h('option', { value: c.id, selected: c.id === state.categoryId }, `${catIcon(c)} ${c.label}`)),
       ])]),
       h('label.field', [h('span', 'Suburb'), h('select', { name: 'suburbId', onchange: (e) => { state.suburbId = e.target.value; syncUrl(); refresh(); } }, [
         h('option', { value: '' }, 'Anywhere in SA'),
-        ...suburbs.map((s) => h('option', { value: s.id, selected: s.id === state.suburbId }, s.name)),
+        ...suburbOptions({ selectedId: state.suburbId }),
       ])]),
       h('label.field', [h('span', 'Sort'), h('select', { name: 'sort', onchange: (e) => { state.sort = e.target.value; syncUrl(); refresh(); } }, [
         h('option', { value: 'verified', selected: state.sort === 'verified' }, 'Most proven first'),
@@ -377,14 +437,14 @@ window.ProVeri.screens = window.ProVeri.screens || {};
           ? `${items.length} piece${items.length === 1 ? '' : 's'} of work · ${items.filter((i) => i.verified).length} proven on ProVeri`
           : '';
         if (!items.length) {
-          list.append(empty('🔎', 'Nothing matches that yet', 'Try a different suburb or category — or post the job you need and let verified pros come to you.',
+          list.append(empty('🔎', 'Nothing matches that yet', 'Try a different suburb or trade — or post the job you need and let verified pros come to you.',
             h('button.btn', { onclick: () => navigate('/post-job') }, 'Post my job')));
           return;
         }
         list.append(workGrid(items));
       } catch (error) {
         list.innerHTML = '';
-        list.append(h('div.banner.danger', [h('span.ico', '⛔'), h('div', error.message)]));
+        list.append(h('div.banner.danger', [h('span.ico', icon('close', 16)), h('div', error.message)]));
       }
     }
   };
@@ -408,10 +468,10 @@ window.ProVeri.screens = window.ProVeri.screens || {};
         ? h('figure.photo', [
           h('img', { src, alt: photo.caption || `${item.title} photo ${index + 1}` }),
           photo.caption ? h('figcaption', photo.caption) : null,
-          photo.illustrative ? h('span.thumb-note', 'Illustrative photo') : null,
+          photo.illustrative ? h('span.thumb-note', 'Demo photo') : null,
         ])
         : h('figure.photo.sealed', [
-          h('span.seal-ico', '🛡️'),
+          h('span.seal-ico', icon('shield', 28)),
           h('figcaption', [
             h('div', photo.caption || 'Proof of work'),
             h('code', `seal ${(photo.seal || '').slice(0, 12)}`),
@@ -425,9 +485,9 @@ window.ProVeri.screens = window.ProVeri.screens || {};
     root.append(h('section.section.tight', [
       h('div.row.between.wrap', { style: { gap: '8px' } }, [
         h('span.tier-pill.big', { class: item.verified ? 'proven' : 'plain' }, [
-          item.verified ? '✓ ' : '', item.tierLabel,
+          item.verified ? icon('check', 13) : null, item.tierLabel,
         ]),
-        item.rating ? h('span.tiny.muted', `${stars(item.rating)} client rating`) : null,
+        item.rating ? starRow(item.rating) : null,
       ]),
       h('h1', item.title),
       item.description ? h('p', item.description) : null,
@@ -443,7 +503,7 @@ window.ProVeri.screens = window.ProVeri.screens || {};
     /* what the badge means, in the tier's own words */
     root.append(h('section.section.tight', [
       h('div.verify-card', { class: item.verified ? 'proven' : 'plain' }, [
-        h('div.kicker', item.verified ? '🛡️ Why this is verified' : '📷 What this is'),
+        h('div.kicker', [icon(item.verified ? 'shield' : 'camera', 14), item.verified ? 'Why this is verified' : 'What this is']),
         h('ul', item.verification.lines.map((line) => h('li', line))),
         item.ledgerSeal ? h('code.seal', `Ledger seal ${String(item.ledgerSeal).slice(0, 16)}`) : null,
       ]),
@@ -457,16 +517,16 @@ window.ProVeri.screens = window.ProVeri.screens || {};
           h('div.grow', [
             h('div.t', item.pro.name),
             h('div.small.muted', [
-              item.pro.rating ? `${stars(item.pro.rating)} ` : '',
               `${item.pro.completedJobs || 0} jobs completed`,
               item.pro.suburb ? ` · ${item.pro.suburb}` : '',
             ]),
-            h('div.row', { style: { gap: '6px', marginTop: '6px' } }, [
+            h('div.row', { style: { gap: '8px', marginTop: '7px', alignItems: 'center' } }, [
+              item.pro.rating ? starRow(item.pro.rating) : null,
               trustBadge(item.pro.badge, item.pro.trustScore),
               item.pro.instantBook ? badge('instant book', 'info') : null,
             ]),
           ]),
-          h('span.arrow', '→'),
+          h('span.arrow', icon('chevron', 18)),
         ]),
       ]));
     }
@@ -478,11 +538,13 @@ window.ProVeri.screens = window.ProVeri.screens || {};
 
     /* actions */
     root.append(h('div.cta-bar', [
-      h('button.btn.ghost.grow', { onclick: () => openEnquiry(item) }, '💬 Message about this'),
-      h('button.btn.grow', { onclick: () => hireFrom(item) }, '🛠️ Hire for my job'),
+      h('button.btn.ghost.grow', { onclick: () => openEnquiry(item) }, [icon('chat', 17), h('span', 'Message about this')]),
+      h('button.btn.grow', { onclick: () => hireFrom(item) }, [icon('tool', 17), h('span', 'Hire for my job')]),
     ]));
     root.append(h('div.row.between.tiny.muted', { style: { padding: '0 4px 24px' } }, [
-      h('span', `${item.enquiries || 0} homeowner${(item.enquiries || 0) === 1 ? ' has' : 's have'} reached out`),
+      h('span', item.enquiries
+        ? `${item.enquiries} homeowner${item.enquiries === 1 ? ' has' : 's have'} reached out`
+        : 'Be the first to reach out'),
       h('button.btn.link.tiny', { onclick: () => reportItem(item) }, 'Report this work'),
     ]));
 
@@ -554,7 +616,7 @@ window.ProVeri.screens = window.ProVeri.screens || {};
       return;
     }
     const form = h('form.stack', { onsubmit: submit }, [
-      h('div.banner.info', [h('span.ico', '💬'), h('div', [
+      h('div.banner.info', [h('span.ico', icon('chat', 18)), h('div', [
         h('strong', `Message ${item.pro?.name || 'this pro'} about “${item.title}”`),
         h('div.small', 'Say what you need and where. They reply here — no WhatsApp numbers exchanged, so the record stays on ProVeri.'),
       ])]),
@@ -584,11 +646,11 @@ window.ProVeri.screens = window.ProVeri.screens || {};
 
   const TRACK = [
     { key: 'POSTED', label: 'Posted' },
-    { key: 'BOOKED', label: 'Pro booked' },
-    { key: 'ESCROW', label: 'Money in escrow' },
+    { key: 'BOOKED', label: 'Booked' },
+    { key: 'ESCROW', label: 'In escrow' },
     { key: 'WORKING', label: 'Work done' },
-    { key: 'CONFIRMED', label: 'You confirmed' },
-    { key: 'PAID', label: 'Pro paid' },
+    { key: 'CONFIRMED', label: 'Confirmed' },
+    { key: 'PAID', label: 'Paid out' },
   ];
   const STAGE_OF = {
     NEW: 0, OPEN: 0, BIDDING: 0, EXPIRED: -1, MATCHED: 1, AWARDED: 1, AWAITING_PAYMENT: 1, SCHEDULED: 2, EN_ROUTE: 3, ON_SITE: 3, IN_PROGRESS: 3,
@@ -686,7 +748,7 @@ window.ProVeri.screens = window.ProVeri.screens || {};
         container.append(workGrid(uploads.slice(0, 8)));
         const thin = uploads.filter((u) => !u.verified);
         if (thin.length) {
-          container.append(h('div.banner.info', [h('span.ico', '📷'), h('div', [
+          container.append(h('div.banner.info', [h('span.ico', icon('camera', 18)), h('div', [
             h('strong', `${thin.length} upload${thin.length === 1 ? '' : 's'} have no proof behind them yet`),
             h('div.small', 'That is allowed — they are labelled “Uploaded by the pro”. Link one to a ProVeri job and it earns the badge automatically.'),
           ])]));
@@ -698,34 +760,66 @@ window.ProVeri.screens = window.ProVeri.screens || {};
   /** Order tracking — the ecommerce-shaped view of a booking. */
   screens['/order/:bookingId'] = async function orderDetail({ params }) {
     const booking = await api.get(`/api/bookings/${params.bookingId}`);
+    // The list rows are flattened; the full record nests the money under
+    // price / escrow / payout, so read it from where it actually lives.
+    const price = booking.price || {};
+    const escrow = booking.escrow || {};
+    const fees = escrow.fees || {};
+    const payout = booking.payout || null;
+    const warranty = booking.warranty || null;
+    const total = price.totalCents ?? booking.totalCents ?? escrow.amountCents ?? 0;
+    const released = payout ? payout.amountCents : 0;
+    const holdback = payout ? (payout.holdbackCents || 0) : (fees.warrantyHoldbackCents || 0);
+    const platformFee = payout ? (payout.platformFeeCents || 0) : (fees.platformFeeCents || 0);
+    const stillHeld = Math.max(0, total - released - holdback - platformFee);
+    const suburb = booking.address?.suburb || booking.suburb || '';
+    const status = String(booking.status || '').replace(/_/g, ' ');
+
     const root = h('div.fade-in.stack');
     root.append(h('a.btn.link', { href: '/orders' }, '← Orders'));
     root.append(h('div.card.accent', [
-      h('div.kicker', `Order ${booking.reference}`),
+      h('div.kicker', [icon('receipt', 14), `Order ${booking.reference}`]),
       h('h1', booking.title),
       h('div.row.between.wrap', { style: { gap: '8px' } }, [
-        h('span.money.big', money(booking.totalCents)),
-        badge(booking.status, booking.status === 'DISPUTED' ? 'danger' : booking.status === 'CLOSED' ? 'ok' : 'info'),
+        h('span.money.big', money(total)),
+        badge(status, booking.status === 'DISPUTED' ? 'danger' : booking.status === 'CLOSED' ? 'ok' : 'info'),
       ]),
-      h('p.small.muted', `${booking.categoryLabel} · ${booking.suburb || ''} · ${booking.proName || ''}`),
+      h('p.small.muted', [booking.categoryLabel, suburb, booking.proName].filter(Boolean).join(' · ')),
       h('div', { style: { marginTop: '12px' } }, tracker(booking.status)),
     ]));
 
     root.append(h('section.section', [
       h('h2', 'Where your money is'),
       h('div.card.pad-sm', [
-        moneyLine('Held in escrow', booking.escrowStatus === 'HELD' || booking.escrowStatus === 'PARTIALLY_RELEASED' ? money(booking.totalCents) : '—'),
-        moneyLine('Released to the pro', booking.escrowStatus === 'RELEASED' || booking.escrowStatus === 'PARTIALLY_RELEASED' ? money(booking.totalCents) : 'R0'),
-        moneyLine('Warranty holdback (14 days)', booking.status === 'IN_WARRANTY' ? 'held until the warranty closes' : '—'),
+        moneyLine('Total for this job', money(total)),
+        stillHeld > 0 ? moneyLine('Held in escrow', money(stillHeld)) : null,
+        released > 0 ? moneyLine('Released to the pro', money(released)) : null,
+        holdback > 0
+          ? moneyLine(`Warranty holdback (${warranty?.days || 14} days)`,
+            warranty?.endsAt ? `${money(holdback)} · until ${dateShort(warranty.endsAt)}` : money(holdback))
+          : null,
+        platformFee > 0 ? moneyLine('ProVeri fee (10%)', money(platformFee)) : null,
+        h('p.tiny.muted', [
+          escrow.provider ? `Held by ${escrow.provider}` : '',
+          escrow.autoReleaseAt ? `auto-releases ${dateShort(escrow.autoReleaseAt)} if you do nothing` : '',
+        ].filter(Boolean).join(' · ') || 'Money is held until you confirm the work.'),
+        price.priceAssessment?.headline ? h('p.tiny.muted', `Market check: ${price.priceAssessment.headline}.`) : null,
         h('p.tiny.muted', 'Nobody is paid before you confirm the work. If a photo was taken away from your address, the payout is held.'),
       ]),
     ]));
 
-    if (booking.evidenceCount || booking.evidence?.length) {
+    const evidence = booking.evidence || [];
+    const evidenceCount = evidence.length || booking.evidenceCount || 0;
+    if (evidenceCount) {
+      const geoVerified = evidence.filter((item) => item.geoVerified).length;
       root.append(h('section.section', [
         h('h2', 'Proof of work'),
         h('div.card.pad-sm', [
-          h('div.small', `${booking.evidenceCount || booking.evidence.length} sealed record(s) — geotagged photos and any certificate required for this trade.`),
+          h('div.small', [
+            `${evidenceCount} sealed record${evidenceCount === 1 ? '' : 's'}`,
+            geoVerified ? `${geoVerified} captured at the job address` : '',
+            'geotagged photos and any certificate this trade requires.',
+          ].filter(Boolean).join(' · ')),
           h('div.row', { style: { gap: '8px', marginTop: '10px' } }, [
             h('a.btn.sm', { href: `/booking/${booking.bookingId}` }, 'Open the full record'),
             h('a.btn.sm.ghost', { href: `/proof/${booking.bookingId}` }, 'See the ledger proof'),
@@ -735,10 +829,10 @@ window.ProVeri.screens = window.ProVeri.screens || {};
     }
 
     root.append(h('div.cta-bar', [
-      h('a.btn.ghost.grow', { href: `/booking/${booking.bookingId}` }, 'Full booking record'),
+      h('a.btn.ghost.grow', { href: `/booking/${booking.bookingId}` }, [icon('shield', 17), h('span', 'Full record')]),
       booking.status === 'AWAITING_CONFIRMATION'
-        ? h('button.btn.grow', { onclick: () => navigate(`/booking/${booking.bookingId}`) }, 'Confirm the work')
-        : h('a.btn.grow', { href: `/pro/${booking.proId}` }, 'See their other work'),
+        ? h('button.btn.grow', { onclick: () => navigate(`/booking/${booking.bookingId}`) }, [icon('check', 17), h('span', 'Confirm the work')])
+        : h('a.btn.grow', { href: `/pro/${booking.proId}` }, [icon('camera', 17), h('span', 'Their other work')]),
     ]));
     return root;
   };
@@ -816,7 +910,7 @@ window.ProVeri.screens = window.ProVeri.screens || {};
           onchange: (event) => { state.categoryId = event.target.value; },
         }, [
           h('option', { value: '' }, 'Auto-detect from my description'),
-          ...cats.map((c) => h('option', { value: c.id, selected: c.id === state.categoryId }, `${c.icon || ''} ${c.label}`)),
+          ...cats.map((c) => h('option', { value: c.id, selected: c.id === state.categoryId }, `${catIcon(c)} ${c.label}`)),
         ])]),
         h('div.row.end', [h('button.btn', { onclick: () => { if (!requireDescription()) return; state.step = 2; paint(); } }, 'Next →')]),
       ]);
@@ -963,10 +1057,9 @@ window.ProVeri.screens = window.ProVeri.screens || {};
     }
 
     const cats = await categories();
-    const suburbs = (api.state.bundle?.catalog?.metros || []).flatMap((m) => m.suburbs || []);
     const root = h('div.fade-in.stack');
     root.append(h('h1', 'Upload your work'));
-    root.append(h('div.banner.info', [h('span.ico', '📷'), h('div', [
+    root.append(h('div.banner.info', [h('span.ico', icon('camera', 18)), h('div', [
       h('strong', 'What you upload is what home owners judge you on'),
       h('div.small', 'Photos are sealed with a hash the moment you upload them. If a photo already belongs to another pro, the upload is refused. Link a ProVeri job and the item earns “Proof of work” — a badge nobody can buy.'),
     ])]));
@@ -974,20 +1067,27 @@ window.ProVeri.screens = window.ProVeri.screens || {};
     const photos = [];
     const previews = h('div.photo-previews', [h('span.tiny.muted', 'No photos yet')]);
     const form = h('form.card.stack', { onsubmit: submit }, [
-      h('label.field', [h('span', 'Photos of the finished job'), h('input', {
-        type: 'file', name: 'photos', accept: 'image/*', multiple: true, onchange: (event) => readPhotos(event.target.files),
-      }), h('div.hint', 'Up to 8. Real photos of your own work — no stock images, no somebody else’s job.')]),
+      h('label.dropzone', [
+        icon('camera', 26),
+        h('div.t', 'Tap to add photos of the finished job'),
+        h('div.small', 'Up to 8. Real photos of your own work — no stock images, no somebody else’s job. Each one is sealed with a hash as it lands.'),
+        h('input', {
+          type: 'file', name: 'photos', accept: 'image/*', multiple: true,
+          style: { position: 'absolute', width: '1px', height: '1px', opacity: '0', pointerEvents: 'none' },
+          onchange: (event) => readPhotos(event.target.files),
+        }),
+      ]),
       previews,
       h('label.field', [h('span', 'What was the job?'), h('input', { type: 'text', name: 'title', required: true, placeholder: 'e.g. 150L geyser replacement, tray and overflow redone' })]),
       h('label.field', [h('span', 'What did you actually do?'), h('textarea', { name: 'description', rows: 3, placeholder: 'Materials, what was broken, what you fixed, any certificate issued.' })]),
       h('div.form-grid', [
         h('label.field', [h('span', 'Trade'), h('select', { name: 'categoryId' }, [
           h('option', { value: '' }, 'My main trade'),
-          ...cats.map((c) => h('option', { value: c.id }, `${c.icon || ''} ${c.label}`)),
+          ...cats.map((c) => h('option', { value: c.id }, `${catIcon(c)} ${c.label}`)),
         ])]),
         h('label.field', [h('span', 'Suburb'), h('select', { name: 'suburbId' }, [
           h('option', { value: '' }, 'Where was this?'),
-          ...suburbs.map((s) => h('option', { value: s.id }, s.name)),
+          ...suburbOptions(),
         ])]),
       ]),
       h('div.form-grid', [
@@ -1071,7 +1171,7 @@ window.ProVeri.screens = window.ProVeri.screens || {};
       ]))));
     } catch (error) {
       container.innerHTML = '';
-      container.append(h('div.banner.danger', [h('span.ico', '⛔'), h('div', error.message)]));
+      container.append(h('div.banner.danger', [h('span.ico', icon('close', 16)), h('div', error.message)]));
     }
 
     async function remove(button, item) {
@@ -1095,9 +1195,9 @@ window.ProVeri.screens = window.ProVeri.screens || {};
       root.append(h('h1', 'You'));
       root.append(signInGate('Sign in to ProVeri', 'One account for both sides of the market: hire someone, or publish your work and get found.'));
       root.append(h('section.section', [h('h2', 'Or just look around'), h('div.list', [
-        tile('🔎', 'Browse work near you', 'Real jobs done by real pros', '/browse'),
-        tile('🛡️', 'Trust & transparency', 'Every check, its source and the ledger', '/trust'),
-        tile('🚗', 'Verified vehicles', 'The second vertical, live in beta', '/vehicles'),
+        tile('search', 'Browse work near you', 'Real jobs done by real pros', '/browse'),
+        tile('shield', 'Trust & transparency', 'Every check, its source and the ledger', '/trust'),
+        tile('car', 'Verified vehicles', 'The second vertical, live in beta', '/vehicles'),
       ])]));
       return root;
     }
@@ -1120,30 +1220,30 @@ window.ProVeri.screens = window.ProVeri.screens || {};
     ]));
 
     root.append(h('section.section', [h('h2', 'My activity'), h('div.list', [
-      tile('🧾', 'Orders & bookings', 'Jobs, escrow, proof of work', '/orders'),
-      session.role === 'PRO' ? tile('📷', 'Upload my work', 'Publish a job you have done', '/upload-work') : tile('🔎', 'Browse work', 'Find a pro by what they have done', '/browse'),
-      tile('🔔', 'Notifications', 'Bids, messages and payout releases', '/notifications'),
-      session.role === 'PRO' ? tile('💰', 'Wallet & earnings', 'Balance, holdbacks, SARS summary', '/wallet') : null,
+      tile('receipt', 'Orders & bookings', 'Jobs, escrow, proof of work', '/orders'),
+      session.role === 'PRO' ? tile('camera', 'Upload my work', 'Publish a job you have done', '/upload-work') : tile('search', 'Browse work', 'Find a pro by what they have done', '/browse'),
+      tile('bell', 'Notifications', 'Bids, messages and payout releases', '/notifications'),
+      session.role === 'PRO' ? tile('wallet', 'Wallet & earnings', 'Balance, holdbacks, SARS summary', '/wallet') : null,
     ])]));
 
     root.append(h('section.section', [h('h2', 'Your record'), h('div.list', [
-      tile('👤🏾', 'Profile', 'Details, verification, documents', '/profile'),
-      tile('🛡️', 'Trust & proof', 'The ledger, the rules, the receipts', '/trust'),
-      tile('🔗', 'Data & integrations', 'What is live, what is simulated', '/integrations'),
+      tile('user', 'Profile', 'Details, verification, documents', '/profile'),
+      tile('shield', 'Trust & proof', 'The ledger, the rules, the receipts', '/trust'),
+      tile('link', 'Data & integrations', 'What is live, what is simulated', '/integrations'),
     ])]));
 
     root.append(h('section.section', [h('h2', 'Grow your business'), h('div.list', [
-      tile('🧰', 'Become a verified pro', 'KYC, trade certificate, bank check', '/become-a-pro'),
-      tile('🖥️', 'Web Studio', 'A free data-bound microsite', '/web-studio'),
-      tile('🏪', 'Business Site Studio', 'A full website with no dead buttons', '/business-studio'),
-      tile('📇', 'Sales desk', 'The pipeline behind the studio', '/sales-desk'),
-      tile('🚗', 'Verified vehicles', 'Buy and sell with checks', '/vehicles'),
-      tile('🏠', 'Property (coming soon)', 'Why it is not live, and the waitlist', '/property'),
-      tile('🧑🏾‍⚖️', 'Trust desk (admin)', 'Disputes, flags, risk', '/admin'),
+      tile('tool', 'Become a verified pro', 'KYC, trade certificate, bank check', '/become-a-pro'),
+      tile('globe', 'Web Studio', 'A free data-bound microsite', '/web-studio'),
+      tile('store', 'Business Site Studio', 'A full website with no dead buttons', '/business-studio'),
+      tile('briefcase', 'Sales desk', 'The pipeline behind the studio', '/sales-desk'),
+      tile('car', 'Verified vehicles', 'Buy and sell with checks', '/vehicles'),
+      tile('home', 'Property (coming soon)', 'Why it is not live, and the waitlist', '/property'),
+      tile('scale', 'Trust desk (admin)', 'Disputes, flags, risk', '/admin'),
     ])]));
 
     root.append(h('div.row.wrap', { style: { gap: '8px', padding: '8px 0 28px' } }, [
-      h('button.btn.ghost.sm', { onclick: (event) => withButton(event.currentTarget, () => window.ProVeri.install()) }, '📲 Install the app'),
+      h('button.btn.ghost.sm', { onclick: (event) => withButton(event.currentTarget, () => window.ProVeri.install()) }, [icon('install', 16), h('span', 'Install the app')]),
       h('button.btn.ghost.sm', {
         onclick: () => {
           api.setSession(null);
@@ -1155,11 +1255,11 @@ window.ProVeri.screens = window.ProVeri.screens || {};
 
     return root;
 
-    function tile(icon, title, body, href) {
+    function tile(name, title, body, href) {
       return h('a.tile', { href }, [
-        h('span.lead', icon),
+        h('span.lead', icon(name, 21)),
         h('div.grow', [h('div.t', title), h('div.d', body)]),
-        h('span.arrow', '→'),
+        h('span.arrow', icon('chevron', 18)),
       ]);
     }
   };

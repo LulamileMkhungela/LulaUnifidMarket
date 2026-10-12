@@ -76,12 +76,26 @@ time, geolocation, distance from the job address, seal. There is no picture to
 serve, and putting a stock photo next to a "Proof of work" badge would be exactly
 the deception the tiers exist to prevent.
 
-So the card renders a *sealed-evidence tile* instead: the trade, the suburb, the
-date, the seal prefix and the tier. It is visibly different from a photograph,
-and it is more informative than one. Uploaded photos render as photographs, and
-any image that is not the pro's own client work (including the five demo images
-in `pwa/img/work/`) carries an **Illustrative photo** chip — the same labelling
-discipline as WEB-003 for generated site assets.
+So the card renders a *sealed-evidence tile* instead: a dark, gold-accented
+receipt showing the trade, the suburb, the date, the seal prefix and the tier. It
+is visibly different from a photograph, and it is more informative than one.
+Uploaded photos render as photographs, and any image that is not the pro's own
+client work (including the fifteen demo images in `pwa/img/work/`) carries a
+**Demo photo** chip — the same labelling discipline as WEB-003 for generated site
+assets. One seeded upload (Anwar Patel's DB board) deliberately has no image at
+all, so the sealed tile is never dead code, and `pwa-screens.test.js` asserts both
+halves of that: a self-declared item with imagery says **Demo photo**, and one
+without imagery shows `.photo.sealed` and never borrows a demo picture.
+
+**Serving them.** Each hosted photo has a 480 px `.thumb.jpg` sibling (ImageMagick,
+q70, metadata stripped): 380 KB for all fifteen, against 1.9 MB of full frames.
+`ui.thumb(url)` swaps `/img/work/x.jpg` for `/img/work/x.thumb.jpg`, and
+`ui.photoImg()` renders a lazy `<img>` carrying `data-full` plus an `onerror`
+handler that restores the full frame if the thumbnail is missing — so a grid of
+twelve jobs costs roughly 250 KB on a phone instead of 2 MB, and a forgotten
+thumbnail degrades to a slower image rather than a broken one. Hero cards and
+product pages use the full frame; the service worker cache-firsts both, so the
+shelf still renders offline after one visit.
 
 ## 4. The reach-out loop
 
@@ -109,11 +123,42 @@ is a brochure. This is a shop:
 
 | Tab | Route | What is on it |
 | --- | --- | --- |
-| **Home** | `/` | Search box, category chips, six pieces of work (proven first, then the newest uploads), one honest line about how much of the feed is proven, one card for the pro side. |
-| **Browse** | `/browse` | The full shelf: search, tier chips (All / Proof of work / Client confirmed), category, suburb and sort filters, result count that names how many items are proven. |
-| **Orders** | `/orders` | Jobs I posted, bookings, and (for pros) work I uploaded — each with a six-step escrow tracker. `/order/:bookingId` is the order-tracking page: where the money is, the proof of work, the next action. |
+| **Home** | `/` | One line of copy, a pill search bar, a trade rail of nine circles (ordered by what home owners actually search for), one full-bleed **hero job** with its photo, price, pro and gold star rating, then six cards (proven first, newest next), one honest line about how much of the feed is proven, and one card for the pro side. |
+| **Browse** | `/browse` | The full shelf: search, tier chips (All / Proof of work / Client confirmed / Browse pros), category, suburb and sort filters — suburbs grouped by metro in `<optgroup>`s, because 110 flat options is a scroll marathon — and a result count that names how many items are proven. |
+| **Orders** | `/orders` | Jobs I posted, bookings, and (for pros) work I uploaded — each with a six-step escrow tracker (Posted · Booked · In escrow · Work done · Confirmed · Paid out). `/order/:bookingId` is the order-tracking page: a receipt for the money, the proof of work, the next action. |
 | **You** | `/me` | Profile, role switch, wallet, notifications, trust and proof, integrations, become-a-pro, Web Studio, Business Site Studio, sales desk, vehicles, property waitlist, trust desk, install, sign out. |
-| **＋** | FAB | Two choices, one for each side of the market: *post a job* or *upload work I have done*. |
+| **＋** | FAB | Two choices, one for each side of the market: *post a job* or *upload work I have done*. It sits in a notch cut into the tab bar and hides itself on screens that already carry their own action bar (`FOCUS_ROUTES` in `js/app.js`), so it never floats over a sticky button. |
+
+### 5.1 The design system behind it
+
+The first cut of this storefront was rejected as unusable, so the chrome was
+rebuilt rather than repainted:
+
+- **No emoji in the chrome.** `ui.icon(name, size)` renders inline 24-grid stroke
+  SVGs (`ICON_PATHS`: home, search, receipt, user, plus, star, shield, camera,
+  pin, chat, chevron, bell, close, check, arrow, wallet, upload, sparkle, filter,
+  tool, car, globe, store, briefcase, link, scale, install). The header, tab bar,
+  FAB, tiles, chips, banners, kickers and action bar all use it. Emoji survive
+  only where they *are* the content: the trade rail glyphs (`ui.catIcon()`, one
+  distinct glyph per trade — the catalogue's own icons repeat, four trades share a
+  sponge) and the friendly illustration in an empty state.
+- **One badge per fact.** The tier is named once, on the photo; the card body
+  carries who did it, their gold half-star rating (`ui.starRow()`), where, and the
+  price. The first cut said "Proof of work" twice on every card.
+- **Glass chrome, solid content.** Sticky header and fixed tab bar are translucent
+  with `backdrop-filter`; cards are opaque with a two-layer shadow. Light and dark
+  palettes come from the same tokens (`--brand-*` veld green, `--gold-*` accent),
+  and `theme-color` follows the scheme so Android's URL bar matches the header.
+- **Money reads as a receipt.** `/order/:bookingId` takes the total from
+  `booking.price.totalCents`, the release from `booking.payout`, the holdback from
+  `booking.warranty`, the fee from `escrow.fees`, and prints only the lines that
+  apply — plus the market-band verdict and the auto-release date. The list rows
+  are flattened (`totalCents`, `suburb`) while the detail record is nested
+  (`price.totalCents`, `address.suburb`); reading the wrong shape rendered "—"
+  where money belongs, and the test suite now asserts the formatted total appears
+  on the page.
+- **Cache version `proveri-v4`**, so phones pick the redesign up instead of
+  serving the rejected shell from cache.
 
 Product pages:
 

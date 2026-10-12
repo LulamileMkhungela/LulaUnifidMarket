@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Lula ProVeri — Real work near you. Verified pros. Escrow-protected money.</title>
   <meta name="description" content="📍 In South Africa, for South Africa 🇿🇦 · Connecting local businesses with home owners. Browse real work pros have done near you, message them about it, and pay into escrow until you confirm the job is done. Reshaping the future of employment.">
-  <meta name="theme-color" content="#0E7C5A">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0d1512" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
@@ -29,25 +30,25 @@
   <div id="app-shell">
     <header id="app-header">
       <a class="brand" href="/" data-link>
-        <img src="/icons/icon-192.png" alt="" width="30" height="30">
-        <span>Lula ProVeri<small>🇿🇦 Local businesses · Home owners</small></span>
+        <img src="/icons/icon-192.png" alt="" width="32" height="32">
+        <span>Lula ProVeri<small>South Africa · real work, real pros</small></span>
       </a>
       <span class="spacer"></span>
       <span id="conn-pill" class="conn" title="Connectivity">●</span>
-      <button class="head-btn" id="btn-notifications" aria-label="Notifications" title="Notifications">🔔<span class="dot" id="notif-dot" hidden></span></button>
-      <button class="head-btn" id="btn-profile" aria-label="Profile and settings" title="Profile">👤🏾</button>
+      <button class="head-btn" id="btn-notifications" aria-label="Notifications" title="Notifications"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.4 9.6a5.6 5.6 0 1 1 11.2 0c0 4.6 1.8 5.8 1.8 5.8H4.6s1.8-1.2 1.8-5.8"/><path d="M10.2 19.4a1.9 1.9 0 0 0 3.6 0"/></svg><span class="dot" id="notif-dot" hidden></span></button>
+      <button class="head-btn" id="btn-profile" aria-label="You" title="You"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8.2" r="3.8"/><path d="M4.6 20.4c1.4-3.7 4.4-5.6 7.4-5.6s6 1.9 7.4 5.6"/></svg></button>
     </header>
 
     <main id="app-main" role="main" aria-live="polite"></main>
 
     <nav id="app-nav" aria-label="Primary">
-      <button data-nav="/" aria-label="Home"><span class="ico">🏠</span>Home</button>
-      <button data-nav="/browse" aria-label="Browse work near you"><span class="ico">🔎</span>Browse</button>
+      <button data-nav="/" aria-label="Home"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 10.6 12 3.4l8.5 7.2"/><path d="M5.6 9.4V20a1 1 0 0 0 1 1h10.8a1 1 0 0 0 1-1V9.4"/></svg></span>Home</button>
+      <button data-nav="/browse" aria-label="Browse work near you"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.6"/><path d="m16 16 4.6 4.6"/></svg></span>Browse</button>
       <span class="fab-slot" aria-hidden="true"></span>
-      <button data-nav="/orders" aria-label="My orders and jobs"><span class="ico">🧾</span>Orders</button>
-      <button data-nav="/me" aria-label="You"><span class="ico">👤🏾</span>You</button>
+      <button data-nav="/orders" aria-label="My orders and jobs"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 3h11v18l-1.9-1.4L13.7 21l-1.7-1.4L10.3 21l-1.9-1.4L6.5 21Z"/><path d="M9.5 8h5M9.5 12h5"/></svg></span>Orders</button>
+      <button data-nav="/me" aria-label="You"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.2" r="3.8"/><path d="M4.6 20.4c1.4-3.7 4.4-5.6 7.4-5.6s6 1.9 7.4 5.6"/></svg></span>You</button>
     </nav>
-    <button id="fab" aria-label="Post a job or upload your work" title="Post a job or upload your work">＋</button>
+    <button id="fab" aria-label="Post a job or upload your work" title="Post a job or upload your work"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5.5v13M5.5 12h13"/></svg></button>
   </div>
 
   <div id="sheet-backdrop"></div>
