@@ -72,6 +72,32 @@
   }
 }
 
+/* ---------------- resets & document ---------------- */
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--ink-900);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+}
+[hidden] { display: none !important; }
+img, svg { display: block; max-width: 100%; }
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: var(--brand-700); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* the shop's links are cards, not hypertext */
+a.work-card:hover, a.tile:hover, a.feat-card:hover, a.pro-cta:hover,
+a.pro-row:hover, a.order-row:hover, a.btn:hover, a.photo:hover { text-decoration: none; }
+code, .mono { font-family: var(--font-mono); font-size: .86em; }
+::selection { background: var(--brand-100); color: var(--brand-900); }
+:focus-visible { outline: 2px solid var(--brand-500); outline-offset: 2px; }
 /* ---------------- shell layout ---------------- */
 
 #app-shell {
@@ -503,7 +529,16 @@ details.fold > .fold-body { padding: 0 14px 14px; }
 
 /* ---------------- home ---------------- */
 
-.home-head { padding: 4px 0 2px; }
+/* a soft brand wash behind the first screen — the only decoration the home
+   page needs, and it costs one gradient */
+.shop-home { position: relative; }
+.home-head {
+  position: relative; margin: -14px -16px 0; padding: 20px 16px 4px;
+  background:
+    radial-gradient(115% 95% at 8% -25%, color-mix(in srgb, var(--brand-300) 42%, transparent), transparent 62%),
+    radial-gradient(90% 80% at 100% -30%, color-mix(in srgb, var(--gold-500) 22%, transparent), transparent 60%);
+}
+@media (min-width: 560px) { .home-head { margin: -14px -20px 0; padding: 22px 20px 4px; } }
 .home-head h1 { font-size: 27px; line-height: 1.12; max-width: 20ch; }
 .home-head h1 em { font-style: normal; color: var(--brand-700); }
 .home-head .sub { margin: 9px 0 14px; font-size: 13px; color: var(--ink-500); font-weight: 500; }
