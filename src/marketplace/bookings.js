@@ -137,6 +137,12 @@ class BookingService {
     this.catalog = catalog;
     this.people = people;
     this.jobs = jobs;
+    this.portfolio = null;
+  }
+
+  /** The portfolio service feeds off released jobs; set by the facade. */
+  attachPortfolio(portfolio) {
+    this.portfolio = portfolio;
   }
 
   /* ================================================================== *
@@ -832,6 +838,20 @@ class BookingService {
         warrantyEndsAt: booking.warranty.endsAt,
       },
     });
+
+    // Proof of work that paid out becomes portfolio proof automatically — the
+    // pro should not have to remember to upload what they already proved.
+    if (this.portfolio) {
+      try {
+        this.portfolio.harvestFromBooking(booking);
+      } catch (error) {
+        // Harvesting is a bonus, never a reason to lose a payout record.
+        this.kernel.ledger.append({
+          action: 'PORTFOLIO_HARVEST_FAILED', subject: booking.bookingId, visibility: 'PRIVATE',
+          payload: { summary: `Portfolio harvest failed: ${error.message}` },
+        });
+      }
+    }
 
     this.#notify(booking.proId, 'PAYOUT_RELEASED', {
       title: `R${(split.immediateToProCents / 100).toFixed(2)} is on its way`,

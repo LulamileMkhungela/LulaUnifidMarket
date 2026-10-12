@@ -19,6 +19,7 @@ const { VehicleService } = require('./vehicles');
 const { WebStudioService } = require('./webstudio');
 const { BusinessSiteStudio } = require('./businessSites');
 const { SalesDeskService } = require('./leads');
+const { PortfolioService } = require('./portfolio');
 const integrations = require('../integrations');
 const { nowIso, deepClone, sha256 } = require('../kernel/util');
 
@@ -39,7 +40,10 @@ class Marketplace {
     this.catalog = new Catalog({ store: this.store });
     this.people = new PeopleService({ store: this.store, kernel: this.kernel, catalog: this.catalog });
     this.jobs = new JobService({ store: this.store, kernel: this.kernel, catalog: this.catalog, people: this.people });
+    this.portfolio = new PortfolioService({ store: this.store, kernel: this.kernel, catalog: this.catalog, people: this.people });
     this.bookings = new BookingService({ store: this.store, kernel: this.kernel, catalog: this.catalog, people: this.people, jobs: this.jobs });
+    this.bookings.attachPortfolio(this.portfolio);
+    this.people.attachPortfolio(this.portfolio);
     this.vehicles = new VehicleService({ store: this.store, kernel: this.kernel, catalog: this.catalog, people: this.people });
     this.webStudio = new WebStudioService({ store: this.store, kernel: this.kernel, catalog: this.catalog, people: this.people });
     this.businessSites = new BusinessSiteStudio({ store: this.store, kernel: this.kernel, catalog: this.catalog, people: this.people, jobs: this.jobs });

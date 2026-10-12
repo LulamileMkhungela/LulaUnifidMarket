@@ -316,6 +316,56 @@ const POLICY_RULES = Object.freeze([
       return { fired: touched.length > 0 && subject?.verification?.status === 'VERIFIED', reason: 'A verified critical vehicle identifier was changed after verification', detail: { touched } };
     },
   },
+
+  /* ---------------------------------------------------------------- *
+   * PORTFOLIO — the past work that opens the door
+   * ---------------------------------------------------------------- */
+  {
+    id: 'PRT-001',
+    name: 'no_verification_badge_without_evidence',
+    protects: 'Customer',
+    statement: 'A portfolio item may only wear a verification badge when ProVeri evidence earned it. Self-declared work says so.',
+    effect: POLICY_EFFECT.BLOCK,
+    severity: 'CRITICAL',
+    appliesTo: ['portfolio'],
+    test: ({ item, action }) => {
+      if (!item || !['ADD', 'UPDATE'].includes(action)) return { fired: false };
+      const claiming = item.claimsProofOfWork === true && (item.tier === 'SELF_DECLARED' || !item.tier);
+      return {
+        fired: claiming,
+        reason: 'A verification badge was claimed for work with no ProVeri evidence behind it. Uploads are welcome; pretending is not.',
+      };
+    },
+  },
+  {
+    id: 'PRT-002',
+    name: 'no_reused_photos_across_pros',
+    protects: 'Customer',
+    statement: 'A photo another pro has already published cannot be uploaded as your own work.',
+    effect: POLICY_EFFECT.BLOCK,
+    severity: 'CRITICAL',
+    appliesTo: ['portfolio'],
+    test: ({ duplicateOf }) => ({
+      fired: Boolean(duplicateOf),
+      reason: duplicateOf ? `This photo is already published by another pro (${duplicateOf.source}). Reused portfolio photos are the oldest trick in the trade.` : '',
+    }),
+  },
+  {
+    id: 'PRT-003',
+    name: 'incomplete_work_items_rank_lower',
+    protects: 'Customer',
+    statement: 'A self-declared item with no suburb and no price ranks below proven work.',
+    effect: POLICY_EFFECT.WARN,
+    severity: 'LOW',
+    appliesTo: ['portfolio'],
+    test: ({ item, action }) => {
+      if (!item || action !== 'ADD' || item.tier !== 'SELF_DECLARED') return { fired: false };
+      return {
+        fired: !item.suburbId && item.priceCents == null,
+        reason: 'Add a suburb and a price so homeowners can judge it; thin uploads rank below proven work.',
+      };
+    },
+  },
 ]);
 
 class PolicyEngine {

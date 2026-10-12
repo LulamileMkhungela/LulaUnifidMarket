@@ -83,7 +83,9 @@ markdown playbooks. Detail in [`12-business-site-studio.md`](12-business-site-st
 
 ## Where ProVeri goes past parity
 
-The matrix above is the floor. The differentiators — load-shedding-aware
+The matrix above is the floor. The differentiators — the self-harvesting
+portfolio and its three unbuyable verification tiers, the reach-out enquiry loop,
+the four-tab storefront, load-shedding-aware
 scheduling, weather-aware quoting, geosealed proof of work, the workmanship
 warranty holdback, the arrival-code identity handshake, Fair-Price
 Intelligence, the Vehicle Service Passport, Remit-a-Job, the SARS-ready income
@@ -101,3 +103,5 @@ diagnostic and the pitch-kit generator — are detailed in
 | CIPC company status cannot be confirmed offline | CIPC has no free public API; resellers need credit | `CIPC_API_KEY` switches the OmniCheck/CompanyData adapter on; offline returns an explicit `WARN`, never a `PASS` |
 | EskomSePush area schedules need a paid plan | Free tier only exposes national stage | `ESP_API_TOKEN`; offline derives a clearly-labelled schedule |
 | Property vertical is not live | Deeds Office and municipal clearance have no stable public API; conveyancer trust accounts already protect deposits by law | Waitlist + published reasons in `src/verticals/index.js` and PWA `/property` |
+| Portfolio duplicate detection is exact-hash, not perceptual | A re-encoded or cropped stolen photo is not caught yet; perceptual hashing needs an image pipeline this zero-dependency build does not have | `PRT-002` covers exact reuse today (the common case); a pHash index is the next step, and the photo seal already gives it something to compare |
+| Portfolio save/bookmark counters have no UI | `stats.saves` exists on the item; no screen writes to it yet | A bookmark action on `/work/:itemId` and a "Saved" list under `/me` |

@@ -100,7 +100,7 @@ function evidenceForBooking({ bookingId, category, suburb, notes = {} }) {
  */
 async function seed(marketplace, { withLiveIntegrations = false } = {}) {
   const { store, catalog, kernel, people, jobs, bookings, vehicles, webStudio } = marketplace;
-  const summary = { pros: 0, customers: 0, jobs: 0, bids: 0, bookings: 0, reviews: 0, vehicles: 0, microsites: 0, sites: 0, sitesLive: 0, siteBookings: 0, siteJobs: 0, leads: 0, leadsWon: 0, demos: 0 };
+  const summary = { pros: 0, customers: 0, jobs: 0, bids: 0, bookings: 0, reviews: 0, vehicles: 0, microsites: 0, sites: 0, sitesLive: 0, siteBookings: 0, siteJobs: 0, leads: 0, leadsWon: 0, demos: 0, portfolio: 0, portfolioUploaded: 0 };
 
   /* ---------------- customers ---------------- */
   const customers = [];
@@ -914,6 +914,71 @@ async function seed(marketplace, { withLiveIntegrations = false } = {}) {
     }
     summary.leadsWon = (summary.leadsWon || 0) + 1;
   }
+
+  /* ---------------- portfolio: the work feed homeowners browse ---------------- */
+  // Every escrow-released booking above harvested itself into its pro's
+  // portfolio (that is the point of the harvest hook), so the feed already has
+  // proven work. These are the uploads a pro would add by hand: recent jobs
+  // done off-platform, or work they simply want to show.
+  //
+  // The photos are labelled illustrative because they are demo imagery, not a
+  // real client's house — the same honesty rule (WEB-003) the web studio applies
+  // to generated assets. Self-declared items carry no verification badge, and
+  // the UI says so in as many words.
+  const uploadedWork = [
+    {
+      proName: 'Sipho Dlamini', file: 'geyser-replacement.jpg',
+      title: '150L geyser replacement, tray and overflow redone',
+      description: 'The old geyser was weeping at the inlet and the tray had rusted through. Removed, fitted a new 150L, new vacuum breakers, tray piped to the outside wall. CoC issued.',
+      priceCents: 695000, priceNote: 'typical price for a 150L replacement with materials',
+    },
+    {
+      proName: 'Anwar Patel', file: 'db-board-electrical.jpg',
+      title: 'Old fuse board replaced with a full DB and surge protection',
+      description: 'Rewirable fuse board from the 1970s swapped for a 12-way DB with earth-leakage and surge protection. Every circuit tested and labelled, CoC issued.',
+      priceCents: 845000, priceNote: 'board, breakers, labour and CoC',
+    },
+    {
+      proName: 'Johan van Rensburg', file: 'interior-painting.jpg',
+      title: 'Three-bedroom interior repaint, walls and trim',
+      description: 'Cracks filled and sanded, one coat of plaster primer, two coats of low-sheen acrylic. Skirting and door frames enamel. Furniture covered and moved back.',
+      priceCents: 1275000, priceNote: 'whole house, materials included',
+    },
+    {
+      proName: 'Lerato Mashaba', file: 'garden-landscaping.jpg',
+      title: 'Front garden cleared, levelled and laid with fresh grass',
+      description: 'Cleared the rubble and weeds, levelled the bed, added compost and topsoil, laid instant lawn and edging. Irrigation line run to the far corner.',
+      priceCents: 460000, priceNote: 'small front garden, materials included',
+    },
+    {
+      proName: 'Thabo Mokoena', file: 'bathroom-tiling.jpg',
+      title: 'Bathroom floor and walls re-tiled, new grout and sealing',
+      description: 'Lifted the cracked tiles, screeded the floor to fall into the shower drain, tiled walls and floor, epoxy grout in the wet zone and sealed everything.',
+      priceCents: 585000, priceNote: 'standard bathroom, tiles supplied by the client',
+    },
+  ];
+  for (const work of uploadedWork) {
+    const pro = pros.find((p) => p.displayName === work.proName);
+    if (!pro) continue;
+    marketplace.portfolio.addItem({
+      proId: pro.proId,
+      title: work.title,
+      description: work.description,
+      categoryId: pro.primaryCategory,
+      suburbId: pro.location?.suburbId || null,
+      priceCents: work.priceCents,
+      priceNote: work.priceNote,
+      completedAt: addDays(nowIso(), -14 - (summary.portfolioUploaded % 5) * 9),
+      photos: [{
+        url: `/img/work/${work.file}`,
+        caption: work.title,
+        illustrative: true,
+        capturedAt: addDays(nowIso(), -14 - (summary.portfolioUploaded % 5) * 9),
+      }],
+    });
+    summary.portfolioUploaded += 1;
+  }
+  summary.portfolio = store.count('portfolioItems');
 
   /* ---------------- refresh microsites now that reviews exist ---------------- */
   for (const pro of pros) {

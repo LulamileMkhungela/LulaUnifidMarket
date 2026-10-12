@@ -53,6 +53,7 @@ class PeopleService {
     this.store = store;
     this.kernel = kernel;
     this.catalog = catalog;
+    this.portfolio = null;
   }
 
   /* ================= customers ================= */
@@ -616,6 +617,11 @@ class PeopleService {
    * state and risk position. Called whenever anything upstream changes —
    * delivery history, an expired certificate, a new risk signal, a resolved one.
    */
+  /** The portfolio service feeds the public profile's "past work" section. */
+  attachPortfolio(portfolio) {
+    this.portfolio = portfolio;
+  }
+
   refreshStanding(proId) {
     const pro = this.#pro(proId);
     const category = this.catalog.get(pro.primaryCategory);
@@ -721,7 +727,24 @@ class PeopleService {
         disputeCount: pro.stats.disputeCount,
         joinedAt: pro.stats.joinedAt,
       },
-      portfolio: pro.portfolio.map((item) => ({ title: item.title, caption: item.caption, capturedAt: item.capturedAt, seal: item.hash.slice(0, 10) })),
+      // Real work beats a declared list: when the portfolio service is attached
+      // the profile shows the items that exist, each with the tier it earned.
+      portfolio: this.portfolio
+        ? this.portfolio.forPro(proId, { limit: 12 }).map((item) => ({
+          itemId: item.itemId,
+          reference: item.reference,
+          title: item.title,
+          caption: item.photo?.caption || null,
+          capturedAt: item.completedAt,
+          seal: (item.seal || '').slice(0, 10),
+          tier: item.tier,
+          tierLabel: item.tierLabel,
+          url: item.photo?.url || null,
+          illustrative: item.illustrative,
+          priceCents: item.priceCents,
+          suburb: item.proSuburb || item.suburb,
+        }))
+        : pro.portfolio.map((item) => ({ title: item.title, caption: item.caption, capturedAt: item.capturedAt, seal: item.hash.slice(0, 10) })),
       recentReviews: reviews.slice(-5).reverse().map((r) => ({
         rating: r.rating,
         comment: r.comment,

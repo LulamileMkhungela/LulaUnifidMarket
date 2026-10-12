@@ -58,6 +58,8 @@ const SIGNAL_CATALOGUE = Object.freeze({
   CERTIFICATE_NOT_FOUND: { weight: 42, kind: 'FRAUD', label: 'Trade certificate could not be confirmed with the issuing body', action: RISK_ACTION.STEP_UP_VERIFICATION },
   EVIDENCE_EXIF_MISMATCH: { weight: 34, kind: 'FRAUD', label: 'Proof-of-work photos were not taken at the job address', action: RISK_ACTION.HOLD_PAYOUT },
   DUPLICATE_PHOTO_HASH: { weight: 48, kind: 'FRAUD', label: 'Portfolio or evidence photo matches another account’s image', action: RISK_ACTION.QUARANTINE },
+  VERIFICATION_CLAIM_WITHOUT_EVIDENCE: { weight: 32, kind: 'FRAUD', label: 'Claimed a verification badge with no evidence behind it', action: RISK_ACTION.STEP_UP_VERIFICATION },
+  PORTFOLIO_MISREPRESENTATION: { weight: 26, kind: 'FRAUD', label: 'Reported work that is not their own or not as described', action: RISK_ACTION.MONITOR },
   NO_SHOW_PATTERN: { weight: 16, kind: 'RELIABILITY', label: 'Repeated no-shows or late arrivals', action: RISK_ACTION.MONITOR },
   DISPUTE_HISTORY: { weight: 24, kind: 'RELIABILITY', label: 'Prior disputes resolved against this actor', action: RISK_ACTION.MONITOR },
   CHARGEBACK_HISTORY: { weight: 28, kind: 'FRAUD', label: 'Prior chargebacks or refunded-for-fraud payments', action: RISK_ACTION.HOLD_PAYOUT },

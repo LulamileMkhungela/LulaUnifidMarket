@@ -17,7 +17,7 @@
  * The worker is served with Cache-Control: no-cache, so a deploy always wins.
  */
 
-const VERSION = 'proveri-v2';   // v2: h() children fix + the studio screen bundle
+const VERSION = 'proveri-v3';   // v3: the shop — portfolio feed, browse, orders, upload work
 const SHELL_CACHE = `${VERSION}-shell`;
 const DATA_CACHE = `${VERSION}-data`;
 const QUEUE_KEY = `${VERSION}-mutation-queue`;
@@ -31,6 +31,7 @@ const SHELL_ASSETS = [
   '/js/ui.js',
   '/js/app.js',
   '/js/screens-market.js',
+  '/js/screens-shop.js',
   '/js/screens-work.js',
   '/js/screens-verticals.js',
   '/js/screens-trust.js',
@@ -43,7 +44,7 @@ const SHELL_ASSETS = [
   '/offline.html',
 ];
 
-const CACHEABLE_GET = /^\/api\/(snapshot|offline-bundle|categories|metros|provinces|price-band|geography|public|pros|jobs|bookings|reviews|vehicles|webstudio|integrations|trust|stats|demo|notifications|tickets|verticals|banks|trade-registers)/;
+const CACHEABLE_GET = /^\/api\/(snapshot|offline-bundle|categories|metros|provinces|price-band|geography|public|pros|portfolio|jobs|bookings|reviews|vehicles|webstudio|integrations|trust|stats|demo|notifications|tickets|verticals|banks|trade-registers)/;
 const MUTATION = /^(POST|PATCH|PUT|DELETE)$/;
 
 self.addEventListener('install', (event) => {

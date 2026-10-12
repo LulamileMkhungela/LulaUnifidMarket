@@ -23,7 +23,7 @@
   outreach windows and next-best-actions.
 - PWA: installable, offline-first, mutation queue, share target, dark mode,
   studio and sales-desk screens.
-- 171-operation API with generated OpenAPI and generated API docs; 168 tests
+- 184-operation API with generated OpenAPI and generated API docs; 199 tests
   (including a DOM-shim test that renders every PWA screen against a live
   server); three demo scripts; this doc suite.
 

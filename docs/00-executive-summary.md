@@ -4,8 +4,9 @@
 **Lula ProVeri**, a South African on-demand services marketplace built to the
 same product shape as [myservicepro.co.za](https://www.myservicepro.co.za) — post
 a job, KYC-verified pros bid, money sits in escrow until the customer confirms —
-and then extended well past it: a shared **Trust Kernel** that also runs a
-verified-vehicles vertical, load-shedding- and weather-aware scheduling,
+and then extended well past it: a **portfolio storefront** where pros publish the
+work they have already done and home owners reach out to them about it, a shared
+**Trust Kernel** that also runs a verified-vehicles vertical, load-shedding- and weather-aware scheduling,
 geosealed proof of work, a 14-day workmanship warranty holdback, verified-only
 reviews, a free data-bound microsite for every verified pro, a Remit-a-Job rail
 that lets family abroad fund a relative's repairs, and a **Business Site Studio**
@@ -39,9 +40,9 @@ Kernel** and kept vehicles as a live vertical on the same rails:
 | --- | --- |
 | `src/trustEscrowEngine.js` — one engine for vehicles/property | `src/kernel/` — audit ledger, verification, escrow, risk, policy; vertical-agnostic |
 | Vehicle + property flows only | **Services** (live), **vehicles** (beta), **property** (honestly "coming soon") |
-| Static HTML prototype | Installable **PWA** + zero-dependency REST API (171 operations) + server-rendered pro microsites **and** client business sites |
+| Static HTML prototype | Installable **PWA** + zero-dependency REST API (184 operations) + server-rendered pro microsites **and** client business sites |
 | Competitor notes (3 vendors) | Competitor teardown across **14** SA and international platforms with take-rate economics |
-| No runnable surface | `npm start` seeds a full marketplace; `npm test` runs **168 tests**; live preview |
+| No runnable surface | `npm start` seeds a full marketplace; `npm test` runs **199 tests**; live preview |
 | Website demos with dead buttons (the reference repository's `BookingModal` shows a toast) | A booking form that validates against its template schema and produces a reference, a quote, an owner notification — and a real marketplace job into escrow when the business is a verified pro |
 | Original TrustShield docs | Preserved verbatim under `docs/archive/` |
 
@@ -63,6 +64,10 @@ Kernel** and kept vehicles as a live vertical on the same rails:
 | A generated image is labelled where it is shown | policy `WEB-003`; an AI hero with nowhere for a note is flagged before publish | `test/businessSites.test.js` |
 | A lead who objects is never contacted again | policy `LEAD-001` blocks all six channels; the objection is a public ledger entry | `test/leads.test.js`, `test/pwa-screens.test.js` |
 | A simulated scan never poses as a measured one | `diagnose()` returns `simulated: true` with the reason and keeps the field research | `test/leads.test.js` |
+| A portfolio badge cannot be claimed | policy `PRT-001`; the tier is computed from evidence and `updateItem` refuses the claim | `test/portfolio.test.js` |
+| A photo another pro published cannot be reused | policy `PRT-002`; photo hashes are matched across portfolios **and** booking evidence | `test/portfolio.test.js` |
+| Closed jobs republish themselves as proven work | `bookings.releasePayment` → `portfolio.harvestFromBooking`, idempotent | `test/portfolio.test.js` |
+| An enquiry thread is private to its participants | `portfolio.listEnquiries` raises `FORBIDDEN`, which the server maps to 403 | `test/portfolio.test.js`, `test/pwa-screens.test.js` |
 | The PWA screens actually render | a DOM shim loads `pwa/js/*` against a live server and fails on any `undefined`/`NaN` | `test/pwa-screens.test.js` |
 
 ## Numbers that frame the opportunity
@@ -81,7 +86,7 @@ Kernel** and kept vehicles as a live vertical on the same rails:
 
 ```bash
 npm start                 # seeds the demo marketplace and serves API + PWA on :4173
-npm test                  # 168 tests: kernel, flows, verticals, integrations, studio, sales desk, HTTP, PWA screens
+npm test                  # 199 tests: kernel, flows, portfolio, verticals, integrations, studio, sales desk, HTTP, PWA screens
 npm run demo              # end-to-end services journey printed to stdout
 npm run demo:vehicle      # end-to-end vehicle journey (the merged TrustShield rail)
 npm run demo:studio       # research → diagnose → demo → pitch → win → publish → booking → job → export
@@ -103,7 +108,7 @@ Environment switches:
 
 1. [`01-servicepro-parity-matrix.md`](01-servicepro-parity-matrix.md) — feature-by-feature against myservicepro.co.za
 2. [`02-competitor-teardown.md`](02-competitor-teardown.md) — 14 platforms, economics and attack surfaces
-3. [`03-innovative-features.md`](03-innovative-features.md) — the 25 things nobody else does
+3. [`03-innovative-features.md`](03-innovative-features.md) — the 28 things nobody else does
 4. [`04-public-data-and-integrations.md`](04-public-data-and-integrations.md) — every endpoint, cost, licence and fallback
 5. [`05-architecture.md`](05-architecture.md) — modules, state machines, data flow
 6. [`06-api-reference.md`](06-api-reference.md) — the REST surface
@@ -113,5 +118,6 @@ Environment switches:
 10. [`10-web-studio.md`](10-web-studio.md) — the preview-before-you-pay web business
 11. [`11-roadmap-and-metrics.md`](11-roadmap-and-metrics.md) — phases, metrics, risks
 12. [`12-business-site-studio.md`](12-business-site-studio.md) — the website product and the sales desk that sells it
+13. [`13-portfolio-and-the-storefront.md`](13-portfolio-and-the-storefront.md) — the work shelf, the tiers, and the four-tab shop
 
 Original TrustShield research is preserved under [`archive/`](archive/).

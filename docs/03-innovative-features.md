@@ -1,4 +1,4 @@
-# Innovative features — 25 things no competitor does
+# Innovative features — 28 things no competitor does
 
 Each entry states the customer or pro pain, the mechanism, the public data or
 partner it rides on, and where it lives in the code. Nothing here is a slogan:
@@ -274,6 +274,58 @@ recorded as guessing.
 
 ---
 
+## 26. The self-harvesting portfolio — proven work nobody had to upload
+**Pain:** every marketplace that asks pros to build a portfolio gets an empty
+one. The people best at tiling are not the people best at marketing tiling, and
+the pros who do upload are the ones with the most to prove.
+**Mechanism:** `releasePayment()` calls `portfolio.harvestFromBooking()`. When a
+job's escrow releases, its geotagged, hash-sealed evidence — before/after photos,
+certificates, the distance from the job address — becomes a portfolio item
+automatically, tiered `EVIDENCE_LINKED`, or `CLIENT_CONFIRMED` when the client on
+that job reviewed it 4★+. The call is idempotent (one item per booking), it needs
+photo evidence to exist, and it never blocks a payout: a harvest failure is
+written to the ledger, not thrown at the money.
+**Code:** `marketplace/portfolio.js` (`harvestFromBooking`), `marketplace/bookings.js`
+(`releasePayment` hook), `marketplace/index.js` (`attachPortfolio`).
+**Test:** `test/portfolio.test.js`.
+
+## 27. Three tiers, and a badge you cannot buy, claim or borrow
+**Pain:** Snupit and Kandua reviews are worth roughly nothing, and every
+classifieds site lets a pro write "verified" next to their own name. A trust
+market needs a claim that a customer can distinguish from an adjective.
+**Mechanism:** the tier is computed, never declared. `SELF_DECLARED` is an
+upload and says so on screen ("Nothing on ProVeri corroborates them yet");
+`EVIDENCE_LINKED` requires a released ProVeri booking belonging to that pro
+(`#resolveEvidenceLink` throws if the job is somebody else's);
+`CLIENT_CONFIRMED` requires the client on that job to confirm it. Policy
+`PRT-001` blocks any patch that claims a tier, `PRT-002` blocks a photo hash
+another pro has already published — matched across portfolios *and* booking
+evidence, which is where stolen photos usually come from — and `PRT-003` warns a
+thin upload to add a suburb and a price rather than refusing it. Attempts are
+recorded as fraud signals (`VERIFICATION_CLAIM_WITHOUT_EVIDENCE`,
+`DUPLICATE_PHOTO_HASH`), so the pattern is visible before the account is.
+**Code:** `marketplace/portfolio.js`, `kernel/policy.js` (`PRT-001…003`),
+`kernel/risk.js` (signal catalogue).
+**Test:** `test/portfolio.test.js`.
+
+## 28. A sealed-evidence tile instead of a stock photo
+**Pain:** a "verified" badge next to a photograph the platform cannot account for
+is worse than no badge — it launders the picture.
+**Mechanism:** harvested items are evidence records, not image files: hash,
+capture time, geo, distance from the address, seal. The card renders a
+*sealed-evidence tile* — trade, suburb, date, seal prefix, tier — that is visibly
+not a photograph and carries more information than one. Uploaded photos render as
+photos, and any image that is not the pro's own client work (the five demo
+photographs in `pwa/img/work/`) carries an **Illustrative photo** chip, the same
+labelling discipline `WEB-003` enforces on generated site assets. The product page
+prints the ledger seal, so a customer can quote a receipt back to the trust desk.
+**Code:** `pwa/js/screens-shop.js` (`workThumb`), `pwa/js/screens-market.js`
+(pro profile shelf), `marketplace/seed.js` (`illustrative: true`).
+**Test:** `test/pwa-screens.test.js` (asserts the badge wording and the
+illustrative chip on the rendered page).
+
+---
+
 ## Deliberately *not* built (and why)
 
 | Idea | Reason |
@@ -285,3 +337,5 @@ recorded as guessing.
 | Shopping cart and checkout on generated sites | Listed as an Enterprise inclusion with its boundary attached; the escrow and provider adapters exist, a cart UI does not, and nothing demos it as working |
 | An AI booking assistant that confirms reservations | A bot that confirms a table or a transfer is making a commitment on the business's behalf. Until it can be labelled, bounded and escalated reliably, a booking lands with a human |
 | Auto-publishing a site without a permission record | It would be faster and it would be the thing that gets a client sued. The gate stays |
+| Stock photography on a "proof of work" item | The badge would be laundering a picture the platform cannot account for. Evidence-only items render their seal instead |
+| Letting a pro choose their verification tier | The moment a tier is a form field it is a marketing claim. It is computed or it is nothing (`PRT-001`) |

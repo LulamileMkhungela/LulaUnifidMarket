@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Lula ProVeri — Verified pros. Escrow-protected money. Proof of work.</title>
-  <meta name="description" content="South Africa's verified on-demand services marketplace. Post a job and get bids from KYC-verified pros near you — your money stays safe in escrow until the work is done. Proudly South African 🇿">
+  <title>Lula ProVeri — Real work near you. Verified pros. Escrow-protected money.</title>
+  <meta name="description" content="📍 In South Africa, for South Africa 🇿🇦 · Connecting local businesses with home owners. Browse real work pros have done near you, message them about it, and pay into escrow until you confirm the job is done. Reshaping the future of employment.">
   <meta name="theme-color" content="#0E7C5A">
   <meta name="color-scheme" content="light dark">
   <link rel="manifest" href="/manifest.webmanifest">
@@ -17,8 +17,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="ProVeri">
   <meta property="og:site_name" content="Lula ProVeri">
-  <meta property="og:title" content="Lula ProVeri — verified pros, escrow-protected money, proof of work">
-  <meta property="og:description" content="Post a job, get bids from KYC-verified pros, pay into escrow, release on geotagged proof of work. Plus verified vehicles and a free pro microsite.">
+  <meta property="og:title" content="Lula ProVeri — see the work before you hire">
+  <meta property="og:description" content="📍 In South Africa, for South Africa 🇿🇦 · Home owners browse real jobs done near them and reach out to the pro who did them. Money stays in escrow until the work is confirmed.">
   <meta property="og:image" content="/icons/og-card.png">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
@@ -30,7 +30,7 @@
     <header id="app-header">
       <a class="brand" href="/" data-link>
         <img src="/icons/icon-192.png" alt="" width="30" height="30">
-        <span>Lula ProVeri<small>Verified · Escrow · Proof</small></span>
+        <span>Lula ProVeri<small>🇿🇦 Local businesses · Home owners</small></span>
       </a>
       <span class="spacer"></span>
       <span id="conn-pill" class="conn" title="Connectivity">●</span>
@@ -42,11 +42,12 @@
 
     <nav id="app-nav" aria-label="Primary">
       <button data-nav="/" aria-label="Home"><span class="ico">🏠</span>Home</button>
-      <button data-nav="/find-a-pro" aria-label="Find a pro"><span class="ico">🔍</span>Find</button>
-      <button data-nav="/post-job" aria-label="Post a job"><span class="ico">➕</span>Post</button>
-      <button data-nav="/bookings" aria-label="My activity"><span class="ico">📦</span>My jobs</button>
-      <button data-nav="/trust" aria-label="Trust and transparency"><span class="ico">🛡️</span>Trust</button>
+      <button data-nav="/browse" aria-label="Browse work near you"><span class="ico">🔎</span>Browse</button>
+      <span class="fab-slot" aria-hidden="true"></span>
+      <button data-nav="/orders" aria-label="My orders and jobs"><span class="ico">🧾</span>Orders</button>
+      <button data-nav="/me" aria-label="You"><span class="ico">👤🏾</span>You</button>
     </nav>
+    <button id="fab" aria-label="Post a job or upload your work" title="Post a job or upload your work">＋</button>
   </div>
 
   <div id="sheet-backdrop"></div>
@@ -58,6 +59,7 @@
       <h1>Lula ProVeri</h1>
       <p>This marketplace is a progressive web app and needs JavaScript. Everything the studio publishes, by contrast, is plain server-rendered HTML and works without it:</p>
       <ul>
+        <li><a href="/api/portfolio">The work feed</a> — past jobs published by local pros, proven ones first</li>
         <li><a href="/sites">Business sites gallery</a> — every published site, each with a working booking form</li>
         <li><a href="/api/webstudio/microsites">Free pro microsites</a> — generated from the verified profile and audit ledger</li>
       </ul>
@@ -67,6 +69,7 @@
   <script src="/js/api.js" defer></script>
   <script src="/js/ui.js" defer></script>
   <script src="/js/screens-market.js" defer></script>
+  <script src="/js/screens-shop.js" defer></script>
   <script src="/js/screens-work.js" defer></script>
   <script src="/js/screens-verticals.js" defer></script>
   <script src="/js/screens-studio.js" defer></script>

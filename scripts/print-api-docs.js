@@ -28,7 +28,8 @@ Conventions:
 - All timestamps are ISO-8601 UTC.
 - Errors are \`{ error, message, details?, policyDecision?, correlationId }\`
   with a meaningful HTTP status: **400** for a validation failure (the message
-  lists the fields), **404** for a record that does not exist, **409** for a
+  lists the fields), **403** for an authorisation failure (signed in, but this
+  record is not yours), **404** for a record that does not exist, **409** for a
   policy refusal or state conflict (with \`policyDecision\` and the rules that
   fired), **500** for anything else — with a correlation id and never a stack
   trace.

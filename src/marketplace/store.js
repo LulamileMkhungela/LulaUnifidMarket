@@ -50,6 +50,7 @@ class Store {
       siteBookings: new Map(),
       siteSubscriptions: new Map(),
       salesLeads: new Map(),
+      portfolioItems: new Map(),
       leadTouches: new Map(),
       waitlist: [],
       priceBands: {},

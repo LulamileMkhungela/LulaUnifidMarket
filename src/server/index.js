@@ -201,6 +201,11 @@ async function boot() {
           correlationId,
         });
       }
+      // Ownership failures are 403s: you are signed in, this just is not yours.
+      if (error.code === 'FORBIDDEN') {
+        log(`${req.method} ${pathname} → 403 ${error.message}`);
+        return send(403, { error: 'FORBIDDEN', message: error.message, correlationId });
+      }
       // "x not found" is a 404: the client asked for a thing that does not exist.
       if (/not found/i.test(error.message || '')) {
         log(`${req.method} ${pathname} → 404 ${error.message}`);

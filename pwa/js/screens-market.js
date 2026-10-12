@@ -1,6 +1,10 @@
 /* ==========================================================================
    Lula ProVeri PWA — marketplace screens
-   home · find-a-pro · post-job · job detail · pro profile
+   find-a-pro · pro profile · job detail
+
+   The home screen, the browse grid, the three-step post-a-job checkout, orders,
+   upload-your-work and the "you" hub live in screens-shop.js — that file is the
+   storefront, this one is the underlying marketplace detail screens.
    ========================================================================== */
 
 window.ProVeri = window.ProVeri || {};
@@ -15,171 +19,6 @@ window.ProVeri.screens = window.ProVeri.screens || {};
   } = window.ProVeri.ui;
 
   const screens = window.ProVeri.screens;
-
-  /* ================= HOME ================= */
-
-  screens['/'] = async function home() {
-    const snap = api.state.snapshot || (await api.get('/api/snapshot'));
-    api.state.snapshot = snap;
-    const session = api.session();
-
-    const root = h('div.fade-in.stack');
-
-    root.append(h('section.hero', [
-      h('h1', [ 'Verified pros. Escrow-protected money. ', h('em', 'Proof of work.') ]),
-      h('p.sub', 'Post a job and get bids from KYC-verified pros near you — your money stays in escrow until you confirm the work is done. Or turn your skills into income, with payment guaranteed before you start.'),
-      h('div.hero-actions', [
-        h('button.btn.on-dark', { onclick: () => navigate('/post-job') }, '🛠️ I need work done'),
-        h('button.btn.on-dark.ghost', { onclick: () => navigate('/become-a-pro') }, '💼 I want jobs'),
-      ]),
-      h('div.stat-grid', { style: { marginTop: '16px' } }, [
-        stat(`${snap.supply.verifiedPros}`, 'verified pros'),
-        stat(`${snap.demand.jobsCompleted + snap.transactions.completed}`, 'jobs completed'),
-        stat(money(snap.money.releasedToProsCents), 'paid to pros'),
-        stat(`${snap.trust.averageRating || '—'}★`, `${snap.trust.verifiedReviews} verified reviews`),
-        stat(`${snap.money.heldInEscrowCents ? money(snap.money.heldInEscrowCents) : 'R0'}`, 'in escrow now'),
-        stat(snap.trust.chainValid ? '✓ sealed' : '—', 'audit chain'),
-      ]),
-    ]));
-
-    function stat(value, label) {
-      return h('div.pill-stat', { style: { background: 'rgba(255,255,255,.12)', borderColor: 'rgba(255,255,255,.2)', color: '#fff' } }, [
-        h('span.v', value), h('span.l', { style: { color: 'rgba(255,255,255,.75)' } }, label),
-      ]);
-    }
-
-    /* load-shedding + weather context strip */
-    root.append(h('section.section', [
-      h('div.scroller-x', { id: 'context-strip' }, [h('div.skeleton.card', { style: { width: '260px' } })]),
-    ]));
-    loadContextStrip(root.querySelector('#context-strip'), snap);
-
-    /* categories */
-    root.append(h('section.section', [
-      sectionHead('What do you need done?', 'All categories', '/find-a-pro'),
-      h('div.cat-grid', { id: 'home-cats' }, [h('div.skeleton.card'), h('div.skeleton.card'), h('div.skeleton.card'), h('div.skeleton.card')]),
-    ]));
-    loadCategories(root.querySelector('#home-cats'));
-
-    /* how it works */
-    root.append(h('section.section', [
-      h('h2', 'How ProVeri protects both sides'),
-      h('div.steps', { style: { marginTop: '14px' } }, [
-        step('1', 'done', 'Post or bid', 'Customers post a job. Verified pros bid. Every bid is annotated with the real market band so nobody gets anchored by a fake R99 callout.'),
-        step('2', 'done', 'Money goes into escrow', 'When a bid is accepted you pay into escrow — TradeSafe for big jobs, Paystack or PayFast for standard ones. The pro sees “payment guaranteed”, you see “nobody gets paid yet”.'),
-        step('3', 'done', 'Proof of work', 'The pro uploads geotagged, hash-sealed before/after photos and any required certificate. A photo taken far from your address holds the payout.'),
-        step('4', 'current', 'You confirm, they get paid', 'Confirm to release. 5% is held for a 14-day workmanship warranty — if something is wrong, that money fixes it.'),
-      ]),
-    ]));
-
-    /* differentiators */
-    root.append(h('section.section', [
-      h('h2', 'Why ProVeri, not a classifieds site'),
-      h('div.list', { style: { marginTop: '12px' } }, snap.guarantees.map((g) =>
-        h('div.card.pad-sm', [
-          h('div.row', { style: { gap: '10px' } }, [h('span', { style: { fontSize: '20px' } }, g.icon), h('div.grow', [h('div.t', { style: { fontWeight: 700 } }, g.title), h('div.small.muted', g.body)])]),
-        ]))),
-    ]));
-
-    /* second vertical + web studio */
-    root.append(h('section.section', [
-      h('div.scroller-x', [
-        h('div.card', { style: { width: '280px', cursor: 'pointer' }, onclick: () => navigate('/vehicles') }, [
-          h('div.kicker', '🚗 Second vertical'),
-          h('h3', 'Verified vehicles'),
-          h('p.small.muted', 'VIN, ownership, stolen and finance checks before a listing goes live — plus a Service Passport built from real escrow-released jobs.'),
-          h('div.row', { style: { marginTop: '8px' } }, [badge('beta', 'info'), badge(`${snap.supply ? '' : ''}`, 'neutral')]),
-        ]),
-        h('div.card', { style: { width: '280px', cursor: 'pointer' }, onclick: () => navigate('/web-studio') }, [
-          h('div.kicker.gold', '🖥️ Web Studio'),
-          h('h3', 'Preview before you pay'),
-          h('p.small.muted', 'Every verified pro gets a free data-bound microsite. Paid packages are delivered through the same escrow and milestone machinery as a plumbing job.'),
-        ]),
-        h('div.card', { style: { width: '280px', cursor: 'pointer' }, onclick: () => navigate('/business-studio') }, [
-          h('div.kicker.gold', '🏪 Business Site Studio'),
-          h('h3', 'A website with no dead buttons'),
-          h('p.small.muted', 'Ten industry templates, R0 to build, monthly hosting — and every booking form creates a real reservation or an escrow-protected job.'),
-        ]),
-        h('div.card', { style: { width: '280px', cursor: 'pointer' }, onclick: () => navigate('/property') }, [
-          h('div.kicker', '🏠 Coming soon'),
-          h('h3', 'Property & conveyancing'),
-          h('p.small.muted', 'Title, municipal clearance and PPRA/FFC verification. Join the waitlist — and read exactly why it is not live yet.'),
-        ]),
-      ]),
-    ]));
-
-    if (session) {
-      root.append(h('section.section', [
-        h('div.banner.ok', [h('span.ico', '👋'), h('div', [h('strong', `Welcome back, ${session.name || session.userId}`), h('div.small', 'Your jobs, bookings and wallet are under My jobs.')])]),
-      ]));
-    }
-
-    return root;
-  };
-
-  function step(number, state, title, body) {
-    return h('div.step.' + state, [
-      h('div.dot', number),
-      h('div.body', [h('div.t', title), h('div.d', body)]),
-    ]);
-  }
-
-  async function loadContextStrip(container, snap) {
-    container.innerHTML = '';
-    const cards = [];
-
-    try {
-      const ls = await api.get('/api/public/loadshedding');
-      const stage = ls.status?.national?.stage ?? 0;
-      cards.push(h('div.card.pad-sm', { style: { width: '250px' } }, [
-        h('div.kicker', stage > 0 ? '⚡ Load shedding active' : '⚡ Grid stable'),
-        h('div.row.between', [h('span.money.big', stage > 0 ? `Stage ${stage}` : 'Stage 0'), h('span.tiny.muted', ls.status?.live ? 'live' : 'offline model')]),
-        h('p.tiny.muted', { style: { marginBottom: 0 } }, stage > 0
-          ? 'Power-dependent jobs are scheduled around published outage windows automatically.'
-          : 'No national load shedding. Power-dependent jobs can be booked freely.'),
-      ]));
-    } catch { cards.push(h('div.card.pad-sm', { style: { width: '250px' } }, [h('div.kicker', '⚡ Load shedding'), h('p.tiny.muted', 'Unavailable offline')])); }
-
-    try {
-      const geo = api.state.bundle?.catalog?.metros?.find((m) => m.id === 'jhb') || api.state.bundle?.catalog?.metros?.[0];
-      const wx = await api.get(`/api/public/weather?lat=${geo?.center?.lat ?? -26.2}&lon=${geo?.center?.lon ?? 28.05}&days=3`);
-      const today = wx.daily?.[0];
-      cards.push(h('div.card.pad-sm', { style: { width: '250px' } }, [
-        h('div.kicker', `${today?.condition?.icon || '🌤️'} Weather, Johannesburg`),
-        h('div.row.between', [h('span.money.big', `${today?.highC ?? '—'}°`), h('span.tiny.muted', `${today?.rainProbabilityPercent ?? 0}% rain`) ]),
-        h('p.tiny.muted', { style: { marginBottom: 0 } }, today?.condition?.outdoorOk === false
-          ? `${today.condition.label} — exterior trades get auto-reschedule protection.`
-          : 'Good conditions for exterior work today.'),
-      ]));
-    } catch { cards.push(h('div.card.pad-sm', { style: { width: '250px' } }, [h('div.kicker', '🌤️ Weather'), h('p.tiny.muted', 'Unavailable offline')])); }
-
-    cards.push(h('div.card.pad-sm', { style: { width: '250px' } }, [
-      h('div.kicker', '📊 Labour market context'),
-      h('div.row.between', [h('span.money.big', `${snap.labourMarket?.unemploymentRate ?? 33.6}%`), h('span.tiny.muted', 'Stats SA Q2 2026')]),
-      h('p.tiny.muted', { style: { marginBottom: 0 } }, `${(snap.labourMarket?.unemployedPersons / 1e6 || 8.5).toFixed(1)}M unemployed. Every job posted here is income for a skilled neighbour.`),
-    ]));
-
-    container.append(...cards);
-  }
-
-  async function loadCategories(container) {
-    container.innerHTML = '';
-    let categories = [];
-    try {
-      categories = (await api.get('/api/categories')).slice(0, 12);
-    } catch {
-      categories = (api.state.bundle?.catalog?.categories || []).slice(0, 12).map((c) => ({ id: c.id, label: c.label, group: c.group, statutoryTrade: c.statutoryTrade }));
-    }
-    const groups = api.state.bundle?.catalog?.groups || [];
-    container.append(...categories.map((c) => {
-      const group = groups.find((g) => g.id === c.group);
-      return h('button.cat-card', { onclick: () => navigate(`/find-a-pro?category=${c.id}`) }, [
-        h('span.ico', group?.icon || ''),
-        h('span.name', c.label),
-        c.statutoryTrade ? h('span.law', '⚖ certificate required') : h('span.sub', 'verified pros only'),
-      ]);
-    }));
-  }
 
   /* ================= FIND A PRO / BROWSE ================= */
 
@@ -290,6 +129,36 @@ window.ProVeri.screens = window.ProVeri.screens || {};
         ]),
       ]));
 
+      /* Past work first: this is the shelf the homeowner is judging. */
+      const work = (profile.portfolio || []).filter((item) => item.itemId);
+      root.append(h('section.section', { style: { padding: 0 } }, [
+        h('div.row.between', { style: { marginBottom: '10px' } }, [
+          h('h2', { style: { margin: 0 } }, work.length ? `Work they have published (${work.length})` : 'No work published yet'),
+          h('a.small', { href: '/browse' }, 'Browse all work'),
+        ]),
+        work.length
+          ? h('div.scroller-x', work.slice(0, 10).map((item) => h('a.work-card.mini', { href: `/work/${item.itemId}`, style: { width: '210px' } }, [
+            item.url
+              ? h('div.work-thumb.card', [
+                h('img', { src: item.url, alt: item.caption || item.title, loading: 'lazy' }),
+                item.illustrative ? h('span.thumb-note', 'Illustrative photo') : null,
+                h('span.thumb-tier', { class: item.tier === 'SELF_DECLARED' ? 'plain' : 'proven' }, item.tierLabel),
+              ])
+              : h('div.work-thumb.sealed.card', [
+                h('span.seal-ico', item.tier === 'CLIENT_CONFIRMED' ? '🛡️' : '📸'),
+                h('span.seal-title', profile.primaryCategoryLabel || 'Trade work'),
+                h('span.seal-line', `Sealed ${item.seal || '—'}`),
+                h('span.thumb-tier.proven', item.tierLabel),
+              ]),
+            h('div.work-body', [
+              h('div.work-title', item.title),
+              h('div.price', item.priceCents ? h('strong', money(item.priceCents)) : 'Quote on request'),
+              h('div.work-foot', [h('span.tier-pill', { class: item.tier === 'SELF_DECLARED' ? 'plain' : 'proven' }, item.tierLabel)]),
+            ]),
+          ])))
+          : h('p.small.muted', 'This pro has not published any past work yet. Their verified reviews and proof-of-work records are below.'),
+      ]));
+
       root.append(h('div.card', [
         h('div.kicker', '🪪 Verification — every check, its source'),
         h('div.row.between', [h('span.money.big', `${profile.trustScore}/100`), h('span.tiny.muted', 'ProVeri trust score')]),
@@ -384,164 +253,6 @@ window.ProVeri.screens = window.ProVeri.screens || {};
   };
 
   /* ================= POST A JOB ================= */
-
-  screens['/post-job'] = async function postJob({ query }) {
-    const session = api.session();
-    const bundle = api.state.bundle || {};
-    const categories = bundle.catalog?.categories || [];
-    const metros = bundle.catalog?.metros || [];
-
-    if (!session) {
-      return onboardingPrompt('Post a job', 'Create a free customer account to post a job. Email and mobile are confirmed with a one-time PIN.');
-    }
-
-    const root = h('div.fade-in.stack');
-    root.append(h('h1', 'Post a job'));
-    root.append(h('p.muted.small', 'Describe the work in your own words. ProVeri matches verified pros instantly, annotates every bid with the real market band, and tells you about weather and load-shedding risks before you commit.'));
-
-    const form = h('form.card.stack', { onsubmit: onSubmit });
-
-    form.append(h('label.field', [
-      h('span', 'What do you need done? ', h('small', '(plain language is fine)')),
-      h('textarea', { name: 'description', required: true, placeholder: 'e.g. Geyser is leaking onto the kitchen ceiling and I need it replaced today' }),
-      h('div.hint', 'We resolve this to a category automatically, and you can change it.'),
-    ]));
-
-    form.append(h('div.form-grid', [
-      h('label.field', [h('span', 'Category'), h('select', { name: 'categoryId' }, [
-        h('option', { value: '' }, 'Auto-detect from my description'),
-        ...categories.map((c) => h('option', { value: c.id, selected: query.category === c.id }, c.label)),
-      ])]),
-      h('label.field', [h('span', 'Suburb / address'), h('input', { type: 'text', name: 'address', required: true, placeholder: 'e.g. Bryanston, Johannesburg', value: '' })]),
-    ]));
-
-    form.append(h('div.form-grid', [
-      h('label.field', [h('span', 'Budget (optional, rand)'), h('input', { type: 'number', name: 'budget', min: 0, step: 50, placeholder: 'Leave blank to see bids' })]),
-      h('label.field', [h('span', 'Urgency'), h('select', { name: 'urgency' }, [
-        h('option', { value: 'EMERGENCY' }, 'Emergency — today'),
-        h('option', { value: 'URGENT' }, 'Urgent — within 48 hours'),
-        h('option', { value: 'SOON', selected: true }, 'This week'),
-        h('option', { value: 'SCHEDULED' }, 'Scheduled date'),
-        h('option', { value: 'FLEXIBLE' }, 'Flexible'),
-      ])]),
-    ]));
-
-    form.append(h('details.fold', [
-      h('summary', '🏠 Household & access details (safety)'),
-      h('div.fold-body', [
-        h('div.row.wrap', [
-          h('label.field', { style: { margin: 0 } }, [h('label', { style: { display: 'flex', gap: '8px', alignItems: 'center' } }, [h('input', { type: 'checkbox', name: 'children' }), h('span.small', 'Children on the premises')])]),
-          h('label', { style: { display: 'flex', gap: '8px', alignItems: 'center' } }, [h('input', { type: 'checkbox', name: 'vulnerable' }), h('span.small', 'Vulnerable occupants')]),
-          h('label', { style: { display: 'flex', gap: '8px', alignItems: 'center' } }, [h('input', { type: 'checkbox', name: 'inHome', checked: true }), h('span.small', 'Work inside the home')]),
-        ]),
-        h('p.tiny.muted', { style: { marginTop: '8px' } }, 'These only add verification steps (arrival codes, clearance checks, two-person visits). They never change who can see your job or what it costs.'),
-      ]),
-    ]));
-
-    form.append(h('button.btn.block', { type: 'submit' }, 'Match me with verified pros'));
-
-    const liveAdvice = h('div.stack', { style: { marginTop: '14px' } });
-    root.append(form, liveAdvice);
-
-    // Live guidance while typing: category resolution + price band.
-    const descriptionBox = form.querySelector('textarea[name=description]');
-    let debounce = null;
-    descriptionBox.addEventListener('input', () => {
-      clearTimeout(debounce);
-      debounce = setTimeout(async () => {
-        const text = descriptionBox.value.trim();
-        if (text.length < 8) { liveAdvice.innerHTML = ''; return; }
-        try {
-          const { resolution } = await api.post('/api/catalogue/resolve', { text });
-          liveAdvice.innerHTML = '';
-          if (resolution.matched) {
-            const category = categories.find((c) => c.id === resolution.categoryId);
-            liveAdvice.append(h('div.banner.info', [
-              h('span.ico', category?.statutoryTrade ? '⚖️' : '🧭'),
-              h('div', [
-                h('strong', `Looks like: ${category?.label || resolution.categoryId}`),
-                h('div.small', `Matched on: ${resolution.why.join(', ') || 'description'}`),
-                category?.statutoryTrade ? h('div.small', 'This is a statutory trade — bids are only accepted from pros with the issuing body’s certificate on file.') : null,
-              ]),
-            ]));
-            const select = form.querySelector('select[name=categoryId]');
-            if (select && !select.value) select.value = resolution.categoryId;
-          }
-        } catch { /* offline or typing fast — ignore */ }
-      }, 420);
-    });
-
-    async function onSubmit(event) {
-      event.preventDefault();
-      const values = formValues(form);
-      const button = form.querySelector('button[type=submit]');
-      await withButton(button, async () => {
-        const job = await api.post('/api/jobs', {
-          customerId: session.userId,
-          categoryId: values.categoryId || null,
-          description: values.description,
-          title: values.description.slice(0, 70),
-          addressText: values.address,
-          budgetCents: values.budget ? Math.round(values.budget * 100) : null,
-          urgency: values.urgency,
-          locationType: values.inHome ? 'IN_HOME' : 'ON_SITE',
-          householdNotes: { childrenOnPremises: values.children, vulnerableOccupants: values.vulnerable },
-        });
-        toast(`Job posted — ${job.matchReport?.candidates?.length || 0} verified pro(s) notified`, 'ok');
-        navigate(`/job/${job.jobId}`);
-      });
-    }
-
-    return root;
-  };
-
-  function onboardingPrompt(title, body) {
-    const root = h('div.fade-in.stack');
-    root.append(h('div.card.accent', [
-      h('div.kicker', '👤🏾 One quick step'),
-      h('h2', title),
-      h('p.small', body),
-      h('div.col', [
-        h('button.btn', { onclick: () => showCustomerSignup() }, 'Create my free account'),
-        h('button.btn.ghost', { onclick: () => showProSignup() }, 'I’m a pro — I want work'),
-      ]),
-    ]));
-    return root;
-  }
-
-  function showCustomerSignup() {
-    const bundle = window.ProVeri.api.state.bundle || {};
-    const suburbs = (bundle.catalog?.metros || []).flatMap((m) => m.suburbs || []);
-    const form = h('form.stack', { onsubmit: submit });
-    form.append(
-      h('label.field', [h('span', 'Full name'), h('input', { type: 'text', name: 'fullName', required: true })]),
-      h('label.field', [h('span', 'Email'), h('input', { type: 'email', name: 'email', required: true })]),
-      h('label.field', [h('span', 'Mobile'), h('input', { type: 'tel', name: 'mobile', required: true, placeholder: '082 123 4567' })]),
-      h('label.field', [h('span', 'Suburb'), h('select', { name: 'suburbId' }, [h('option', { value: '' }, 'Prefer not to say'), ...suburbs.map((s) => h('option', { value: s.id }, `${s.name} (${s.postalCode})`))])]),
-      h('button.btn.block', { type: 'submit' }, 'Create account'),
-    );
-    window.ProVeri.ui.sheet('Create your free account', form);
-
-    async function submit(event) {
-      event.preventDefault();
-      const values = window.ProVeri.ui.formValues(form);
-      const button = form.querySelector('button[type=submit]');
-      await window.ProVeri.ui.withButton(button, async () => {
-        const customer = await window.ProVeri.api.post('/api/customers', { ...values, suburbId: values.suburbId || undefined });
-        await window.ProVeri.api.post(`/api/customers/${customer.customerId}/verify-channel`, { channel: 'email', reference: `OTP_${customer.customerId.slice(-8)}` });
-        await window.ProVeri.api.post(`/api/customers/${customer.customerId}/verify-channel`, { channel: 'mobile', reference: `OTP_${customer.customerId.slice(-8)}` });
-        window.ProVeri.api.setSession({ userId: customer.customerId, role: 'CUSTOMER', name: customer.fullName });
-        window.ProVeri.ui.closeSheet();
-        window.ProVeri.ui.toast(`Welcome, ${customer.fullName.split(' ')[0]} — email and mobile verified`, 'ok');
-        window.dispatchEvent(new PopStateEvent('popstate'));
-      });
-    }
-  }
-
-  function showProSignup() {
-    window.ProVeri.ui.navigate('/become-a-pro');
-    window.ProVeri.ui.closeSheet();
-  }
 
   /* ================= JOB DETAIL ================= */
 

@@ -135,6 +135,12 @@ function buildApiRoutes({ marketplace }) {
 
   router.get('/api/pros/:proId/wallet', ({ params }) => mp.bookings.walletFor(params.proId), { tags: ['people', 'money'], summary: 'Wallet: balance, escrow held, warranty holdbacks, payout rails' });
 
+  router.get('/api/pros/:proId/portfolio', ({ params, query }) => mp.portfolio.forPro(params.proId, {
+    limit: query.limit ? Number(query.limit) : 30,
+  }), { tags: ['people', 'portfolio'], summary: 'A pro’s past work, proven items first' });
+
+  router.post('/api/pros/:proId/portfolio', wrap(async ({ params, body }) => mp.portfolio.addItem({ ...body, proId: params.proId })), { tags: ['people', 'portfolio'], summary: 'Upload past work for this pro' });
+
   router.post('/api/pros/:proId/bank-change', wrap(async ({ params, body }) => {
     require_(body.newBank, 'newBank');
     return mp.people.requestBankChange(params.proId, { newBank: body.newBank, actorId: body.actorId, callBackConfirmed: Boolean(body.callBackConfirmed) });
@@ -166,6 +172,73 @@ function buildApiRoutes({ marketplace }) {
   router.get('/api/verify/qualifications/:trade', wrap(async ({ params, query }) => integrations.QUALIFICATIONS.forTrade(params.trade, { live: query.live === 'true' })), { tags: ['trust'], summary: 'SAQA / NQF qualifications for a trade' });
 
   router.post('/api/verify/rpl-pathway', wrap(async ({ body }) => integrations.QUALIFICATIONS.rplPathway(require_(body.trade, 'trade'))), { tags: ['trust'], summary: 'Recognition of Prior Learning pathway for skilled but uncertified pros' });
+
+  /* ================= portfolio — the past work homeowners browse ================= */
+
+  router.get('/api/portfolio', ({ query }) => mp.portfolio.list({
+    categoryId: query.categoryId || null,
+    suburbId: query.suburbId || null,
+    metro: query.metro || null,
+    q: query.q || null,
+    tier: query.tier || null,
+    proId: query.proId || null,
+    verifiedOnly: query.verified === 'true' || query.verifiedOnly === 'true',
+    sort: query.sort || 'recent',
+    limit: query.limit ? Number(query.limit) : 60,
+  }), { tags: ['portfolio'], summary: 'The work feed: past jobs near you, proven ones first' });
+
+  router.get('/api/portfolio/stats', () => mp.portfolio.stats(), { tags: ['portfolio', 'trust'], summary: 'Portfolio counts by tier — how much of the feed is proven work' });
+
+  router.get('/api/portfolio/tiers', () => ({
+    tiers: mp.portfolio.tiers(),
+    explainer: [
+      { tier: 'SELF_DECLARED', label: 'Uploaded by the pro', whatItMeans: 'The pro uploaded this. Nothing on ProVeri corroborates it, so it is shown as what it is: their word.', badge: null },
+      { tier: 'EVIDENCE_LINKED', label: 'Proof of work', whatItMeans: 'Tied to an escrow-released ProVeri job: geotagged, hash-sealed photos from the address where the work happened.', badge: 'Proof of work' },
+      { tier: 'CLIENT_CONFIRMED', label: 'Client confirmed', whatItMeans: 'The homeowner on that job confirmed it and rated it 4★ or better. This is the strongest thing a pro can show you.', badge: 'Client confirmed' },
+    ],
+    rules: mp.kernel.policy.ruleBook().filter((r) => r.appliesTo.includes('portfolio')),
+  }), { tags: ['portfolio', 'trust'], summary: 'What each verification tier is allowed to claim, and the rules that police it' });
+
+  router.post('/api/portfolio', wrap(async ({ body }) => {
+    require_(body.proId, 'proId');
+    return mp.portfolio.addItem(body);
+  }), { tags: ['portfolio'], summary: 'Upload past work (photos are sealed; a tier is computed, never claimed)' });
+
+  router.get('/api/portfolio/:itemId', ({ params }) => mp.portfolio.detail(params.itemId), { tags: ['portfolio'], summary: 'One piece of work: photos, seals, tier statement, the pro, enquiry count' });
+
+  router.patch('/api/portfolio/:itemId', wrap(async ({ params, body }) => {
+    const { actorId, ...patch } = body;
+    return mp.portfolio.updateItem(params.itemId, patch, { actorId: actorId || 'pro' });
+  }), { tags: ['portfolio'], summary: 'Edit your own work item (tier and badges are not editable)' });
+
+  router.delete('/api/portfolio/:itemId', wrap(async ({ params, query }) => mp.portfolio.removeItem(params.itemId, {
+    actorId: query.actorId || 'pro',
+    reason: query.reason || null,
+  })), { tags: ['portfolio'], summary: 'Remove a work item (owner or trust desk)' });
+
+  router.post('/api/portfolio/:itemId/confirm', wrap(async ({ params, body }) => mp.portfolio.confirmByClient({
+    itemId: params.itemId,
+    customerId: require_(body.customerId, 'customerId'),
+    comment: body.comment || null,
+  })), { tags: ['portfolio'], summary: 'Homeowner confirms: yes, this was my house and this pro did the work' });
+
+  router.post('/api/portfolio/:itemId/flag', wrap(async ({ params, body }) => mp.portfolio.flag({
+    itemId: params.itemId,
+    reason: require_(body.reason, 'reason'),
+    reporterId: body.reporterId || null,
+  })), { tags: ['portfolio', 'trust'], summary: 'Report work that is not theirs or not as described' });
+
+  router.post('/api/portfolio/:itemId/enquire', wrap(async ({ params, body }) => mp.portfolio.enquire({
+    itemId: params.itemId,
+    customerId: body.customerId || null,
+    actorId: body.actorId || null,
+    body: require_(body.message || body.body, 'message'),
+  })), { tags: ['portfolio'], summary: 'Reach out about a piece of work — the lead that starts a job' });
+
+  router.get('/api/portfolio/:itemId/messages', ({ params, query }) => mp.portfolio.listEnquiries({
+    itemId: params.itemId,
+    userId: require_(query.userId, 'userId'),
+  }), { tags: ['portfolio'], summary: 'The enquiry thread on a work item (participants only)' });
 
   /* ================= jobs & bidding ================= */
 

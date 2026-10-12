@@ -74,7 +74,11 @@
 
   function titleFor(pathname) {
     const titles = {
-      '/': 'Lula ProVeri — verified pros, escrow-protected money',
+      '/': 'Lula ProVeri — real work near you 🇿🇦',
+      '/browse': 'Browse work near you · Lula ProVeri',
+      '/orders': 'My orders · Lula ProVeri',
+      '/me': 'You · Lula ProVeri',
+      '/upload-work': 'Upload your work · Lula ProVeri',
       '/find-a-pro': 'Find a verified pro · Lula ProVeri',
       '/post-job': 'Post a job · Lula ProVeri',
       '/bookings': 'My jobs · Lula ProVeri',
@@ -93,6 +97,8 @@
       '/profile': 'Profile · Lula ProVeri',
     };
     if (titles[pathname]) return titles[pathname];
+    if (pathname.startsWith('/work/')) return 'Work · Lula ProVeri';
+    if (pathname.startsWith('/order/')) return 'Order · Lula ProVeri';
     if (pathname.startsWith('/job/')) return 'Job · Lula ProVeri';
     if (pathname.startsWith('/booking/')) return 'Booking · Lula ProVeri';
     if (pathname.startsWith('/pro/')) return 'Pro profile · Lula ProVeri';
@@ -103,10 +109,9 @@
 
   function updateNav(pathname) {
     const active = pathname === '/' ? '/'
-      : pathname.startsWith('/find-a-pro') || pathname.startsWith('/pro/') ? '/find-a-pro'
-      : pathname.startsWith('/post-job') ? '/post-job'
-      : pathname.startsWith('/booking') || pathname.startsWith('/job/') ? '/bookings'
-      : pathname.startsWith('/trust') || pathname.startsWith('/integrations') || pathname.startsWith('/proof/') ? '/trust'
+      : pathname.startsWith('/browse') || pathname.startsWith('/work/') || pathname.startsWith('/pro/') || pathname.startsWith('/find-a-pro') ? '/browse'
+      : pathname.startsWith('/orders') || pathname.startsWith('/order/') || pathname.startsWith('/booking') || pathname.startsWith('/job/') || pathname.startsWith('/post-job') ? '/orders'
+      : pathname.startsWith('/me') || pathname.startsWith('/profile') || pathname.startsWith('/wallet') || pathname.startsWith('/notifications') || pathname.startsWith('/upload-work') ? '/me'
       : null;
     nav.querySelectorAll('button').forEach((button) => {
       button.classList.toggle('active', button.dataset.nav === active);
@@ -120,7 +125,25 @@
   });
 
   document.getElementById('btn-notifications').addEventListener('click', () => navigate('/notifications'));
-  document.getElementById('btn-profile').addEventListener('click', () => navigate('/profile'));
+  document.getElementById('btn-profile').addEventListener('click', () => navigate('/me'));
+
+  /* One button, two sides of the market: hire somebody, or publish your work. */
+  const fab = document.getElementById('fab');
+  if (fab) {
+    fab.addEventListener('click', () => {
+      const session = window.ProVeri.api.session();
+      const { h: make, sheet: openSheet } = window.ProVeri.ui;
+      openSheet('What do you want to do?', make('div.col', { style: { gap: '10px' } }, [
+        make('button.btn.block', {
+          onclick: () => { window.ProVeri.ui.closeSheet(); navigate('/post-job'); },
+        }, '🛠️ I need work done — post a job'),
+        make('button.btn.block.ghost', {
+          onclick: () => { window.ProVeri.ui.closeSheet(); navigate(session && session.role === 'PRO' ? '/upload-work' : '/become-a-pro'); },
+        }, session && session.role === 'PRO' ? '📷 Upload work I have done' : '📷 I am a pro — publish my work'),
+        make('p.tiny.muted', 'Home owners reach out to pros through the work they publish. Every escrow-released job adds itself to your portfolio automatically.'),
+      ]));
+    });
+  }
 
   window.addEventListener('popstate', render);
 

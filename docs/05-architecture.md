@@ -23,6 +23,7 @@ LulaUnifidMarket/
 │   │   ├── people.js            customers, pros, the 9-stage KYC pipeline
 │   │   ├── jobs.js              posting, matching, bidding, beat-the-quote
 │   │   ├── bookings.js          award → escrow → evidence → release → review
+│   │   ├── portfolio.js         the work shelf: upload, tiers, harvest, enquiries
 │   │   ├── vehicles.js          the merged TrustShield vertical + passports
 │   │   ├── webstudio.js         microsites, packages, orders, diagnostics
 │   │   ├── businessSites.js     Business Site Studio: templates, plans, build,
@@ -44,7 +45,7 @@ LulaUnifidMarket/
 │   └── server/
 │       ├── router.js            path templates, JSON bodies, OpenAPI generation
 │       ├── static.js            PWA static serving, traversal guard, ETags
-│       ├── routes/api.js        171 operations registered with tag + summary
+│       ├── routes/api.js        184 operations registered with tag + summary
 │       └── index.js             bootstrap, scheduler, shutdown, and the
 │                                server-rendered public pages (/sites, /s/:slug,
 │                                /preview/:slug, /export/:slug, robots, sitemap)
@@ -61,14 +62,14 @@ LulaUnifidMarket/
 │                                10 site templates, studio plans + sales playbook
 ├── docs/                        this suite (+ archive/)
 ├── scripts/                     icons, probe, openapi, api-docs, healthcheck, reset
-└── test/                        168 tests across 9 files
+└── test/                        199 tests across 10 files
 ```
 
 ## Layering rules
 
 1. **HTTP never touches the store.** Routes call the `Marketplace` facade; the
    facade calls service modules; service modules call the kernel. That is the
-   whole dependency graph, and it is what makes the 168 tests possible without a
+   whole dependency graph, and it is what makes the 199 tests possible without a
    server. The one deliberate exception is `businessSites.js`, which renders
    HTML: it is a service that returns strings, still with no network and no
    template engine, and the HTTP layer only decides which URL serves which
@@ -139,6 +140,27 @@ somebody can be held to. A POPIA objection moves a prospect to `LOST` with
 `result: 'OPT_OUT'` and blocks all six outreach channels; on a `WON` account it
 records the objection and leaves the stage alone, because they are still a
 customer.
+
+### Portfolio item
+
+```
+(nothing)  ──addItem()──▶  SELF_DECLARED  ──link a released booking──▶  EVIDENCE_LINKED
+                                     │                                          │
+                                     │                                   confirmByClient()
+                                     │                                   or a 4★+ review
+                                     ▼                                          ▼
+                              (patch claims a tier)                     CLIENT_CONFIRMED
+                                     │
+                                     └──PRT-001 BLOCK──▶ 409 + VERIFICATION_CLAIM_WITHOUT_EVIDENCE
+
+bookings.releasePayment() ──harvestFromBooking()──▶ EVIDENCE_LINKED / CLIENT_CONFIRMED  (idempotent)
+
+LIVE ──flag()──▶ FLAGGED (off the shelf, on the record) ──removeItem()──▶ REMOVED (soft)
+```
+
+There is no arrow from `SELF_DECLARED` to a tier that does not pass through a
+released booking belonging to that pro, and no arrow out of `FLAGGED`/`REMOVED`
+back to the feed.
 
 ## Concurrency and durability notes (honest)
 
