@@ -171,7 +171,7 @@ function line(label, value) {
   line('platform receipt', receipt.receipt);
 
   heading('DONE');
-  process.stdout.write('Run `npm start` for the same journey as an installable PWA, or `npm test` for the 199 tests that enforce every rule above.\n\n');
+  process.stdout.write('Run `npm start` for the same journey as an installable PWA, or `npm test` for the 200 tests that enforce every rule above.\n\n');
 })().catch((error) => {
   process.stderr.write(`demo failed: ${error.stack}\n`);
   process.exit(1);

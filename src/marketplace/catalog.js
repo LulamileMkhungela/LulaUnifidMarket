@@ -7,7 +7,8 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const { distanceKm, nowIso, clamp } = require('../kernel/util');
-const { MARKET, GEOCODING, MUNICIPAL } = require('../integrations/context');
+const { MARKET, MUNICIPAL } = require('../integrations/context');
+const { GEOCODING } = require('../integrations/publicData');
 const { TRADE_REGULATORS } = require('../kernel/verification');
 
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
@@ -133,12 +134,26 @@ class Catalog {
   }
 
   findSuburbByName(name) {
-    const needle = String(name || '').toLowerCase();
-    for (const metro of this.metros.values()) {
-      const found = metro.suburbs.find((s) => s.name.toLowerCase() === needle || s.name.toLowerCase().startsWith(needle));
-      if (found) return this.suburb(found.id);
+    const needle = String(name || '').trim().toLowerCase();
+    if (!needle) return null;
+    const suburbs = [...this.metros.values()].flatMap((metro) => metro.suburbs);
+
+    const exact = (value) => suburbs.find((s) => s.name.toLowerCase() === value || s.name.toLowerCase().startsWith(value));
+
+    // "Midrand", then "Midrand, Johannesburg", then a street address that
+    // happens to contain the suburb — people type all three.
+    let found = exact(needle);
+    if (!found) {
+      for (const part of needle.split(/[,;]/).map((p) => p.trim()).filter(Boolean)) {
+        found = exact(part);
+        if (found) break;
+      }
     }
-    return null;
+    if (!found) {
+      const words = needle.split(/\s+/).filter((w) => w.length > 3);
+      found = suburbs.find((s) => words.includes(s.name.toLowerCase()));
+    }
+    return found ? this.suburb(found.id) : null;
   }
 
   /** Geocode a free-text address, preferring the live OSM lookup. */
@@ -159,8 +174,13 @@ class Catalog {
         municipality: MUNICIPAL.municipalityFor({ lat: bundled.lat, lon: bundled.lon }, geographyData),
       };
     }
-    const live = await GEOCODING.geocode(addressText);
-    const best = live.results?.[0];
+    let live = null;
+    try {
+      live = await GEOCODING.geocode(addressText);
+    } catch (error) {
+      return { resolved: false, source: 'geocoding-unavailable', reason: error.message, addressText };
+    }
+    const best = live?.results?.[0];
     if (!best) return { resolved: false, source: 'none', addressText };
     return {
       source: live.source,

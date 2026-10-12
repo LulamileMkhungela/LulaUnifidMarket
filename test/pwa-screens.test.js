@@ -1016,6 +1016,31 @@ test('an unknown work item and a bad upload are client errors', async () => {
   assert.equal(noPro.status, 400);
 });
 
+test('a job posted without a trade is matched from its own description', async () => {
+  // The checkout promises "auto-detect from my description", so the server has
+  // to do the detecting — a plain-language job must not bounce with a 400.
+  const customer = marketplace.store.all('customers')[0];
+  const posted = await post('/api/jobs', {
+    customerId: customer.customerId,
+    description: 'The geyser is leaking through the kitchen ceiling and needs replacing today',
+    title: 'Geyser replacement',
+    addressText: 'Midrand, Johannesburg',
+    urgency: 'URGENT',
+  });
+  assert.equal(posted.status, 200, JSON.stringify(posted.payload));
+  assert.ok(posted.payload.jobId, 'the job exists');
+  assert.equal(posted.payload.categoryAutoDetected.categoryId, 'plumbing');
+  assert.equal(posted.payload.categoryAutoDetected.label, 'Plumber');
+  assert.ok(posted.payload.categoryAutoDetected.confidence > 0);
+  assert.ok(posted.payload.categoryAutoDetected.why.includes('geyser'), 'and it says why it matched');
+
+  const vague = await post('/api/jobs', {
+    customerId: customer.customerId, description: 'help', title: 'help', addressText: 'Midrand',
+  });
+  assert.equal(vague.status, 400, 'a description we cannot match asks for a trade');
+  assert.match(JSON.stringify(vague.payload), /pick a trade|categoryId/);
+});
+
 test('shutdown', () => {
   marketplace.stopScheduler();
   server.close();

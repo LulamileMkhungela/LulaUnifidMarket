@@ -17,7 +17,7 @@ itself back onto the shelf as proven work.
 It ships as an **installable, offline-first PWA** with an e-commerce-shaped
 interface (four tabs and one action button) plus a **zero-dependency REST API**
 (184 operations across 164 paths), runs on **one Node 22 process with no
-`node_modules`**, and is enforced by **199 tests**.
+`node_modules`**, and is enforced by **200 tests**.
 
 It also ships a **Business Site Studio**: ten industry templates that produce a
 live, server-rendered business website at R0 build cost, where the booking form
@@ -28,7 +28,7 @@ generated pitch kit.
 
 ```bash
 npm start        # seeds a full demo marketplace · API + PWA on http://localhost:4173
-npm test         # 199 tests: kernel, flows, portfolio, verticals, integrations, studio, sales desk, HTTP, PWA screens
+npm test         # 200 tests: kernel, flows, portfolio, verticals, integrations, studio, sales desk, HTTP, PWA screens
 npm run demo     # one services journey printed end to end
 npm run demo:vehicle   # one vehicle journey (the merged TrustShield rail)
 npm run demo:studio    # research → diagnose → demo → pitch → win → publish → booking → job → export
@@ -102,7 +102,7 @@ data/              categories (32), geography (11 metros, 9 provinces), Web Stud
 docs/              00 executive summary → 13 portfolio & storefront (+ archive/
                    with the original TrustShield docs)
 scripts/           icon generator, integration probe, OpenAPI printer, healthcheck, store reset
-test/              199 tests across 10 files
+test/              200 tests across 10 files
 ```
 
 ## Documentation

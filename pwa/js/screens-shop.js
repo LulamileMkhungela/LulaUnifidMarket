@@ -943,7 +943,10 @@ window.ProVeri.screens = window.ProVeri.screens || {};
           householdNotes: { childrenOnPremises: state.children, vulnerableOccupants: state.vulnerable },
           preferredProId: state.proId || null,
         });
-        toast(`Job posted — ${job.matchReport?.candidates?.length || 0} verified pro(s) notified`, 'ok');
+        const matched = job.categoryAutoDetected
+          ? ` Matched to ${job.categoryAutoDetected.label} (${job.categoryAutoDetected.confidence}%).`
+          : '';
+        toast(`Job posted — ${job.matchReport?.candidates?.length || 0} verified pro(s) notified.${matched}`, 'ok');
         navigate(`/job/${job.jobId}`);
       });
     }

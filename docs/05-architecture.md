@@ -62,14 +62,14 @@ LulaUnifidMarket/
 │                                10 site templates, studio plans + sales playbook
 ├── docs/                        this suite (+ archive/)
 ├── scripts/                     icons, probe, openapi, api-docs, healthcheck, reset
-└── test/                        199 tests across 10 files
+└── test/                        200 tests across 10 files
 ```
 
 ## Layering rules
 
 1. **HTTP never touches the store.** Routes call the `Marketplace` facade; the
    facade calls service modules; service modules call the kernel. That is the
-   whole dependency graph, and it is what makes the 199 tests possible without a
+   whole dependency graph, and it is what makes the 200 tests possible without a
    server. The one deliberate exception is `businessSites.js`, which renders
    HTML: it is a service that returns strings, still with no network and no
    template engine, and the HTTP layer only decides which URL serves which

@@ -120,7 +120,7 @@ Posting, matching, amending, awarding and expiring jobs.
 
 | Method | Route | Purpose |
 | --- | --- | --- |
-| `POST` | `/api/jobs` | Post a job — matching, weather, load-shedding and holiday advice run immediately |
+| `POST` | `/api/jobs` | Post a job — the trade is auto-detected from the description if it is not supplied; matching, weather, load-shedding and holiday advice run immediately |
 | `GET` | `/api/jobs` | List jobs |
 | `GET` | `/api/jobs/:jobId` | One job with its bids, market band, weather, load-shedding and safety advice |
 | `PATCH` | `/api/jobs/:jobId` | Amend a job — existing bids are flagged for re-consent because the scope changed |

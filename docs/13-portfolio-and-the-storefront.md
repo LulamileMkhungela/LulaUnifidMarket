@@ -207,6 +207,12 @@ Honesty about verification state is part of the acceptance criteria, so:
 - Every shop screen rendered against the live API through the DOM shim, with
   canary assertions that catch `undefined`/`NaN`/`[object Object]` reaching a
   phone.
+- Posting a job in plain language: the trade is auto-detected from the
+  description (`categoryAutoDetected` with its confidence and its reasons), and
+  "Bryanston, Johannesburg" resolves to a real suburb. Both were broken — the
+  route demanded a `categoryId` the UI promised to infer, and `catalog.js`
+  imported `GEOCODING` from the wrong module, so any address that was not an
+  exact suburb name threw a TypeError. Fixed and regression-tested.
 
 **Simulated, and labelled as such in the product**
 
@@ -231,7 +237,7 @@ rules, evidence linking, impostor linking, harvest and its idempotency, client
 confirmation, the enquiry loop and its privacy, feed filters and ranking, detail
 views, flag/remove, stats, public-profile projection).
 
-`test/pwa-screens.test.js` — 30 tests, now including the storefront: the shell
+`test/pwa-screens.test.js` — 31 tests, now including the storefront: the shell
 asserts four tabs, one FAB, load order, service-worker precache and the `v3`
 cache version; the render tests assert the home screen has a search box, chips
 and work cards **and no longer contains the old essay sections**; the product
@@ -239,4 +245,4 @@ page asserts a proven item says *escrow-released* while a self-declared one says
 *Uploaded by the pro* and never borrows the badge; plus the portfolio HTTP API,
 the 409/403/400/404 mapping, and the demo photographs actually being served.
 
-Full suite: **199 tests**.
+Full suite: **200 tests**.

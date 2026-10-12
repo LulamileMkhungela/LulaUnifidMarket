@@ -42,7 +42,7 @@ Kernel** and kept vehicles as a live vertical on the same rails:
 | Vehicle + property flows only | **Services** (live), **vehicles** (beta), **property** (honestly "coming soon") |
 | Static HTML prototype | Installable **PWA** + zero-dependency REST API (184 operations) + server-rendered pro microsites **and** client business sites |
 | Competitor notes (3 vendors) | Competitor teardown across **14** SA and international platforms with take-rate economics |
-| No runnable surface | `npm start` seeds a full marketplace; `npm test` runs **199 tests**; live preview |
+| No runnable surface | `npm start` seeds a full marketplace; `npm test` runs **200 tests**; live preview |
 | Website demos with dead buttons (the reference repository's `BookingModal` shows a toast) | A booking form that validates against its template schema and produces a reference, a quote, an owner notification — and a real marketplace job into escrow when the business is a verified pro |
 | Original TrustShield docs | Preserved verbatim under `docs/archive/` |
 
@@ -86,7 +86,7 @@ Kernel** and kept vehicles as a live vertical on the same rails:
 
 ```bash
 npm start                 # seeds the demo marketplace and serves API + PWA on :4173
-npm test                  # 199 tests: kernel, flows, portfolio, verticals, integrations, studio, sales desk, HTTP, PWA screens
+npm test                  # 200 tests: kernel, flows, portfolio, verticals, integrations, studio, sales desk, HTTP, PWA screens
 npm run demo              # end-to-end services journey printed to stdout
 npm run demo:vehicle      # end-to-end vehicle journey (the merged TrustShield rail)
 npm run demo:studio       # research → diagnose → demo → pitch → win → publish → booking → job → export

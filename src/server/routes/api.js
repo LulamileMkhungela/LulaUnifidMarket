@@ -244,10 +244,32 @@ function buildApiRoutes({ marketplace }) {
 
   router.post('/api/jobs', wrap(async ({ body }) => {
     require_(body.customerId, 'customerId');
-    require_(body.categoryId, 'categoryId');
     require_(body.description, 'description');
-    return mp.jobs.postJob(body);
-  }), { tags: ['jobs'], summary: 'Post a job — matching, weather, load-shedding and holiday advice run immediately' });
+
+    // The PWA promises "auto-detect from my description", so the server does the
+    // detecting rather than refusing a job that described itself perfectly well.
+    let categoryId = body.categoryId || null;
+    let autoDetected = null;
+    if (!categoryId) {
+      const resolution = mp.catalog.resolveFromText(body.description);
+      if (resolution.matched) {
+        categoryId = resolution.categoryId;
+        autoDetected = {
+          categoryId,
+          label: mp.catalog.get(categoryId).label,
+          confidence: resolution.confidence,
+          why: resolution.why,
+          alternatives: resolution.alternatives,
+        };
+      }
+    }
+    if (!categoryId) {
+      throw badRequest('categoryId is required — pick a trade, or describe the job in a sentence we can match (for example "the geyser is leaking into the ceiling")');
+    }
+
+    const posted = await mp.jobs.postJob({ ...body, categoryId });
+    return autoDetected ? { ...posted, categoryAutoDetected: autoDetected } : posted;
+  }), { tags: ['jobs'], summary: 'Post a job — the trade is auto-detected from the description if it is not supplied; matching, weather, load-shedding and holiday advice run immediately' });
 
   router.get('/api/jobs', ({ query }) => mp.jobs.listJobs({
     customerId: query.customerId,
