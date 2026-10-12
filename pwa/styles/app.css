@@ -132,7 +132,7 @@ code, .mono { font-family: var(--font-mono); font-size: .86em; }
 #app-header .brand img { width: 34px; height: 34px; border-radius: 11px; box-shadow: var(--shadow-sm); }
 #app-header .brand small {
   display: block; font-weight: 700; font-size: 9px; letter-spacing: .07em; text-transform: uppercase;
-  color: var(--ink-500); max-width: 46vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--ink-500); max-width: 52vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 #app-header .brand > span { min-width: 0; }
 #app-header .spacer { flex: 1; }
