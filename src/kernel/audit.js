@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Append-only, hash-chained audit ledger.
+ * ProVeri — Append-only, hash-chained audit ledger.
  *
  * This is the TrustShield immutability idea generalised: every meaningful
  * platform action (verification result, bid, escrow movement, evidence upload,

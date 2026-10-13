@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Persistence.
+ * ProVeri — Persistence.
  *
  * Zero-dependency store: an in-memory graph with an append-only JSON snapshot
  * on disk. Swapping this for Postgres/Neon is a one-file change — every module
@@ -29,6 +29,7 @@ class Store {
       bids: new Map(),
       bookings: new Map(),
       reviews: new Map(),
+      customerReviews: new Map(),
       disputes: new Map(),
       messages: new Map(),
       notifications: new Map(),
@@ -52,6 +53,7 @@ class Store {
       salesLeads: new Map(),
       portfolioItems: new Map(),
       leadTouches: new Map(),
+      inboxReads: new Map(),
       waitlist: [],
       priceBands: {},
       counters: {},

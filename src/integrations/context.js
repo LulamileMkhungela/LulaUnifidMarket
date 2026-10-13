@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Market, safety and municipal context adapters.
+ * ProVeri — Market, safety and municipal context adapters.
  *
  * Public statistics are used for two purposes only:
  *   1. MARKET INTELLIGENCE — honest price bands so customers can spot a bait
@@ -24,7 +24,7 @@ const MARKET = {
   id: 'market',
   label: 'Fair-Price Intelligence',
   providers: [{
-    name: 'Lula ProVeri bid ledger (first-party)',
+    name: 'ProVeri bid ledger (first-party)',
     endpoint: 'internal — src/marketplace/matching.js',
     auth: 'none',
     note: 'Every bid placed on the platform, in rand, per category per metro. This is the moat: nobody else in South Africa has escrow-confirmed, non-negotiated prices.',

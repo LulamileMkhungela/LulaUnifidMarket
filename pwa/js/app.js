@@ -1,17 +1,20 @@
 /* ==========================================================================
-   Lula ProVeri PWA — bootstrap, client router, navigation, install & SW
+   ProVeri PWA — shell: router, header, tabs, the Post button,
+   badges, connectivity, install and the service worker.
    ========================================================================== */
 
 (function () {
   'use strict';
   const { api } = window.ProVeri;
-  const { h, toast, navigate } = window.ProVeri.ui;
+  const { h, toast, navigate, icon, avatar, firstName } = window.ProVeri.ui;
   const screens = window.ProVeri.screens;
 
   const main = document.getElementById('app-main');
   const nav = document.getElementById('app-nav');
-  const connPill = document.getElementById('conn-pill');
-  const notifDot = document.getElementById('notif-dot');
+  const headerNav = document.getElementById('header-nav');
+  const headActions = document.getElementById('head-actions');
+  const offlinePill = document.getElementById('offline-pill');
+  const fabLabel = document.getElementById('fab-label');
 
   /* ---------------- route matching ---------------- */
 
@@ -32,6 +35,12 @@
     return null;
   }
 
+  /**
+   * Task screens own the bottom of the screen (a sticky "Accept & pay", a
+   * composer, a three-step form), so the tab bar slides away on them.
+   */
+  const FOCUS_ROUTES = /^\/(work\/|order\/|booking\/|job\/|post-job|upload-work|pro\/|inbox\/|site\/|vehicle\/|checkout|become-a-pro)/;
+
   /* ---------------- render ---------------- */
 
   let currentRender = 0;
@@ -40,90 +49,137 @@
     const pathname = location.pathname;
     const query = Object.fromEntries(new URLSearchParams(location.search).entries());
     const token = ++currentRender;
+    window.ProVeri.ui.closeSheet();
 
     const matched = matchRoute(pathname);
+    updateChrome(pathname);
     if (!matched) {
       main.innerHTML = '';
-      main.append(h('div.empty', [
-        h('div.ico', '🧭'), h('h3', 'Page not found'),
-        h('p.small', `${pathname} does not exist on ProVeri.`),
-        h('button.btn', { onclick: () => navigate('/') }, 'Take me home'),
-      ]));
+      main.append(h('div.page.narrow', h('div.empty', [
+        h('div.ico', icon('map', 28)), h('h3', 'We could not find that page'),
+        h('p', 'The link may be old, or the page has moved.'),
+        h('button.btn', { onclick: () => navigate('/') }, 'Go to the home screen'),
+      ])));
       return;
     }
 
-    updateNav(pathname);
     document.title = titleFor(pathname);
     main.innerHTML = '';
-    main.append(h('div.skeleton.line', { style: { width: '45%' } }), h('div.skeleton.card'), h('div.skeleton.card'));
-    main.scrollTop = 0;
+    main.append(h('div.page', window.ProVeri.ui.loading(3)));
     window.scrollTo({ top: 0 });
 
     try {
       const node = await matched.handler({ params: matched.params, query });
       if (token !== currentRender) return; // a newer navigation superseded this one
       main.innerHTML = '';
+      node.classList.add('screen-enter');
       main.append(node);
     } catch (error) {
       if (token !== currentRender) return;
       main.innerHTML = '';
-      main.append(h('div.banner.danger', [h('span.ico', window.ProVeri.ui.icon('close', 18)), h('div', [h('strong', 'Could not load this screen'), h('div.small', error.message)])]),
-        h('button.btn.ghost', { style: { marginTop: '12px' }, onclick: render }, 'Try again'));
+      main.append(h('div.page.narrow', h('div.empty', [
+        h('div.ico', icon(error.status === 0 ? 'offline' : 'alert', 28)),
+        h('h3', error.status === 0 ? 'You seem to be offline' : error.status === 404 ? 'This no longer exists' : 'That did not load'),
+        h('p', error.status === 404 ? 'It may have been removed or the link is wrong.' : window.ProVeri.ui.friendlyError(error)),
+        h('div.btn-row', { style: { justifyContent: 'center', marginTop: '18px' } }, [
+          h('button.btn', { onclick: render }, 'Try again'),
+          h('button.btn.ghost', { onclick: () => navigate('/') }, 'Home'),
+        ]),
+      ])));
     }
+    refreshBadges();
   }
 
   function titleFor(pathname) {
     const titles = {
-      '/': 'Lula ProVeri — real work near you 🇿🇦',
-      '/browse': 'Browse work near you · Lula ProVeri',
-      '/orders': 'My orders · Lula ProVeri',
-      '/me': 'You · Lula ProVeri',
-      '/upload-work': 'Upload your work · Lula ProVeri',
-      '/find-a-pro': 'Find a verified pro · Lula ProVeri',
-      '/post-job': 'Post a job · Lula ProVeri',
-      '/bookings': 'My jobs · Lula ProVeri',
-      '/trust': 'Trust & transparency · Lula ProVeri',
-      '/vehicles': 'Verified vehicles · Lula ProVeri',
-      '/property': 'Property (coming soon) · Lula ProVeri',
-      '/web-studio': 'Web Studio · Lula ProVeri',
-      '/business-studio': 'Business Site Studio · Lula ProVeri',
+      '/': 'ProVeri — hire a pro with proof',
+      '/browse': 'Explore real work near you · ProVeri',
+      '/orders': 'Your jobs · ProVeri',
+      '/inbox': 'Inbox · ProVeri',
+      '/me': 'Your account · ProVeri',
+      '/sign-in': 'Sign in · ProVeri',
+      '/upload-work': 'Add your work · ProVeri',
+      '/find-a-pro': 'Find a verified pro · ProVeri',
+      '/post-job': 'Post a job · ProVeri',
+      '/bookings': 'Your jobs · ProVeri',
+      '/trust': 'How we protect you · ProVeri',
+      '/vehicles': 'Verified vehicles · ProVeri',
+      '/property': 'Property (coming soon) · ProVeri',
+      '/web-studio': 'Web Studio · ProVeri',
+      '/business-studio': 'Business Site Studio · ProVeri',
       '/sites': 'Sites built on ProVeri',
-      '/sales-desk': 'Sales desk · Lula ProVeri',
-      '/become-a-pro': 'Become a verified pro · Lula ProVeri',
-      '/admin': 'Trust desk · Lula ProVeri',
-      '/integrations': 'Data & integrations · Lula ProVeri',
-      '/wallet': 'Wallet & earnings · Lula ProVeri',
-      '/notifications': 'Notifications · Lula ProVeri',
-      '/profile': 'Profile · Lula ProVeri',
+      '/sales-desk': 'Sales desk · ProVeri',
+      '/become-a-pro': 'Join as a pro · ProVeri',
+      '/admin': 'Trust desk · ProVeri',
+      '/integrations': 'Data & integrations · ProVeri',
+      '/wallet': 'Earnings · ProVeri',
+      '/notifications': 'Updates · ProVeri',
+      '/profile': 'Profile · ProVeri',
     };
     if (titles[pathname]) return titles[pathname];
-    if (pathname.startsWith('/work/')) return 'Work · Lula ProVeri';
-    if (pathname.startsWith('/order/')) return 'Order · Lula ProVeri';
-    if (pathname.startsWith('/job/')) return 'Job · Lula ProVeri';
-    if (pathname.startsWith('/booking/')) return 'Booking · Lula ProVeri';
-    if (pathname.startsWith('/pro/')) return 'Pro profile · Lula ProVeri';
-    if (pathname.startsWith('/vehicle/')) return 'Vehicle · Lula ProVeri';
-    if (pathname.startsWith('/site/')) return 'Site editor · Lula ProVeri';
-    return 'Lula ProVeri';
+    if (pathname.startsWith('/work/')) return 'Work · ProVeri';
+    if (pathname.startsWith('/order/')) return 'Job tracker · ProVeri';
+    if (pathname.startsWith('/job/')) return 'Job · ProVeri';
+    if (pathname.startsWith('/booking/')) return 'Job tracker · ProVeri';
+    if (pathname.startsWith('/pro/')) return 'Pro profile · ProVeri';
+    if (pathname.startsWith('/inbox/')) return 'Conversation · ProVeri';
+    if (pathname.startsWith('/vehicle/')) return 'Vehicle · ProVeri';
+    if (pathname.startsWith('/site/')) return 'Site editor · ProVeri';
+    return 'ProVeri';
   }
 
-  function updateNav(pathname) {
-    const active = pathname === '/' ? '/'
-      : pathname.startsWith('/browse') || pathname.startsWith('/work/') || pathname.startsWith('/pro/') || pathname.startsWith('/find-a-pro') ? '/browse'
-      : pathname.startsWith('/orders') || pathname.startsWith('/order/') || pathname.startsWith('/booking') || pathname.startsWith('/job/') || pathname.startsWith('/post-job') ? '/orders'
-      : pathname.startsWith('/me') || pathname.startsWith('/profile') || pathname.startsWith('/wallet') || pathname.startsWith('/notifications') || pathname.startsWith('/upload-work') ? '/me'
-      : null;
-    nav.querySelectorAll('button').forEach((button) => {
-      button.classList.toggle('active', button.dataset.nav === active);
-    });
-    // Mid-task screens carry their own primary action, so the + button steps
-    // aside instead of floating over a sticky bar.
-    const plus = document.getElementById('fab');
-    if (plus) plus.hidden = FOCUS_ROUTES.test(pathname);
+  function activeTab(pathname) {
+    if (pathname === '/') return '/';
+    if (/^\/(browse|work\/|pro\/|find-a-pro)/.test(pathname)) return '/browse';
+    if (/^\/(orders|order\/|booking|job\/|post-job|wallet)/.test(pathname)) return '/orders';
+    if (/^\/(inbox|notifications)/.test(pathname)) return '/inbox';
+    return null;
   }
 
-  /** Routes where the floating + would sit on top of the screen's own buttons. */
-  const FOCUS_ROUTES = /^\/(work\/|order\/|booking\/|job\/|post-job|upload-work|pro\/|site\/|vehicle\/|checkout)/;
+  /* ---------------- chrome: tabs, header, Post ---------------- */
+
+  function updateChrome(pathname) {
+    const active = activeTab(pathname);
+    for (const button of Array.from(nav.querySelectorAll('button[data-nav]'))) {
+      // classList.toggle is avoided on purpose: add/remove behave the same everywhere.
+      if (button.dataset.nav === active) { button.classList.add('active'); button.setAttribute('aria-current', 'page'); }
+      else { button.classList.remove('active'); button.removeAttribute('aria-current'); }
+    }
+    if (FOCUS_ROUTES.test(pathname)) document.body.classList.add('focus-mode');
+    else document.body.classList.remove('focus-mode');
+    paintHeader(active);
+  }
+
+  function paintHeader(active) {
+    const session = api.session();
+    const isPro = session && session.role === 'PRO';
+    if (fabLabel) fabLabel.textContent = isPro ? 'Add work' : 'Post';
+
+    headerNav.innerHTML = '';
+    const links = [
+      ['/', 'Home', 'home'],
+      ['/browse', 'Explore', 'search'],
+      ['/orders', isPro ? 'Leads & jobs' : 'Your jobs', 'jobs'],
+      ['/inbox', 'Inbox', 'inbox'],
+    ];
+    for (const [href, label] of links) {
+      headerNav.append(h('a.nav-link' + (active === href ? '.active' : ''), { href }, [
+        label,
+        href === '/inbox' && badgeCount ? h('span.count-badge', String(Math.min(badgeCount, 99))) : null,
+      ]));
+    }
+
+    headActions.innerHTML = '';
+    headActions.append(h('a.btn.sm.head-post', { href: isPro ? '/upload-work' : '/post-job' }, [icon('plus', 18), isPro ? 'Add work' : 'Post a job']));
+    if (session) {
+      headActions.append(h('a.avatar-btn', { href: '/me', 'aria-label': `Your account — ${session.name || 'signed in'}`, title: session.name || 'Your account' }, [
+        avatar(session.name || 'You'),
+        isPro ? h('span.role-dot', { title: 'Pro account' }, icon('tool', 9, { stroke: 3 })) : null,
+      ]));
+    } else {
+      headActions.append(h('button.btn.sm.ghost', { type: 'button', onclick: () => window.ProVeri.account.openSignIn() }, 'Sign in'));
+    }
+  }
 
   nav.addEventListener('click', (event) => {
     const button = event.target.closest('button[data-nav]');
@@ -131,63 +187,110 @@
     navigate(button.dataset.nav);
   });
 
-  document.getElementById('btn-notifications').addEventListener('click', () => navigate('/notifications'));
-  document.getElementById('btn-profile').addEventListener('click', () => navigate('/me'));
-
-  /* One button, two sides of the market: hire somebody, or publish your work. */
+  /* One button, both sides of the market. */
   const fab = document.getElementById('fab');
   if (fab) {
     fab.addEventListener('click', () => {
-      const session = window.ProVeri.api.session();
-      const { h: make, sheet: openSheet, icon: ico } = window.ProVeri.ui;
-      openSheet('What do you want to do?', make('div.col', { style: { gap: '10px' } }, [
-        make('button.btn.block', {
-          onclick: () => { window.ProVeri.ui.closeSheet(); navigate('/post-job'); },
-        }, [ico('tool', 18), make('span', 'I need work done — post a job')]),
-        make('button.btn.block.ghost', {
-          onclick: () => { window.ProVeri.ui.closeSheet(); navigate(session && session.role === 'PRO' ? '/upload-work' : '/become-a-pro'); },
-        }, [ico('camera', 18), make('span', session && session.role === 'PRO' ? 'Upload work I have done' : 'I am a pro — publish my work')]),
-        make('p.tiny.muted', 'Home owners reach out to pros through the work they publish. Every escrow-released job adds itself to your portfolio automatically.'),
+      const session = api.session();
+      if (session && session.role === 'PRO') return navigate('/upload-work');
+      if (session) return navigate('/post-job');
+      const { sheet, closeSheet } = window.ProVeri.ui;
+      sheet('What would you like to do?', h('div.list', [
+        h('button.tile', { type: 'button', onclick: () => { closeSheet(); navigate('/post-job'); } }, [
+          h('span.lead', icon('clipboard-check', 22)),
+          h('div.body', [h('div.t', 'Get a job done'), h('div.d', 'Describe it once, get quotes from verified pros nearby. Free to post.')]),
+          h('span.meta', icon('chevron', 18)),
+        ]),
+        h('button.tile', { type: 'button', onclick: () => { closeSheet(); navigate('/become-a-pro'); } }, [
+          h('span.lead.gold', icon('camera', 22)),
+          h('div.body', [h('div.t', 'I am a pro — show my work'), h('div.d', 'Get hired for work you have already done. No lead fees.')]),
+          h('span.meta', icon('chevron', 18)),
+        ]),
       ]));
     });
   }
 
   window.addEventListener('popstate', render);
+  window.addEventListener('proveri:session', () => {
+    badgeCount = 0;
+    paintHeader(activeTab(location.pathname));
+    refreshBadges(true);
+  });
+
+  /* Header gains a hairline once the page scrolls under it. */
+  let scrolled = false;
+  window.addEventListener('scroll', () => {
+    const now = window.scrollY > 6;
+    if (now === scrolled) return;
+    scrolled = now;
+    if (now) document.body.classList.add('scrolled'); else document.body.classList.remove('scrolled');
+  }, { passive: true });
+
+  /* ---------------- unread badges ---------------- */
+
+  let badgeCount = 0;
+  let badgeFetchedAt = 0;
+
+  async function refreshBadges(force) {
+    const session = api.session();
+    const inboxTab = nav.querySelector('button[data-nav="/inbox"]');
+    if (!session) { paintBadge(inboxTab, 0); return; }
+    if (!force && Date.now() - badgeFetchedAt < 15000) { paintBadge(inboxTab, badgeCount); return; }
+    badgeFetchedAt = Date.now();
+    try {
+      const [inbox, updates] = await Promise.all([
+        api.get(`/api/inbox/${encodeURIComponent(session.userId)}`).catch(() => ({ unread: 0 })),
+        api.get(`/api/notifications/${encodeURIComponent(session.userId)}?unreadOnly=true&limit=99`).catch(() => []),
+      ]);
+      badgeCount = (inbox.unread || 0) + (Array.isArray(updates) ? updates.length : 0);
+    } catch { /* badges are a nicety */ }
+    paintBadge(inboxTab, badgeCount);
+    paintHeader(activeTab(location.pathname));
+  }
+  window.ProVeri.refreshBadges = refreshBadges;
+
+  function paintBadge(button, count) {
+    if (!button) return;
+    const existing = button.querySelector('.count-badge');
+    if (existing) existing.remove();
+    if (count > 0) button.append(h('span.count-badge', { 'aria-label': `${count} unread` }, String(Math.min(count, 99))));
+  }
+
+  setInterval(() => { if (document.visibilityState === 'visible') refreshBadges(true); }, 60000);
 
   /* ---------------- connectivity ---------------- */
 
   function paintConnectivity() {
-    const online = navigator.onLine;
-    connPill.textContent = online ? '●' : 'offline';
-    connPill.title = online ? 'Online' : 'Offline — cached catalogue and queued changes';
-    connPill.classList.toggle('offline', !online);
+    offlinePill.hidden = navigator.onLine;
   }
-  window.addEventListener('online', paintConnectivity);
+  window.addEventListener('online', () => {
+    paintConnectivity();
+    toast('Back online.', 'ok');
+  });
   window.addEventListener('offline', () => {
     paintConnectivity();
-    toast('You are offline. ProVeri keeps working from the cached catalogue, and anything you submit is queued and sent on reconnect.', 'warn');
+    toast('You are offline. You can still browse what you have already seen.', 'warn');
   });
   window.addEventListener('proveri:queue-replayed', (event) => {
     const ok = (event.detail || []).filter((r) => r.ok).length;
-    toast(`${ok} queued change(s) synced now that you are back online`, 'ok');
+    if (ok) toast(`${ok === 1 ? 'Your saved change was' : `${ok} saved changes were`} sent now that you are back online.`, 'ok');
   });
 
-  /* ---------------- install prompt ---------------- */
+  /* ---------------- install ---------------- */
 
   let deferredInstall = null;
   window.addEventListener('beforeinstallprompt', (event) => {
     event.preventDefault();
     deferredInstall = event;
-    const seen = sessionStorage.getItem('proveri.install-dismissed');
-    if (!seen && !window.matchMedia('(display-mode: standalone)').matches) {
-      setTimeout(() => {
-        toast('Tip: install ProVeri to your home screen for the full app experience — it also works offline.', 'ok');
-      }, 4000);
-    }
   });
+  window.ProVeri.canInstall = () => Boolean(deferredInstall);
   window.ProVeri.install = async function install() {
     if (!deferredInstall) {
-      toast('On iPhone: Share → Add to Home Screen. On Android/Chrome: menu → Install app.', 'warn');
+      window.ProVeri.ui.sheet('Install ProVeri on your phone', h('div.stack', [
+        h('p.muted', 'It opens like an app, sends you job updates and works with a weak signal.'),
+        h('div.tile', [h('span.lead.grey', icon('phone', 22)), h('div.body', [h('div.t', 'iPhone (Safari)'), h('div.d', 'Tap Share, then “Add to Home Screen”.')])]),
+        h('div.tile', [h('span.lead.grey', icon('install', 22)), h('div.body', [h('div.t', 'Android (Chrome)'), h('div.d', 'Tap the ⋮ menu, then “Install app”.')])]),
+      ]));
       return false;
     }
     deferredInstall.prompt();
@@ -207,7 +310,7 @@
         if (!worker) return;
         worker.addEventListener('statechange', () => {
           if (worker.state === 'installed' && navigator.serviceWorker.controller) {
-            toast('A new version of ProVeri is ready — reload to switch.', 'ok');
+            toast('A fresh version of ProVeri is ready.', 'ok', { label: 'Reload', onClick: () => location.reload() });
           }
         });
       });
@@ -218,33 +321,22 @@
 
   /* ---------------- boot ---------------- */
 
-  async function boot() {
-    paintConnectivity();
-    registerServiceWorker();
+  let booted = false;
 
+  async function boot() {
+    if (booted) return; // deferred scripts can see readyState 'interactive' *and* DOMContentLoaded
+    booted = true;
+    paintConnectivity();
+    paintHeader(activeTab(location.pathname));
+    registerServiceWorker();
     try {
       await api.boot();
     } catch (error) {
       console.warn('boot fetch failed:', error.message);
     }
-
-    // Share-target deep link: ?title=&text= from the Web Share API.
-    const params = new URLSearchParams(location.search);
-    if (params.get('text') && location.pathname === '/post-job') {
-      sessionStorage.setItem('proveri.share-draft', params.get('text'));
-    }
-
     await render();
-
-    // Unread notifications dot.
-    const session = api.session();
-    if (session) {
-      api.get(`/api/notifications/${session.userId}?unreadOnly=true&limit=1`)
-        .then((rows) => { notifDot.hidden = !rows.length; })
-        .catch(() => {});
-    }
   }
 
-  document.addEventListener('DOMContentLoaded', boot);
-  if (document.readyState !== 'loading') boot();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 })();

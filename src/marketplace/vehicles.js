@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Vehicles vertical (the merged TrustShield engine).
+ * ProVeri — Vehicles vertical (the merged TrustShield engine).
  *
  * WHY THIS EXISTS IN A SERVICES MARKETPLACE
  * -----------------------------------------

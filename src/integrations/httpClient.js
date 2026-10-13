@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — HTTP client for public data sources.
+ * ProVeri — HTTP client for public data sources.
  *
  * Node 22 has global fetch, so this stays dependency-free. It adds what the
  * public APIs actually need in production:

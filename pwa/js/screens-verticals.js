@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Lula ProVeri PWA — vertical screens
+   ProVeri PWA — vertical screens
    vehicles (list + detail + Service Passport) · property waitlist · Web Studio
    ========================================================================== */
 
@@ -74,7 +74,7 @@ window.ProVeri.screens = window.ProVeri.screens || {};
         h('p.sub', `${listing.reference} · ${listing.asset.odometerKm?.toLocaleString('en-ZA')} km · ${listing.location.suburb || listing.location.metro || ''} · ${listing.sellerType === 'TRADE_OR_DEALER' ? 'trade seller' : 'private seller'}`),
         h('div.row.wrap', [
           h('span.money.big', money(listing.priceCents)),
-          h('button.btn.on-dark.ghost', { onclick: () => share({ title: listing.title, text: `${listing.title} on Lula ProVeri`, url: location.href }) }, 'Share'),
+          h('button.btn.on-dark.ghost', { onclick: () => share({ title: listing.title, text: `${listing.title} on ProVeri`, url: location.href }) }, 'Share'),
         ]),
       ]));
 

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Marketplace facade.
+ * ProVeri — Marketplace facade.
  *
  * One object that composes the Trust Kernel, the verticals and the service
  * modules, and is the only thing the HTTP layer talks to. Every mutation goes
@@ -20,6 +20,7 @@ const { WebStudioService } = require('./webstudio');
 const { BusinessSiteStudio } = require('./businessSites');
 const { SalesDeskService } = require('./leads');
 const { PortfolioService } = require('./portfolio');
+const { AuthService } = require('./auth');
 const integrations = require('../integrations');
 const { nowIso, deepClone, sha256 } = require('../kernel/util');
 
@@ -49,8 +50,140 @@ class Marketplace {
     this.businessSites = new BusinessSiteStudio({ store: this.store, kernel: this.kernel, catalog: this.catalog, people: this.people, jobs: this.jobs });
     this.salesDesk = new SalesDeskService({ store: this.store, kernel: this.kernel, catalog: this.catalog, businessSites: this.businessSites, webStudio: this.webStudio, people: this.people });
     this.integrations = integrations;
+    this.auth = new AuthService({ store: this.store, people: this.people, kernel: this.kernel, configuredPartners: () => integrations.configuredPartners() });
     this.startedAt = nowIso();
     this.schedulerTimer = null;
+  }
+
+  /* ---------------- inbox ---------------- */
+
+  /**
+   * Every conversation a person is in, newest first: enquiries about published
+   * work (homeowner ↔ pro, before any job exists) and the chat on each booking.
+   * Read state is a per-user marker, so "unread" means the same thing on every
+   * device.
+   */
+  inbox(userId) {
+    if (!userId) throw new Error('userId is required');
+    const reads = this.store.get('inboxReads', userId) || { userId, markers: {} };
+    const work = this.portfolio.conversationsFor(userId);
+    // A booking chat exists from the moment the job is booked — an active job
+    // always shows its thread, even before the first message.
+    const bookings = this.store.find('bookings', (b) => (b.customerId === userId || b.proId === userId)
+      && ((b.messages || []).length || !['CANCELLED', 'REFUNDED', 'CLOSED'].includes(b.status)))
+      .map((b) => this.#bookingConversation(b));
+    const conversations = [...work, ...bookings].map((c) => {
+      const last = c.messages[c.messages.length - 1];
+      const lastAt = last ? (last.at || last.createdAt) : (c.createdAt || null);
+      const marker = reads.markers[c.conversationId] || null;
+      const unread = c.messages.filter((m) => m.fromUserId !== userId && (!marker || String(m.at || m.createdAt) > marker)).length;
+      const counterpart = c.pro.userId === userId ? c.customer : c.pro;
+      return {
+        conversationId: c.conversationId,
+        kind: c.kind,
+        subject: c.subject,
+        itemId: c.itemId || null,
+        bookingId: c.bookingId || null,
+        categoryId: c.categoryId || null,
+        photoUrl: c.photoUrl || null,
+        counterpart,
+        myRole: c.pro.userId === userId ? 'PRO' : 'CUSTOMER',
+        lastMessage: last ? { body: last.body, fromMe: last.fromUserId === userId, at: lastAt } : null,
+        lastAt,
+        messageCount: c.messages.length,
+        unread,
+      };
+    }).sort((a, b) => String(b.lastAt).localeCompare(String(a.lastAt)));
+    return { userId, conversations, unread: conversations.reduce((n, c) => n + c.unread, 0) };
+  }
+
+  /** One conversation with its messages; opening it marks it read for this user. */
+  conversation(userId, conversationId, { markRead = true } = {}) {
+    const found = this.#findConversation(userId, conversationId);
+    if (markRead) {
+      const reads = this.store.get('inboxReads', userId) || { userId, markers: {} };
+      reads.markers[conversationId] = nowIso();
+      this.store.put('inboxReads', userId, reads);
+    }
+    const counterpart = found.pro.userId === userId ? found.customer : found.pro;
+    return {
+      conversationId,
+      kind: found.kind,
+      subject: found.subject,
+      itemId: found.itemId || null,
+      bookingId: found.bookingId || null,
+      categoryId: found.categoryId || null,
+      photoUrl: found.photoUrl || null,
+      counterpart,
+      myRole: found.pro.userId === userId ? 'PRO' : 'CUSTOMER',
+      messages: found.messages.map((m) => ({
+        messageId: m.messageId,
+        body: m.body,
+        at: m.at || m.createdAt,
+        fromMe: m.fromUserId === userId,
+        fromRole: m.fromRole || (m.fromUserId === found.pro.userId ? 'PRO' : 'CUSTOMER'),
+        flagged: Boolean(m.flagged),
+      })),
+    };
+  }
+
+  /** Reply inside a conversation — routed to the enquiry or the booking chat. */
+  sendToConversation(userId, conversationId, body) {
+    const found = this.#findConversation(userId, conversationId);
+    if (found.kind === 'WORK_ENQUIRY') {
+      this.portfolio.enquire({ itemId: found.itemId, customerId: found.customer.userId, actorId: userId, body });
+    } else {
+      if (!body || !String(body).trim()) throw new Error('a message is required');
+      this.bookings.sendMessage({ bookingId: found.bookingId, fromUserId: userId, body: String(body).trim() });
+    }
+    return this.conversation(userId, conversationId);
+  }
+
+  #bookingConversation(booking) {
+    const messages = (booking.messages || []).map((id) => this.store.get('messages', id)).filter(Boolean)
+      .sort((a, b) => String(a.createdAt || a.at).localeCompare(String(b.createdAt || b.at)));
+    return {
+      conversationId: `booking.${booking.bookingId}`,
+      kind: 'BOOKING',
+      subject: booking.title,
+      bookingId: booking.bookingId,
+      categoryId: booking.categoryId,
+      photoUrl: null,
+      pro: { userId: booking.proId, name: booking.proName },
+      customer: { userId: booking.customerId, name: booking.customerName },
+      createdAt: booking.createdAt,
+      messages,
+    };
+  }
+
+  #findConversation(userId, conversationId) {
+    if (!userId) throw new Error('userId is required');
+    const [kind, first, second] = String(conversationId || '').split('.');
+    let found = null;
+    if (kind === 'work' && first && second) {
+      found = this.portfolio.conversationsFor(userId).find((c) => c.conversationId === conversationId) || null;
+      if (!found) {
+        // A brand-new conversation the homeowner is about to start.
+        const item = this.store.get('portfolioItems', first);
+        if (item && second === userId && item.proId !== userId) {
+          found = {
+            conversationId, kind: 'WORK_ENQUIRY', subject: item.title, itemId: item.itemId, categoryId: item.categoryId,
+            photoUrl: (item.photos || []).find((p) => p.url)?.url || null,
+            pro: { userId: item.proId, name: this.store.get('pros', item.proId)?.displayName || 'Pro' },
+            customer: { userId, name: this.store.get('customers', userId)?.fullName || 'Homeowner' },
+            messages: [],
+          };
+        }
+      }
+    } else if (kind === 'booking' && first) {
+      const booking = this.store.get('bookings', first);
+      if (booking && (booking.customerId === userId || booking.proId === userId)) found = this.#bookingConversation(booking);
+    }
+    if (!found) {
+      const error = new Error('conversation not found');
+      throw error;
+    }
+    return found;
   }
 
   /* ---------------- verticals ---------------- */
@@ -143,7 +276,7 @@ class Marketplace {
 
     return {
       brand: {
-        name: 'Lula ProVeri',
+        name: 'ProVeri',
         tagline: 'Verified pros. Escrow-protected money. Proof of work.',
         promise: 'Post a job and get bids from KYC-verified pros near you — your money stays safe in escrow until the work is done. Or flip it: turn your skills into income, with payment guaranteed before you start.',
         country: 'South Africa',

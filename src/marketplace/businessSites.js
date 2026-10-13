@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Business Site Studio.
+ * ProVeri — Business Site Studio.
  *
  * This is the MyServicePro "get a website" business, rebuilt so that it is not
  * a mock-up. The reference implementation it is benchmarked against
@@ -1476,7 +1476,7 @@ ${sections}
         return `<footer class="ftr">
   <div><strong>${esc(site.name)}</strong>${site.contact.suburb ? `<p>${esc(site.contact.suburb)}${site.contact.metro ? `, ${esc(site.contact.metro)}` : ''}</p>` : ''}</div>
   <div class="ftr-right">
-    <p class="tiny">Site by <a href="/">Lula ProVeri</a> · ${esc(site.plan.planName)} · ${esc(site.plan.updateCreditsTotal === -1 ? 'unlimited updates' : site.plan.updateCreditsTotal + ' updates/month included')}</p>
+    <p class="tiny">Site by <a href="/">ProVeri</a> · ${esc(site.plan.planName)} · ${esc(site.plan.updateCreditsTotal === -1 ? 'unlimited updates' : site.plan.updateCreditsTotal + ' updates/month included')}</p>
     ${site.proId ? `<p class="tiny"><a href="/p/${esc(site.slug)}">Verified pro profile →</a></p>` : ''}
     <p class="tiny muted">© ${new Date().getFullYear()} ${esc(site.name)}${isDemo ? ' · preview, not the published site' : ''}</p>
   </div>
@@ -1574,17 +1574,17 @@ ${sections}
     const rows = sites || this.store.all('businessSites').filter((s) => s.status !== SITE_STATUS.ARCHIVED);
     return `<!doctype html>
 <html lang="en-ZA"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Live business sites · Lula ProVeri</title>
+<title>Live business sites · ProVeri</title>
 <style>${indexCss()}</style></head>
 <body><div class="wrap">
-<header><h1>Lula ProVeri</h1><p class="sub">Business sites built on the studio — every booking form below is live</p></header>
+<header><h1>ProVeri</h1><p class="sub">Business sites built on the studio — every booking form below is live</p></header>
 <main class="grid">${rows.map((s) => `<a class="card" href="${esc(s.status === SITE_STATUS.LIVE ? `/s/${s.slug}` : `/preview/${s.slug}`)}">
   <span class="ico">${esc(this.template(s.templateId).icon)}</span>
   <h2>${esc(s.name)}</h2>
   <p>${esc(s.tagline)}</p>
   <div class="meta"><span class="pill ${esc(s.status === SITE_STATUS.LIVE ? 'verified' : 'warn')}">${esc(s.status.toLowerCase())}</span><span class="tiny">${esc(s.plan.planName)}</span></div>
 </a>`).join('\n')}</main>
-<footer><p>${rows.length} site(s) · generated ${esc(nowIso().slice(0, 10))} · Lula ProVeri 🇿🇦</p></footer>
+<footer><p>${rows.length} site(s) · generated ${esc(nowIso().slice(0, 10))} · ProVeri 🇿🇦</p></footer>
 </div></body></html>`;
   }
 
@@ -1992,7 +1992,7 @@ function renderSitemap(sites) {
 }
 
 function renderBundleReadme(sites) {
-  return `# Lula ProVeri — exported business sites
+  return `# ProVeri — exported business sites
 
 Generated ${nowIso().slice(0, 10)}. ${sites.length} site(s), each a single self-contained HTML file.
 

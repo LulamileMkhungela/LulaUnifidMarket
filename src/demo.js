@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — services journey demo.
+ * ProVeri — services journey demo.
  *
  * Prints one complete customer journey on a fresh marketplace:
  * verify a pro → post a job → match → bid → award → fund escrow → arrival code

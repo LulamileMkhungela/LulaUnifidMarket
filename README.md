@@ -1,11 +1,11 @@
-# Lula ProVeri 🇿
+# ProVeri 🇿
 
 **Upload your past work. Let home owners find you by it.**
 
 📍 In South Africa, for South Africa 🇿🇦 · Connecting local businesses with home
 owners · Reshaping the future of employment.
 
-Lula ProVeri is a South African marketplace whose front door is a **shelf of real
+ProVeri is a South African marketplace whose front door is a **shelf of real
 work**: individuals and small businesses publish the jobs they have done, home
 owners browse what has been done near them, tap it, and message the person who
 did it. Underneath that shop sits the machinery from
@@ -35,7 +35,8 @@ generated pitch kit.
 
 ```bash
 npm start        # seeds a full demo marketplace · API + PWA on http://localhost:4173
-npm test         # 200 tests: kernel, flows, portfolio, verticals, integrations, studio, sales desk, HTTP, PWA screens
+npm test         # 208 tests: kernel, flows, portfolio, verticals, integrations, studio, sales desk, HTTP, PWA screens
+npm run journey  # the whole product over live HTTP: sign-up → post → quote → escrow → arrival code → proof → payout → settlement → two-way reviews → cancel → refund
 npm run demo     # one services journey printed end to end
 npm run demo:vehicle   # one vehicle journey (the merged TrustShield rail)
 npm run demo:studio    # research → diagnose → demo → pitch → win → publish → booking → job → export

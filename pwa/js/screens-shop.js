@@ -1,1267 +1,1264 @@
 /* ==========================================================================
-   Lula ProVeri PWA — the shop
-   ==========================================================================
-   📍 In South Africa, for South Africa 🇿🇦
-   Connecting local businesses with home owners.
+   ProVeri PWA — the storefront
 
-   This is the storefront: a homeowner scrolls real work done near them, taps
-   a job they like, and reaches out to the person who did it. Four tabs and one
-   button — everything else lives under "You".
+   /              home: what we do, how to start, real work, real pros
+   /browse        explore the work feed (search understands "leaking geyser")
+   /work/:itemId  one piece of work, photo first, with the truth about its badge
+   /orders        your jobs (homeowner) · leads & jobs (pro)
+   /order/:id     the job tracker (shared with /booking/:id)
+   /post-job      three short steps, account creation folded into the last one
+   /upload-work   a pro adds past work
+   /me            account, settings and the rest of the platform
 
-   Deliberately not here: walls of copy, stat grids, four-step explainers and
-   marketing adjectives. The proof is the work itself, and each item says in
-   plain words whether ProVeri evidence stands behind it.
+   Copy rules: say what happens to the person, not what the system does.
+   No status codes on screen. Every screen has one obvious next step.
    ========================================================================== */
-
-window.ProVeri = window.ProVeri || {};
-window.ProVeri.screens = window.ProVeri.screens || {};
 
 (function () {
   'use strict';
   const { api } = window.ProVeri;
+  const ui = window.ProVeri.ui;
   const {
-    h, money, timeAgo, dateShort, starRow, icon, photoImg, catIcon, badge, trustBadge, toast, sheet, closeSheet,
-    loadingCards, empty, navigate, formValues, withButton, sectionHead,
-  } = window.ProVeri.ui;
-
+    h, icon, money, timeAgo, toast, sheet, closeSheet, navigate, avatar, tradeIcon, tradeName, rating,
+    withButton, formValues, shortName, firstName, plural, photoImg,
+  } = ui;
+  window.ProVeri.screens = window.ProVeri.screens || {};
   const screens = window.ProVeri.screens;
+  const account = () => window.ProVeri.account;
 
-  /** sessionStorage can throw in private mode and is absent in the test shim. */
-  const scratch = {
-    get(key) { try { return window.sessionStorage ? window.sessionStorage.getItem(key) : null; } catch { return null; } },
-    set(key, value) { try { if (window.sessionStorage) window.sessionStorage.setItem(key, String(value)); } catch { /* not fatal */ } },
-    remove(key) { try { if (window.sessionStorage) window.sessionStorage.removeItem(key); } catch { /* not fatal */ } },
-  };
+  const POPULAR = ['plumbing', 'electrical', 'painting', 'handyman', 'solar-inverter', 'cleaning-home', 'gardening', 'roofing-gutters'];
 
-  const TIER_TONE = {
-    CLIENT_CONFIRMED: 'verified',
-    EVIDENCE_LINKED: 'verified',
-    SELF_DECLARED: 'neutral',
-  };
-  const TIER_SHORT = {
-    CLIENT_CONFIRMED: '✓ Client confirmed',
-    EVIDENCE_LINKED: '✓ Proof of work',
-    SELF_DECLARED: 'Uploaded by the pro',
-  };
+  const categories = () => api.state.bundle?.catalog?.categories || [];
+  const categoryById = (id) => categories().find((c) => c.id === id) || null;
+  const metros = () => api.state.bundle?.catalog?.metros || [];
 
-  /* ================================================================== *
-   * Shared pieces
-   * ================================================================== */
+  /* ------------------------------------------------------------------ *
+   * shared pieces
+   * ------------------------------------------------------------------ */
 
-  /** The picture, or — for evidence-only items — the seal that stands in for it. */
-  function workThumb(item, size) {
-    const photo = item.photo || item.photos?.[0] || null;
-    const src = photo?.dataUrl || photo?.url || null;
-    if (src) {
-      return h(`div.work-thumb.${size || 'card'}`, [
-        photoImg(src, photo?.caption || item.title),
-        photo?.illustrative ? h('span.thumb-note', 'Demo photo') : null,
-        h('span.thumb-tier', { class: item.verified === false ? 'plain' : 'proven' }, TIER_SHORT[item.tier] || ''),
-      ]);
-    }
-    // No hosted image: this item's proof is a hash-sealed evidence record, and
-    // showing a stock photo instead would be exactly the trick we police.
-    return h(`div.work-thumb.sealed.${size || 'card'}`, [
-      h('span.seal-ico', icon(item.tier === 'CLIENT_CONFIRMED' ? 'shield' : 'camera', 20)),
-      h('span.seal-title', item.categoryLabel || 'Trade work'),
-      h('span.seal-line', [
-        item.proSuburb || item.suburb || item.metro || 'South Africa',
-        item.completedAt ? ` · ${dateShort(item.completedAt)}` : '',
+  function workCard(item, opts) {
+    const options = opts || {};
+    const src = item.photo && (item.photo.url || item.photo.dataUrl);
+    const approved = item.tier === 'CLIENT_CONFIRMED';
+    return h('a.work-card' + (options.mini ? '.mini' : ''), { href: `/work/${item.itemId}` }, [
+      h('div.wc-media', [
+        src ? photoImg(src, item.title) : h('div.sealed-media', [icon('lock', 22), h('span', 'Photo sealed on record')]),
+        item.verified ? h('span.wc-badge' + (approved ? '.gold' : ''), { title: approved ? 'Verified job, approved by the homeowner' : 'Verified job on ProVeri' }, [icon('verified', 15), 'Verified job']) : null,
+        item.illustrative ? h('span.wc-demo', 'Demo photo') : null,
       ]),
-      h('span.seal-line', item.seal ? `Sealed ${String(item.seal).slice(0, 10)}` : 'Evidence sealed on the ledger'),
-      h('span.thumb-tier.proven', TIER_SHORT[item.tier] || ''),
-    ]);
-  }
-
-  function priceTag(item) {
-    if (item.priceCents == null) return h('div.price', 'Quote on request');
-    return h('div.price', [h('strong', money(item.priceCents)), item.priceNote ? h('small', item.priceNote) : null]);
-  }
-
-  /**
-   * One card in the grid — the whole decision a home owner makes, in one
-   * glance: the picture, who did it, how they rate, where, what it cost, and
-   * whether ProVeri evidence stands behind it.
-   */
-  function workCard(item) {
-    return h('a.work-card', { href: `/work/${item.itemId}` }, [
-      workThumb(item),
-      h('div.work-body', [
-        h('div.work-title', item.title),
-        h('div.work-meta', [
-          h('span.who', item.proName || 'A local pro'),
-          item.proRating ? starRow(item.proRating) : null,
-        ]),
-        h('div.work-meta', [
-          icon('pin', 12),
-          h('span.where', item.proSuburb || item.suburb || item.metro || 'South Africa'),
-        ]),
-        h('div.work-foot', [
-          priceTag(item),
-          item.enquiries ? h('span.tiny.muted', `${item.enquiries} reached out`) : null,
+      h('div.wc-body', [
+        h('div.wc-title', item.title),
+        h('div.wc-meta', [item.priceCents ? h('b', money(item.priceCents)) : null, item.priceCents ? ' · ' : null, item.suburb || item.metro || item.categoryLabel || '']),
+        options.hidePro ? null : h('div.wc-pro', [
+          avatar(item.proName || 'Pro', 'xs'),
+          h('span.name', shortName(item.proName || 'Local pro')),
+          item.proRating ? rating(item.proRating) : null,
         ]),
       ]),
     ]);
   }
 
-  function workGrid(items) {
-    return h('div.work-grid', items.map(workCard));
+  function proCard(pro) {
+    const cat = categories().find((c) => c.label === pro.primaryCategoryLabel);
+    return h('a.pro-card', { href: `/pro/${pro.proId}` }, [
+      h('div.pc-top', [
+        avatar(pro.name, 'lg'),
+        h('div.grow', [
+          h('div.pc-name', pro.name),
+          h('div.pc-trade', `${pro.primaryCategoryLabel}${pro.suburb ? ` · ${pro.suburb}` : ''}`),
+        ]),
+      ]),
+      h('div.pc-facts', [
+        rating(pro.averageRating, pro.reviewCount),
+        pro.completedJobs ? h('span', `${pro.completedJobs} jobs`) : null,
+        pro.responseMedianMinutes ? h('span', [icon('clock', 14), ` replies in ~${pro.responseMedianMinutes} min`]) : null,
+      ]),
+      h('div.row.wrap', { style: { gap: '6px' } }, [
+        ui.badge(ui.badgeText(pro.badge), /ELITE/.test(pro.badge) ? 'elite' : 'verified', /ELITE/.test(pro.badge) ? 'crown' : 'verified'),
+        pro.insured ? ui.badge('Insured', 'neutral', 'shield') : null,
+        cat ? null : null,
+      ]),
+    ]);
   }
 
-  async function fetchFeed(query = {}) {
-    const params = new URLSearchParams();
-    if (query.q) params.set('q', query.q);
-    if (query.categoryId) params.set('categoryId', query.categoryId);
-    if (query.suburbId) params.set('suburbId', query.suburbId);
-    if (query.metro) params.set('metro', query.metro);
-    if (query.tier) params.set('tier', query.tier);
-    if (query.verified) params.set('verified', 'true');
-    if (query.sort) params.set('sort', query.sort);
-    params.set('limit', String(query.limit || 24));
-    return api.get(`/api/portfolio?${params.toString()}`);
+  function siteFooter() {
+    return h('footer.site-footer', [
+      h('div.cols', [
+        h('div', [
+          h('a.brand', { href: '/', style: { marginBottom: '10px' } }, [h('span.word', [h('b', 'Pro'), h('span', 'Veri')])]),
+          h('p', { style: { maxWidth: '36ch' } }, 'In South Africa, for South Africa. Verified local pros, real proof of work and payments that wait for your approval.'),
+        ]),
+        h('div', [h('h4', 'Homeowners'), h('a', { href: '/post-job' }, 'Post a job'), h('a', { href: '/browse' }, 'Explore work'), h('a', { href: '/find-a-pro' }, 'Find a pro'), h('a', { href: '/trust' }, 'How we protect you')]),
+        h('div', [h('h4', 'Pros'), h('a', { href: '/become-a-pro' }, 'Join as a pro'), h('a', { href: '/upload-work' }, 'Add your work'), h('a', { href: '/web-studio' }, 'Free website')]),
+        h('div', [h('h4', 'More'), h('a', { href: '/business-studio' }, 'Business sites'), h('a', { href: '/vehicles' }, 'Verified vehicles'), h('a', { href: '/integrations' }, 'Data & integrations')]),
+      ]),
+      h('div.fine', [h('span', `© ${new Date().getFullYear()} ProVeri`), ui.flagZA(), h('span', 'Payments held in escrow by registered partners · POPIA-aligned')]),
+    ]);
   }
+  window.ProVeri.siteFooter = siteFooter;
+  window.ProVeri.workCard = workCard;
+  window.ProVeri.proCard = proCard;
 
-  /**
-   * ~110 suburbs across 11 metros. Flat, that is a scroll marathon; grouped by
-   * metro it is a list a person can actually read on a phone.
-   */
-  function suburbOptions({ selectedId = '', withPostal = false } = {}) {
-    const metros = (api.state.bundle && api.state.bundle.catalog && api.state.bundle.catalog.metros) || [];
-    return metros.map((metro) => h('optgroup', { label: metro.name },
-      (metro.suburbs || []).map((suburb) => h('option', {
-        value: suburb.id,
-        selected: suburb.id === selectedId || undefined,
-      }, withPostal && suburb.postalCode ? `${suburb.name} (${suburb.postalCode})` : suburb.name))));
-  }
-
-  async function categories() {
-    try {
-      return await api.get('/api/categories');
-    } catch {
-      return (api.state.bundle?.catalog?.categories || []).map((c) => ({ id: c.id, label: c.label, icon: c.icon, group: c.group }));
+  function allTradesSheet(hrefFor, onPick) {
+    const groups = new Map();
+    for (const c of categories()) {
+      const key = c.groupLabel || 'Other';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(c);
     }
+    sheet('All services', h('div.stack.lg', [...groups.entries()].map(([label, list]) => h('div', [
+      h('div.group-label', { style: { marginTop: 0 } }, label),
+      h('div.trade-list', list.map((c) => (onPick
+        ? h('button.tile', { type: 'button', onclick: () => { closeSheet(); onPick(c.id); } }, [tradeIcon(c.id, 'sm'), h('div.body', h('div.t', tradeName(c.id, c.label)))])
+        : h('a.tile', { href: hrefFor(c.id), onclick: () => closeSheet() }, [tradeIcon(c.id, 'sm'), h('div.body', h('div.t', tradeName(c.id, c.label)))])))),
+    ]))), null, { sub: `${categories().length} trades and services, every pro verified` });
   }
 
-  function searchBar({ value = '', placeholder = 'What do you need done?', onsubmit }) {
-    const form = h('form.search-bar', {
+  function searchForm(value, opts) {
+    const options = opts || {};
+    const input = h('input', { name: 'q', type: 'search', value: value || '', placeholder: options.placeholder || 'What do you need done?', 'aria-label': 'What do you need done?', autocomplete: 'off', enterkeyhint: 'search' });
+    return h('form.search-bar' + (options.compact ? '.compact' : ''), {
+      role: 'search',
       onsubmit: (event) => {
         event.preventDefault();
-        onsubmit(form.querySelector('input[name=q]').value.trim());
+        const q = input.value.trim();
+        navigate(q ? `/browse?q=${encodeURIComponent(q)}` : '/browse');
       },
-    }, [
-      h('span.ico', icon('search', 19)),
-      h('input', { type: 'search', name: 'q', value, placeholder, autocomplete: 'off' }),
-      h('button.btn.sm', { type: 'submit' }, 'Search'),
-    ]);
-    return form;
+    }, [icon('search', 20), input, h('button.btn', { type: 'submit' }, options.button || 'Search')]);
   }
 
-  /**
-   * Sign-in gate. Everything that writes (enquire, post, upload) needs to know
-   * who is acting, and the ledger records it — so we ask once, plainly.
-   */
-  function signInGate(title, body, next) {
-    return h('div.fade-in.stack', [
-      h('div.card.accent', [
-        h('div.kicker', [icon('user', 14), 'One quick step']),
-        h('h2', title),
-        h('p.small', body),
-        h('div.col', [
-          h('button.btn', { onclick: () => customerSignup(next) }, 'Create my free account'),
-          h('button.btn.ghost', { onclick: () => { closeSheet(); navigate('/become-a-pro'); } }, 'I’m a pro — I want work'),
-          next ? h('button.btn.link', { onclick: () => navigate('/') }, 'Not now') : null,
+  /* ------------------------------------------------------------------ *
+   * /  — home
+   * ------------------------------------------------------------------ */
+
+  screens['/'] = async (ctx) => {
+    const session = api.session();
+    if (session && session.role === 'PRO' && window.ProVeri.proHome) return window.ProVeri.proHome(ctx);
+
+    const page = h('div.page');
+    const feedGrid = h('div.work-grid', ui.skeletonItems(4, 'grid'));
+    const heroArt = h('div.hero-art', { 'aria-hidden': 'true' });
+
+    // 1 — the promise, and the one thing to do about it.
+    const greeting = session
+      ? h('div', [h('span.eyebrow-pill', [ui.flagZA(), `Welcome back, ${firstName(session.name)}`])])
+      : h('span.eyebrow-pill', [ui.flagZA(), 'Verified local pros across South Africa']);
+    // Returning homeowners already know the promise: give them the search and
+    // their next step, not the pitch.
+    page.append(h('section.hero-home' + (session ? '.compact' : ''), [
+      h('div', [
+        greeting,
+        session ? h('h1', ['What needs ', h('em', 'doing?')]) : h('h1', ['Hire a pro ', h('em', 'with proof.')]),
+        session ? null : h('p.sub', 'See real jobs done near you, compare quotes from ID-verified pros, and only release payment when you are happy with the work.'),
+        searchForm('', { placeholder: 'e.g. leaking geyser', button: 'Search' }),
+        h('div.chip-row', POPULAR.slice(0, 6).map((id) => h('a.chip', { href: `/browse?category=${id}` }, [icon('t-' + id, 16), tradeName(id)]))),
+        session ? null : h('div.hero-trust', [
+          h('span', [icon('verified', 16), 'ID-checked pros']),
+          h('span', [icon('lock', 16), 'Money held until you approve']),
+          h('span', [icon('camera', 16), 'Real job photos']),
         ]),
       ]),
-    ]);
-  }
-
-  function customerSignup(after) {
-    const form = h('form.stack', { onsubmit: submit }, [
-      h('label.field', [h('span', 'Full name'), h('input', { type: 'text', name: 'fullName', required: true })]),
-      h('label.field', [h('span', 'Email'), h('input', { type: 'email', name: 'email', required: true })]),
-      h('label.field', [h('span', 'Mobile'), h('input', { type: 'tel', name: 'mobile', required: true, placeholder: '082 123 4567' })]),
-      h('label.field', [h('span', 'Suburb'), h('select', { name: 'suburbId' }, [
-        h('option', { value: '' }, 'Prefer not to say'),
-        ...suburbOptions({ withPostal: true }),
-      ])]),
-      h('button.btn.block', { type: 'submit' }, 'Create account'),
-      h('p.tiny.muted', 'Email and mobile are confirmed with a one-time PIN. No card needed to browse or enquire.'),
-    ]);
-    sheet('Create your free account', form);
-
-    async function submit(event) {
-      event.preventDefault();
-      const values = formValues(form);
-      const button = form.querySelector('button[type=submit]');
-      await withButton(button, async () => {
-        const customer = await api.post('/api/customers', { ...values, suburbId: values.suburbId || undefined });
-        const pin = `OTP_${customer.customerId.slice(-8)}`;
-        await api.post(`/api/customers/${customer.customerId}/verify-channel`, { channel: 'email', reference: pin });
-        await api.post(`/api/customers/${customer.customerId}/verify-channel`, { channel: 'mobile', reference: pin });
-        api.setSession({ userId: customer.customerId, role: 'CUSTOMER', name: customer.fullName });
-        closeSheet();
-        toast(`Welcome, ${customer.fullName.split(' ')[0]} — email and mobile verified`, 'ok');
-        if (after) after();
-        else window.dispatchEvent(new PopStateEvent('popstate'));
-      });
-    }
-  }
-
-  /* ================================================================== *
-   * HOME — search, categories, work near you. Nothing else.
-   * ================================================================== */
-
-  screens['/'] = async function home({ query }) {
-    const root = h('div.fade-in.shop-home');
-
-    root.append(h('section.home-head', [
-      h('h1', ['Find someone who has ', h('em', 'already done this'), ' — near you.']),
-      h('p.sub', '📍 In South Africa, for South Africa 🇿🇦 · Real jobs, real photos, real pros.'),
-      searchBar({
-        value: query.q || '',
-        onsubmit: (q) => navigate(q ? `/browse?q=${encodeURIComponent(q)}` : '/browse'),
-      }),
+      heroArt,
     ]));
 
-    /* the trades, as a thumb-reachable rail of circles */
-    const catWrap = h('div.cat-rail', [h('div.skeleton.line', { style: { width: '70%' } })]);
-    root.append(h('section.section.tight', catWrap));
-    loadCategoryRail(catWrap, query.category);
+    // 2 — your next step, if you have one in flight.
+    const nextSlot = h('div');
+    page.append(nextSlot);
+    if (session) fillNextStep(nextSlot, session);
 
-    /* one hero job, then the grid — proven work first, newest next */
-    const feat = h('div', [h('div.skeleton.card')]);
-    const feedHead = sectionHead('Work done near you', 'See all', '/browse');
-    const feed = h('div', [loadingCards(2)]);
-    root.append(feat, h('section.section', [feedHead, feed]));
-    loadHomeFeed(feat, feed, feedHead, query);
-
-    /* one honest line about what the feed is made of, then out of the way */
-    const proof = h('div.trust-line', [h('div.skeleton.line', { style: { width: '80%' } })]);
-    root.append(proof);
-    loadProofLine(proof);
-
-    /* the other side of the market, one card, no lecture */
-    root.append(h('section.section', [
-      h('a.pro-cta', { href: '/upload-work' }, [
-        h('div.grow', [
-          h('div.t', 'Did the work? Put it here.'),
-          h('div.small', 'Upload your past jobs and home owners reach out to you directly. Proven work gets a badge you cannot buy.'),
-        ]),
-        h('span.arrow', icon('arrow', 20)),
+    // 3 — services, one tap away.
+    page.append(h('section.section', [
+      h('div.section-head', [h('div', h('h2', 'Popular services')), h('button.link', { type: 'button', onclick: () => allTradesSheet((id) => `/browse?category=${id}`) }, ['All services', icon('chevron', 16)])]),
+      h('div.trades', [
+        ...POPULAR.slice(0, 7).map((id) => h('a.trade', { href: `/browse?category=${id}` }, [tradeIcon(id), tradeName(id)])),
+        h('button.trade.all', { type: 'button', onclick: () => allTradesSheet((id) => `/browse?category=${id}`) }, [h('span.trade-ico', icon('grid', 22)), 'All services']),
       ]),
     ]));
 
-    return root;
-  };
+    // 4 — the work itself.
+    page.append(h('section.section', [
+      ui.sectionHead('Work done near you', 'Explore all', '/browse', 'Every “Verified job” badge is backed by an escrow-released job on ProVeri — pros cannot buy it.'),
+      feedGrid,
+    ]));
 
-  /** What a home owner types into a search bar most often, in that order. */
-  const RAIL_ORDER = [
-    'plumbing', 'electrical', 'painting', 'handyman', 'cleaning-home',
-    'gardening', 'solar-inverter', 'electric-fence-security', 'beauty-mobile',
-  ];
+    // 5 — how it works, in three sentences.
+    page.append(h('section.section', [
+      ui.sectionHead('How ProVeri works', 'How we protect you', '/trust'),
+      h('div.steps-strip', [
+        howStep(1, 'clipboard-check', 'Post your job for free', 'Say what needs doing. We send it to verified pros nearby — no calls, no chasing.'),
+        howStep(2, 'quote', 'Compare real quotes', 'See each pro’s past work, reviews and price side by side. Message before you decide.'),
+        howStep(3, 'lock', 'Pay safely, approve, done', 'Your money waits in escrow. The pro is paid only when you approve the finished job.'),
+      ]),
+    ]));
 
-  /** Trade picker: circles you can hit with a thumb, not a wall of text. */
-  async function loadCategoryRail(container, activeId) {
-    container.innerHTML = '';
-    const all = await categories();
-    const byId = new Map(all.map((c) => [c.id, c]));
-    const cats = [...RAIL_ORDER.map((id) => byId.get(id)).filter(Boolean),
-      ...all.filter((c) => !RAIL_ORDER.includes(c.id))].slice(0, 9);
-    container.append(...cats.map((c) => h('button.chip.cat-dot', {
-      class: c.id === activeId ? 'active' : '',
-      onclick: () => navigate(`/browse?category=${c.id}`),
-    }, [
-      h('span.ring', catIcon(c)),
-      h('span.lbl', c.label),
+    // 6 — the pros.
+    const prosRail = h('div.rail', [h('div.skeleton.card'), h('div.skeleton.card')]);
+    page.append(h('section.section', [ui.sectionHead('Top-rated pros', 'Find a pro', '/find-a-pro'), prosRail]));
+
+    // 7 — the other side of the market, once.
+    page.append(h('section.section', h('div.pro-band', [
+      h('div', [
+        h('div.kicker', [icon('briefcase', 15), 'For tradespeople']),
+        h('h2', 'Your best work is your best advert.'),
+        h('p', 'Show the jobs you have done, get enquiries from homeowners nearby and get paid through ProVeri the moment work is approved.'),
+        h('div.pb-points', [h('span', [icon('check', 16), 'No lead fees']), h('span', [icon('check', 16), '10% only when you win']), h('span', [icon('check', 16), 'Free website'])]),
+      ]),
+      h('div.btn-row', [
+        h('a.btn.gold.lg', { href: '/become-a-pro' }, 'Join as a pro'),
+        h('a.btn.on-dark.ghost.lg', { href: '/upload-work' }, 'Add your work'),
+      ]),
     ])));
-    container.append(h('button.chip.cat-dot', { onclick: () => navigate('/browse') }, [
-      h('span.ring', icon('sparkle', 24)),
-      h('span.lbl', 'All work'),
-    ]));
-  }
 
-  /** The one job worth stopping for: a photo, a price, and who did it. */
-  function featuredCard(item) {
-    const photo = item.photo || item.photos?.[0] || null;
-    const src = photo?.dataUrl || photo?.url || null;
-    return h('a.feat-card', { href: `/work/${item.itemId}` }, [
-      src ? h('img', { src, alt: item.title, loading: 'lazy', decoding: 'async' }) : null,
-      h('div.scrim'),
-      h('div.over', [
-        h('div.kick', [icon(item.verified ? 'shield' : 'sparkle', 13), item.verified ? 'Proven on ProVeri' : 'Just uploaded']),
-        h('div.t', item.title),
-        h('div.m', [
-          h('span.money', item.priceCents == null ? 'Quote on request' : money(item.priceCents)),
-          h('span', `${item.proName || 'A local pro'} · ${item.proSuburb || item.suburb || item.metro || 'South Africa'}`),
-          item.proRating ? starRow(item.proRating) : null,
-        ]),
-      ]),
-    ]);
-  }
+    page.append(siteFooter());
 
-  async function loadHomeFeed(featSlot, container, head, query) {
-    try {
-      // Proven work first, then the newest uploads — so the first screen shows
-      // both what the badge is worth and what is arriving right now.
-      const [provenWork, recentWork] = await Promise.all([
-        fetchFeed({ ...query, verified: true, sort: 'verified', limit: 5 }),
-        fetchFeed({ ...query, sort: 'recent', limit: 9 }),
-      ]);
-      const seen = new Set(provenWork.map((i) => i.itemId));
-      const items = [...provenWork, ...recentWork.filter((i) => !seen.has(i.itemId))];
-      const hero = items.find((i) => i.photo?.url || i.photo?.dataUrl) || items[0] || null;
-      const rest = items.filter((i) => i !== hero).slice(0, 6);
+    // Data after first paint.
+    loadFeed(feedGrid, heroArt, session);
+    api.get('/api/pros').then((rows) => {
+      prosRail.innerHTML = '';
+      const top = (Array.isArray(rows) ? rows : []).filter((p) => p.averageRating).sort((a, b) => (b.averageRating * Math.log(2 + b.completedJobs)) - (a.averageRating * Math.log(2 + a.completedJobs))).slice(0, 8);
+      if (!top.length) prosRail.append(h('p.muted', 'Verified pros appear here as they join.'));
+      top.forEach((p) => prosRail.append(proCard(p)));
+    }).catch(() => { prosRail.innerHTML = ''; prosRail.append(h('p.muted', 'Could not load pros right now.')); });
 
-      featSlot.innerHTML = '';
-      if (hero) featSlot.append(h('section.section.tight', featuredCard(hero)));
-
-      container.innerHTML = '';
-      if (!rest.length) {
-        container.append(empty('🧰', 'No work posted here yet', 'Be the first: upload a job you have done and home owners in your area will find it.',
-          h('button.btn', { onclick: () => navigate('/upload-work') }, 'Upload my work')));
-        return;
-      }
-      container.append(workGrid(rest));
-      const proven = items.filter((i) => i.verified).length;
-      head.querySelector('h2').textContent = proven === items.length
-        ? 'Work done near you — all of it proven'
-        : 'Work done near you';
-    } catch (error) {
-      container.innerHTML = '';
-      container.append(h('div.banner.danger', [h('span.ico', icon('close', 16)), h('div', error.message)]));
-    }
-  }
-
-  async function loadProofLine(container) {
-    try {
-      const stats = await api.get('/api/portfolio/stats');
-      container.innerHTML = '';
-      container.append(h('div.card.flat.pad-sm.trust-line-card', [
-        h('div.row.between', { style: { gap: '10px' } }, [
-          h('div.grow', [
-            h('div.small', [
-              h('strong', `${stats.verified} of ${stats.items}`),
-              ` pieces of work here are backed by escrow-released jobs on ProVeri.`,
-            ]),
-            h('div.tiny.muted', 'The rest were uploaded by the pros themselves and are labelled that way. Nobody can buy a badge.'),
-          ]),
-          h('a.btn.sm.ghost', { href: '/trust' }, 'How it works'),
-        ]),
-      ]));
-    } catch {
-      container.innerHTML = '';
-    }
-  }
-
-  /* ================================================================== *
-   * BROWSE — the shop floor
-   * ================================================================== */
-
-  screens['/browse'] = async function browse({ query }) {
-    const state = {
-      q: query.q || '',
-      categoryId: query.category || '',
-      suburbId: query.suburb || '',
-      verified: query.verified === 'true',
-      sort: query.sort || 'verified',
-    };
-
-    const root = h('div.fade-in.stack');
-    root.append(h('h1', 'Browse work'));
-    root.append(searchBar({
-      value: state.q,
-      placeholder: 'Search work: geyser, tiling, painting…',
-      onsubmit: (q) => { state.q = q; syncUrl(); refresh(); },
-    }));
-
-    const tierChips = h('div.chip-row', [
-      h('button.chip', { class: 'active', onclick: (e) => pickTier(e, '') }, 'All work'),
-      h('button.chip', { onclick: (e) => pickTier(e, 'PROVEN') }, [icon('shield', 14), h('span', 'Proof of work')]),
-      h('button.chip', { onclick: (e) => pickTier(e, 'CLIENT_CONFIRMED') }, [icon('star', 14), h('span', 'Client confirmed')]),
-      h('button.chip.ghost', { onclick: () => navigate('/find-a-pro') }, [icon('user', 14), h('span', 'Browse pros')]),
-    ]);
-    root.append(tierChips);
-
-    const cats = await categories();
-    const filters = h('div.filters', [
-      h('label.field', [h('span', 'Category'), h('select', { name: 'categoryId', onchange: (e) => { state.categoryId = e.target.value; syncUrl(); refresh(); } }, [
-        h('option', { value: '' }, 'All categories'),
-        ...cats.map((c) => h('option', { value: c.id, selected: c.id === state.categoryId }, `${catIcon(c)} ${c.label}`)),
-      ])]),
-      h('label.field', [h('span', 'Suburb'), h('select', { name: 'suburbId', onchange: (e) => { state.suburbId = e.target.value; syncUrl(); refresh(); } }, [
-        h('option', { value: '' }, 'Anywhere in SA'),
-        ...suburbOptions({ selectedId: state.suburbId }),
-      ])]),
-      h('label.field', [h('span', 'Sort'), h('select', { name: 'sort', onchange: (e) => { state.sort = e.target.value; syncUrl(); refresh(); } }, [
-        h('option', { value: 'verified', selected: state.sort === 'verified' }, 'Most proven first'),
-        h('option', { value: 'recent', selected: state.sort === 'recent' }, 'Newest'),
-        h('option', { value: 'rating', selected: state.sort === 'rating' }, 'Best-rated pro'),
-      ])]),
-    ]);
-    root.append(filters);
-
-    const count = h('div.tiny.muted.result-count', 'Loading work…');
-    const list = h('div', [loadingCards(3)]);
-    root.append(count, list);
-    refresh();
-    return root;
-
-    function pickTier(event, tier) {
-      tierChips.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
-      event.target.closest('button').classList.add('active');
-      state.verified = tier === 'PROVEN';
-      state.tier = tier === 'CLIENT_CONFIRMED' ? 'CLIENT_CONFIRMED' : '';
-      syncUrl();
-      refresh();
-    }
-
-    function syncUrl() {
-      const params = new URLSearchParams();
-      if (state.q) params.set('q', state.q);
-      if (state.categoryId) params.set('category', state.categoryId);
-      if (state.suburbId) params.set('suburb', state.suburbId);
-      if (state.verified) params.set('verified', 'true');
-      if (state.tier) params.set('tier', state.tier);
-      if (state.sort !== 'verified') params.set('sort', state.sort);
-      const qs = params.toString();
-      history.replaceState({}, '', qs ? `/browse?${qs}` : '/browse');
-    }
-
-    async function refresh() {
-      list.innerHTML = '';
-      list.append(loadingCards(3));
-      try {
-        const items = await fetchFeed({ ...state, limit: 48 });
-        list.innerHTML = '';
-        count.textContent = items.length
-          ? `${items.length} piece${items.length === 1 ? '' : 's'} of work · ${items.filter((i) => i.verified).length} proven on ProVeri`
-          : '';
-        if (!items.length) {
-          list.append(empty('🔎', 'Nothing matches that yet', 'Try a different suburb or trade — or post the job you need and let verified pros come to you.',
-            h('button.btn', { onclick: () => navigate('/post-job') }, 'Post my job')));
-          return;
-        }
-        list.append(workGrid(items));
-      } catch (error) {
-        list.innerHTML = '';
-        list.append(h('div.banner.danger', [h('span.ico', icon('close', 16)), h('div', error.message)]));
-      }
-    }
+    return page;
   };
 
-  /* ================================================================== *
-   * WORK — the product page
-   * ================================================================== */
-
-  screens['/work/:itemId'] = async function workDetail({ params }) {
-    const item = await api.get(`/api/portfolio/${params.itemId}`);
-    // detail() returns the record itself, so the tier decides what may be claimed.
-    item.verified = item.tier !== 'SELF_DECLARED';
-    item.seal = item.seal || item.ledgerSeal;
-    const root = h('div.fade-in.stack.product');
-
-    /* photos */
-    const photos = item.photos || [];
-    root.append(h('div.photo-strip', photos.map((photo, index) => {
-      const src = photo.dataUrl || photo.url;
-      return src
-        ? h('figure.photo', [
-          h('img', { src, alt: photo.caption || `${item.title} photo ${index + 1}` }),
-          photo.caption ? h('figcaption', photo.caption) : null,
-          photo.illustrative ? h('span.thumb-note', 'Demo photo') : null,
-        ])
-        : h('figure.photo.sealed', [
-          h('span.seal-ico', icon('shield', 28)),
-          h('figcaption', [
-            h('div', photo.caption || 'Proof of work'),
-            h('code', `seal ${(photo.seal || '').slice(0, 12)}`),
-            photo.geoVerified === false ? h('div.tiny.warn', `Captured ${photo.distanceFromJobKm} km from the job address`) : null,
-            photo.geoVerified ? h('div.tiny.ok', 'Captured at the job address') : null,
-          ]),
-        ]);
-    })));
-
-    /* the offer */
-    root.append(h('section.section.tight', [
-      h('div.row.between.wrap', { style: { gap: '8px' } }, [
-        h('span.tier-pill.big', { class: item.verified ? 'proven' : 'plain' }, [
-          item.verified ? icon('check', 13) : null, item.tierLabel,
-        ]),
-        item.rating ? starRow(item.rating) : null,
-      ]),
-      h('h1', item.title),
-      item.description ? h('p', item.description) : null,
-      priceTag(item),
-      h('div.fact-row', [
-        fact('Trade', item.categoryLabel),
-        fact('Where', [item.suburb, item.metro].filter(Boolean).join(', ') || 'South Africa'),
-        fact('Done', dateShort(item.completedAt)),
-        item.clientReference ? fact('Job ref', item.clientReference) : null,
-      ]),
-    ]));
-
-    /* what the badge means, in the tier's own words */
-    root.append(h('section.section.tight', [
-      h('div.verify-card', { class: item.verified ? 'proven' : 'plain' }, [
-        h('div.kicker', [icon(item.verified ? 'shield' : 'camera', 14), item.verified ? 'Why this is verified' : 'What this is']),
-        h('ul', item.verification.lines.map((line) => h('li', line))),
-        item.ledgerSeal ? h('code.seal', `Ledger seal ${String(item.ledgerSeal).slice(0, 16)}`) : null,
-      ]),
-    ]));
-
-    /* the seller */
-    if (item.pro) {
-      root.append(h('section.section.tight', [
-        h('a.card.pro-row', { href: `/pro/${item.pro.proId}` }, [
-          h('div.avatar', (item.pro.name || 'P').slice(0, 1)),
-          h('div.grow', [
-            h('div.t', item.pro.name),
-            h('div.small.muted', [
-              `${item.pro.completedJobs || 0} jobs completed`,
-              item.pro.suburb ? ` · ${item.pro.suburb}` : '',
-            ]),
-            h('div.row', { style: { gap: '8px', marginTop: '7px', alignItems: 'center' } }, [
-              item.pro.rating ? starRow(item.pro.rating) : null,
-              trustBadge(item.pro.badge, item.pro.trustScore),
-              item.pro.instantBook ? badge('instant book', 'info') : null,
-            ]),
-          ]),
-          h('span.arrow', icon('chevron', 18)),
-        ]),
-      ]));
-    }
-
-    /* other work by the same pro */
-    const moreWrap = h('div.scroller-x', [h('div.skeleton.card', { style: { width: '220px' } })]);
-    root.append(h('section.section', [sectionHead(`More work by ${item.pro?.name || 'this pro'}`, 'Their profile', item.pro ? `/pro/${item.pro.proId}` : '/browse'), moreWrap]));
-    loadMoreByPro(moreWrap, item);
-
-    /* actions */
-    root.append(h('div.cta-bar', [
-      h('button.btn.ghost.grow', { onclick: () => openEnquiry(item) }, [icon('chat', 17), h('span', 'Message about this')]),
-      h('button.btn.grow', { onclick: () => hireFrom(item) }, [icon('tool', 17), h('span', 'Hire for my job')]),
-    ]));
-    root.append(h('div.row.between.tiny.muted', { style: { padding: '0 4px 24px' } }, [
-      h('span', item.enquiries
-        ? `${item.enquiries} homeowner${item.enquiries === 1 ? ' has' : 's have'} reached out`
-        : 'Be the first to reach out'),
-      h('button.btn.link.tiny', { onclick: () => reportItem(item) }, 'Report this work'),
-    ]));
-
-    return root;
-  };
-
-  function fact(label, value) {
-    if (!value) return null;
-    return h('div.fact', [h('span.k', label), h('span.v', String(value))]);
+  function howStep(n, iconName, title, text) {
+    return h('div.how-step', [h('span.hs-n', String(n)), h('div.hs-ico', icon(iconName, 24)), h('h3', title), h('p', text)]);
   }
 
-  async function loadMoreByPro(container, item) {
+  async function loadFeed(grid, heroArt, session) {
+    let items = [];
     try {
-      const rows = (await api.get(`/api/pros/${item.proId}/portfolio?limit=8`)).filter((r) => r.itemId !== item.itemId);
-      container.innerHTML = '';
-      if (!rows.length) {
-        container.append(h('p.small.muted', 'This is the only piece of work they have published so far.'));
-        return;
-      }
-      container.append(...rows.map((row) => h('a.work-card.mini', { href: `/work/${row.itemId}`, style: { width: '220px' } }, [
-        workThumb(row),
-        h('div.work-body', [h('div.work-title', row.title), priceTag(row)]),
-      ])));
-    } catch {
-      container.innerHTML = '';
-    }
-  }
-
-  function hireFrom(item) {
-    const draft = `Like the ${item.title.toLowerCase()} work by ${item.pro?.name || 'this pro'} — I need the same done.`;
-    scratch.set('proveri.share-draft', draft);
-    navigate(`/post-job?category=${item.categoryId || ''}&proId=${item.proId}&fromWork=${item.itemId}`);
-  }
-
-  function reportItem(item) {
-    const session = api.session();
-    const form = h('form.stack', { onsubmit: submit }, [
-      h('label.field', [h('span', 'What is wrong with this?'), h('select', { name: 'reason' }, [
-        h('option', 'This is not their work'),
-        h('option', 'Photos are copied from somewhere else'),
-        h('option', 'Price or scope is misleading'),
-        h('option', 'Something else'),
-      ])]),
-      h('label.field', [h('span', 'Anything we should know?'), h('textarea', { name: 'note', rows: 3 })]),
-      h('button.btn.block', { type: 'submit' }, 'Send to the trust desk'),
-      h('p.tiny.muted', 'Reports go to the trust desk with your id attached. False reports are recorded too.'),
-    ]);
-    sheet(`Report “${item.title}”`, form);
-
-    async function submit(event) {
-      event.preventDefault();
-      const values = formValues(form);
-      await withButton(form.querySelector('button[type=submit]'), async () => {
-        await api.post(`/api/portfolio/${item.itemId}/flag`, {
-          reason: [values.reason, values.note].filter(Boolean).join(' — '),
-          reporterId: session?.userId || null,
-        });
-        closeSheet();
-        toast('Reported. The trust desk reviews it against the ledger record.', 'ok');
-      });
-    }
-  }
-
-  /** The reach-out loop: message a pro about a specific piece of their work. */
-  function openEnquiry(item) {
-    const session = api.session();
-    if (!session) {
-      sheet('Message this pro', signInGate('Create a free account to message', 'Home owners reach out to pros through their work. It takes 30 seconds — email and mobile are confirmed with a one-time PIN.', () => { closeSheet(); openEnquiry(item); }));
+      items = await api.get('/api/portfolio?limit=12&sort=verified');
+    } catch { /* offline */ }
+    grid.innerHTML = '';
+    if (!items.length) {
+      grid.append(h('div', { style: { gridColumn: '1 / -1' } }, ui.empty('images', 'Work will appear here', 'As pros complete jobs on ProVeri their work shows up near you.')));
       return;
     }
-    const form = h('form.stack', { onsubmit: submit }, [
-      h('div.banner.info', [h('span.ico', icon('chat', 18)), h('div', [
-        h('strong', `Message ${item.pro?.name || 'this pro'} about “${item.title}”`),
-        h('div.small', 'Say what you need and where. They reply here — no WhatsApp numbers exchanged, so the record stays on ProVeri.'),
-      ])]),
-      h('label.field', [h('span', 'Your message'), h('textarea', {
-        name: 'message', rows: 4, required: true,
-        placeholder: `Hi ${item.pro?.name || ''} — can you do this in ${item.suburb || 'my area'}? I need it done next week.`.trim(),
-      })]),
-      h('button.btn.block', { type: 'submit' }, 'Send message'),
-      h('p.tiny.muted', 'Messages are scanned for off-platform payment requests — that is how people get burned, so we keep the money here.'),
-    ]);
-    sheet(`Enquire about this work`, form);
-
-    async function submit(event) {
-      event.preventDefault();
-      const values = formValues(form);
-      await withButton(form.querySelector('button[type=submit]'), async () => {
-        await api.post(`/api/portfolio/${item.itemId}/enquire`, { customerId: session.userId, message: values.message });
-        closeSheet();
-        toast('Message sent — it is in your Orders tab.', 'ok');
-      });
+    items.slice(0, 8).forEach((item) => grid.append(workCard(item)));
+    const withPhotos = items.filter((i) => i.photo && i.photo.url && i.verified).slice(0, 3);
+    if (heroArt && withPhotos.length >= 3) {
+      heroArt.append(
+        ...withPhotos.map((item) => h('div.ha-card', photoImg(item.photo.url, ''))),
+        h('div.ha-chip.one', [h('span.ic', icon('verified', 20)), h('div', ['Verified job', h('small', `${withPhotos[0].suburb || 'Near you'} · ${money(withPhotos[0].priceCents)}`)])]),
+        h('div.ha-chip.two', [h('span.ic', icon('lock', 20)), h('div', ['Paid safely', h('small', 'Released on approval')])]),
+      );
     }
+    void session;
   }
 
-  /* ================================================================== *
-   * ORDERS — my jobs, my bookings, my messages, my uploads
-   * ================================================================== */
-
-  const TRACK = [
-    { key: 'POSTED', label: 'Posted' },
-    { key: 'BOOKED', label: 'Booked' },
-    { key: 'ESCROW', label: 'In escrow' },
-    { key: 'WORKING', label: 'Work done' },
-    { key: 'CONFIRMED', label: 'Confirmed' },
-    { key: 'PAID', label: 'Paid out' },
-  ];
-  const STAGE_OF = {
-    NEW: 0, OPEN: 0, BIDDING: 0, EXPIRED: -1, MATCHED: 1, AWARDED: 1, AWAITING_PAYMENT: 1, SCHEDULED: 2, EN_ROUTE: 3, ON_SITE: 3, IN_PROGRESS: 3,
-    AWAITING_CONFIRMATION: 3, COMPLETED: 4, IN_WARRANTY: 5, CLOSED: 5,
-    CANCELLED: -1, DISPUTED: -1, REFUNDED: -1,
-  };
-
-  function tracker(status) {
-    const stage = STAGE_OF[status] ?? 0;
-    if (stage < 0) {
-      return h('div.track.halted', [h('span.badge.danger', String(status).replace(/_/g, ' ')),
-        h('span.tiny.muted', status === 'DISPUTED' ? 'Money is frozen in escrow until the dispute is resolved.' : 'Cancelled — nothing was paid out.')]);
-    }
-    return h('div.track', TRACK.map((step, index) => h('div.track-step', {
-      class: index < stage ? 'done' : index === stage ? 'current' : '',
-    }, [h('span.dot', index < stage ? '✓' : String(index + 1)), h('span.label', step.label)])));
-  }
-
-  screens['/orders'] = async function orders() {
-    const session = api.session();
-    if (!session) {
-      return signInGate('Sign in to see your orders',
-        'Every job you post, every booking, every message you send a pro and every piece of work you publish lives here — with your money’s position in escrow at each step. Creating an account is free and takes about thirty seconds.');
-    }
-    const root = h('div.fade-in.stack');
-    root.append(h('div.row.between', [
-      h('h1', 'Orders'),
-      h('div.seg', [
-        h('button', { class: session.role === 'PRO' ? '' : 'active', onclick: (e) => switchRole(e, 'CUSTOMER') }, 'I’m hiring'),
-        h('button', { class: session.role === 'PRO' ? 'active' : '', onclick: (e) => switchRole(e, 'PRO') }, 'I’m working'),
-      ]),
-    ]));
-
-    const body = h('div.stack');
-    root.append(body);
-    await render(body, session.role === 'PRO' ? 'pro' : 'customer');
-    return root;
-
-    function switchRole(event, role) {
-      event.target.parentNode.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
-      event.target.classList.add('active');
-      api.setSession({ ...session, role });
-      render(body, role === 'PRO' ? 'pro' : 'customer');
-    }
-
-    async function render(container, mode) {
-      container.innerHTML = '';
-      container.append(loadingCards(3));
-      const who = mode === 'pro' ? `proId=${session.userId}` : `customerId=${session.userId}`;
-      const [bookings, jobs, uploads] = await Promise.all([
-        api.get(`/api/bookings?${who}`).catch(() => []),
-        mode === 'pro' ? Promise.resolve([]) : api.get(`/api/jobs?customerId=${session.userId}`).catch(() => []),
-        mode === 'pro' ? api.get(`/api/pros/${session.userId}/portfolio?limit=30`).catch(() => []) : Promise.resolve([]),
+  /** The one thing a signed-in homeowner should do next, lifted to the top. */
+  async function fillNextStep(slot, session) {
+    try {
+      const [jobs, bookings] = await Promise.all([
+        api.get(`/api/jobs?customerId=${encodeURIComponent(session.userId)}`),
+        api.get(`/api/bookings?customerId=${encodeURIComponent(session.userId)}`),
       ]);
-      container.innerHTML = '';
-
-      if (!bookings.length && !jobs.length && !uploads.length) {
-        container.append(empty(mode === 'pro' ? '🧰' : '🧾',
-          mode === 'pro' ? 'No work yet' : 'No orders yet',
-          mode === 'pro'
-            ? 'Upload the jobs you have already done — home owners find you through your work, and every escrow-released job adds itself here automatically.'
-            : 'Browse real work done near you, message the pro who did it, or post a job and let verified pros bid.',
-          h('button.btn', { onclick: () => navigate(mode === 'pro' ? '/upload-work' : '/browse') }, mode === 'pro' ? 'Upload my work' : 'Browse work')));
-        return;
-      }
-
-      if (jobs.length) {
-        container.append(h('h4', 'Jobs I posted'));
-        container.append(h('div.order-list', jobs.map((job) => h('a.order-row', { href: job.bookingId ? `/booking/${job.bookingId}` : `/job/${job.jobId}` }, [
-          h('span.lead', '🛠️'),
-          h('div.grow', [
-            h('div.t', job.title),
-            h('div.d', `${job.categoryLabel} · ${job.suburb || ''} · ${job.bidCount} bid${job.bidCount === 1 ? '' : 's'}`),
-            tracker(job.status),
-          ]),
-          h('div.meta', [h('div.money', job.budgetCents ? money(job.budgetCents) : '—'), h('div.tiny.muted', timeAgo(job.postedAt))]),
-        ]))));
-      }
-
-      if (bookings.length) {
-        container.append(h('h4', mode === 'pro' ? 'Jobs I won' : 'My bookings'));
-        container.append(h('div.order-list', bookings.map((b) => h('a.order-row', { href: `/order/${b.bookingId}` }, [
-          h('span.lead', b.status === 'CLOSED' ? '✅' : b.status === 'DISPUTED' ? '⚖️' : '📦'),
-          h('div.grow', [
-            h('div.row.wrap', { style: { gap: '6px' } }, [h('div.t', b.title), badge(b.reference, 'neutral')]),
-            h('div.d', `${b.categoryLabel} · ${mode === 'pro' ? b.customerName : b.proName} · ${b.suburb || ''}`),
-            tracker(b.status),
-          ]),
-          h('div.meta', [h('div.money', money(b.totalCents)), h('div.tiny.muted', b.status === 'IN_WARRANTY' ? 'warranty' : b.escrowStatus || '')]),
-        ]))));
-      }
-
-      if (uploads.length) {
-        container.append(sectionHead('Work I uploaded', 'Add more', '/upload-work'));
-        container.append(workGrid(uploads.slice(0, 8)));
-        const thin = uploads.filter((u) => !u.verified);
-        if (thin.length) {
-          container.append(h('div.banner.info', [h('span.ico', icon('camera', 18)), h('div', [
-            h('strong', `${thin.length} upload${thin.length === 1 ? '' : 's'} have no proof behind them yet`),
-            h('div.small', 'That is allowed — they are labelled “Uploaded by the pro”. Link one to a ProVeri job and it earns the badge automatically.'),
-          ])]));
-        }
-      }
-    }
-  };
-
-  /** Order tracking — the ecommerce-shaped view of a booking. */
-  screens['/order/:bookingId'] = async function orderDetail({ params }) {
-    const booking = await api.get(`/api/bookings/${params.bookingId}`);
-    // The list rows are flattened; the full record nests the money under
-    // price / escrow / payout, so read it from where it actually lives.
-    const price = booking.price || {};
-    const escrow = booking.escrow || {};
-    const fees = escrow.fees || {};
-    const payout = booking.payout || null;
-    const warranty = booking.warranty || null;
-    const total = price.totalCents ?? booking.totalCents ?? escrow.amountCents ?? 0;
-    const released = payout ? payout.amountCents : 0;
-    const holdback = payout ? (payout.holdbackCents || 0) : (fees.warrantyHoldbackCents || 0);
-    const platformFee = payout ? (payout.platformFeeCents || 0) : (fees.platformFeeCents || 0);
-    const stillHeld = Math.max(0, total - released - holdback - platformFee);
-    const suburb = booking.address?.suburb || booking.suburb || '';
-    const status = String(booking.status || '').replace(/_/g, ' ');
-
-    const root = h('div.fade-in.stack');
-    root.append(h('a.btn.link', { href: '/orders' }, '← Orders'));
-    root.append(h('div.card.accent', [
-      h('div.kicker', [icon('receipt', 14), `Order ${booking.reference}`]),
-      h('h1', booking.title),
-      h('div.row.between.wrap', { style: { gap: '8px' } }, [
-        h('span.money.big', money(total)),
-        badge(status, booking.status === 'DISPUTED' ? 'danger' : booking.status === 'CLOSED' ? 'ok' : 'info'),
-      ]),
-      h('p.small.muted', [booking.categoryLabel, suburb, booking.proName].filter(Boolean).join(' · ')),
-      h('div', { style: { marginTop: '12px' } }, tracker(booking.status)),
-    ]));
-
-    root.append(h('section.section', [
-      h('h2', 'Where your money is'),
-      h('div.card.pad-sm', [
-        moneyLine('Total for this job', money(total)),
-        stillHeld > 0 ? moneyLine('Held in escrow', money(stillHeld)) : null,
-        released > 0 ? moneyLine('Released to the pro', money(released)) : null,
-        holdback > 0
-          ? moneyLine(`Warranty holdback (${warranty?.days || 14} days)`,
-            warranty?.endsAt ? `${money(holdback)} · until ${dateShort(warranty.endsAt)}` : money(holdback))
-          : null,
-        platformFee > 0 ? moneyLine('ProVeri fee (10%)', money(platformFee)) : null,
-        h('p.tiny.muted', [
-          escrow.provider ? `Held by ${escrow.provider}` : '',
-          escrow.autoReleaseAt ? `auto-releases ${dateShort(escrow.autoReleaseAt)} if you do nothing` : '',
-        ].filter(Boolean).join(' · ') || 'Money is held until you confirm the work.'),
-        price.priceAssessment?.headline ? h('p.tiny.muted', `Market check: ${price.priceAssessment.headline}.`) : null,
-        h('p.tiny.muted', 'Nobody is paid before you confirm the work. If a photo was taken away from your address, the payout is held.'),
-      ]),
-    ]));
-
-    const evidence = booking.evidence || [];
-    const evidenceCount = evidence.length || booking.evidenceCount || 0;
-    if (evidenceCount) {
-      const geoVerified = evidence.filter((item) => item.geoVerified).length;
-      root.append(h('section.section', [
-        h('h2', 'Proof of work'),
-        h('div.card.pad-sm', [
-          h('div.small', [
-            `${evidenceCount} sealed record${evidenceCount === 1 ? '' : 's'}`,
-            geoVerified ? `${geoVerified} captured at the job address` : '',
-            'geotagged photos and any certificate this trade requires.',
-          ].filter(Boolean).join(' · ')),
-          h('div.row', { style: { gap: '8px', marginTop: '10px' } }, [
-            h('a.btn.sm', { href: `/booking/${booking.bookingId}` }, 'Open the full record'),
-            h('a.btn.sm.ghost', { href: `/proof/${booking.bookingId}` }, 'See the ledger proof'),
-          ]),
+      const action = nextActionFor(jobs || [], bookings || []);
+      if (!action) return;
+      slot.append(h('section.section.tight', h('a.order-card', { href: action.href }, [
+        h('div.oc-top', [
+          tradeIcon(action.categoryId),
+          h('div.grow', [h('div.oc-title', action.title), h('div.oc-sub', action.sub), h('div.oc-status', ui.statusPill(action.words))]),
         ]),
-      ]));
-    }
-
-    root.append(h('div.cta-bar', [
-      h('a.btn.ghost.grow', { href: `/booking/${booking.bookingId}` }, [icon('shield', 17), h('span', 'Full record')]),
-      booking.status === 'AWAITING_CONFIRMATION'
-        ? h('button.btn.grow', { onclick: () => navigate(`/booking/${booking.bookingId}`) }, [icon('check', 17), h('span', 'Confirm the work')])
-        : h('a.btn.grow', { href: `/pro/${booking.proId}` }, [icon('camera', 17), h('span', 'Their other work')]),
-    ]));
-    return root;
-  };
-
-  function moneyLine(label, value) {
-    return h('div.row.between', { style: { padding: '6px 0', borderBottom: '1px solid var(--line, rgba(0,0,0,.08))' } }, [
-      h('span.small', label), h('span.small.strong', String(value)),
-    ]);
+        h('div.oc-next' + (action.urgent ? '.action' : ''), [icon(action.icon, 18), h('span.grow', action.cta), icon('chevron', 18)]),
+      ])));
+    } catch { /* optional */ }
   }
 
-  /* ================================================================== *
-   * POST A JOB — a checkout in three steps, not one long form
-   * ================================================================== */
-
-  screens['/post-job'] = async function postJob({ query }) {
-    const session = api.session();
-    if (!session) {
-      return signInGate('Post a job', 'Create a free account to post. Verified pros near you are notified the moment it goes live.');
+  function nextActionFor(jobs, bookings) {
+    const byPriority = [];
+    for (const b of bookings) {
+      const words = ui.bookingWords(b.status);
+      if (b.status === 'AWARDED') byPriority.push({ p: 1, href: `/order/${b.bookingId}`, title: b.title, sub: `with ${b.proName}`, words, cta: `Pay ${money(b.totalCents)} to confirm the booking`, icon: 'lock', urgent: true, categoryId: b.categoryId });
+      else if (b.status === 'AWAITING_CONFIRMATION') byPriority.push({ p: 0, href: `/order/${b.bookingId}`, title: b.title, sub: `${b.proName} says it is done`, words, cta: 'Check the work and approve payment', icon: 'check-circle', urgent: true, categoryId: b.categoryId });
+      else if (['SCHEDULED', 'EN_ROUTE'].includes(b.status)) byPriority.push({ p: 2, href: `/order/${b.bookingId}`, title: b.title, sub: `${b.proName} · ${ui.relDay(b.scheduledAt)}`, words, cta: 'When they arrive, check their arrival code', icon: 'key', categoryId: b.categoryId });
     }
+    for (const j of jobs) {
+      if (j.bookingId) continue;
+      if (j.status === 'BIDDING' || ((j.status === 'OPEN') && j.bidCount)) byPriority.push({ p: 1, href: `/job/${j.jobId}`, title: j.title, sub: `${j.suburb || ''} · posted ${timeAgo(j.postedAt)}`, words: ui.jobWords(j.status, j.bidCount), cta: `Compare ${plural(j.bidCount, 'quote')}`, icon: 'quote', urgent: true, categoryId: j.categoryId });
+      else if (j.status === 'OPEN') byPriority.push({ p: 3, href: `/job/${j.jobId}`, title: j.title, sub: `posted ${timeAgo(j.postedAt)}`, words: ui.jobWords(j.status, 0), cta: 'Waiting for quotes from pros nearby', icon: 'hourglass', categoryId: j.categoryId });
+    }
+    byPriority.sort((a, b) => a.p - b.p);
+    return byPriority[0] || null;
+  }
+  window.ProVeri.nextActionFor = nextActionFor;
 
-    const bundle = api.state.bundle || {};
-    const cats = bundle.catalog?.categories || (await categories());
-    const draft = scratch.get('proveri.share-draft') || '';
-    if (draft) scratch.remove('proveri.share-draft');
+  /* ------------------------------------------------------------------ *
+   * /browse — explore the work
+   * ------------------------------------------------------------------ */
 
+  screens['/browse'] = async ({ query }) => {
+    const page = h('div.page');
     const state = {
-      step: 1,
-      description: draft,
-      categoryId: query.category || '',
-      address: '',
-      urgency: 'SOON',
-      budget: null,
-      inHome: true,
-      children: false,
-      vulnerable: false,
-      advice: null,
-      fromWork: query.fromWork || null,
-      proId: query.proId || null,
+      q: query.q || '',
+      category: query.category || '',
+      area: query.area || '',
+      sort: query.sort || 'verified',
+      verified: query.verified === 'true',
+      limit: 24,
     };
 
-    const root = h('div.fade-in.stack');
-    root.append(h('a.btn.link', { href: state.fromWork ? `/work/${state.fromWork}` : '/' }, '← Back'));
-    root.append(h('h1', 'Post a job'));
-    const stepper = h('div.stepper');
-    const panel = h('div.card.stack');
-    root.append(stepper, panel);
-    paint();
-    return root;
+    const countLine = h('p.page-sub', 'Loading work…');
+    page.append(h('div.page-head', h('div.titles', [h('h1', state.category ? tradeName(state.category, categoryById(state.category)?.label) : 'Explore work'), countLine])));
+    page.append(searchForm(state.q, { compact: true, placeholder: 'Search, e.g. bathroom', button: 'Go' }));
 
-    function paint() {
-      stepper.innerHTML = '';
-      stepper.append(...[['1', 'What'], ['2', 'Where & when'], ['3', 'Budget & post']].map(([n, label]) => h('div.step-pill', {
-        class: Number(n) < state.step ? 'done' : Number(n) === state.step ? 'current' : '',
-      }, [h('span.dot', Number(n) < state.step ? '✓' : n), h('span', label)])));
+    const smart = h('div', { style: { marginTop: '14px' } });
+    const chips = h('div.chip-row', { style: { marginTop: '14px' } });
+    const filters = h('div.filters.row', { style: { marginTop: '12px', gap: '8px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '2px' } });
+    const grid = h('div.work-grid', { style: { marginTop: '18px' } }, ui.skeletonItems(6, 'grid'));
+    const more = h('div.center', { style: { marginTop: '22px' } });
+    page.append(smart, chips, filters, grid, more);
 
-      panel.innerHTML = '';
-      if (state.step === 1) panel.append(stepWhat());
-      if (state.step === 2) panel.append(stepWhere());
-      if (state.step === 3) panel.append(stepReview());
+    // Chips: all, verified only, then the popular trades.
+    const chip = (label, active, onclick, iconName) => h('button.chip' + (active ? '.active' : ''), { type: 'button', onclick }, [iconName ? icon(iconName, 16) : null, label]);
+    const paintChips = () => {
+      chips.innerHTML = '';
+      chips.append(
+        chip('All work', !state.verified && !state.category, () => { state.verified = false; state.category = ''; sync(); }),
+        chip('Verified jobs only', state.verified, () => { state.verified = !state.verified; sync(); }, 'verified'),
+        ...POPULAR.map((id) => chip(tradeName(id), state.category === id, () => { state.category = state.category === id ? '' : id; sync(); }, 't-' + id)),
+      );
+    };
+
+    const select = (name, options, value, label) => h('select', {
+      name, 'aria-label': label, style: { width: 'auto', flex: 'none', height: '40px', borderRadius: '12px', fontSize: '14px', fontWeight: '650', paddingLeft: '12px', paddingRight: '34px', backgroundPosition: 'right 10px center' },
+      onchange: (event) => { state[name] = event.target.value; sync(); },
+    }, options.map(([v, l]) => h('option', { value: v, selected: v === value ? true : null }, l)));
+    const paintFilters = () => {
+      filters.innerHTML = '';
+      filters.append(
+        select('category', [['', 'All services'], ...categories().map((c) => [c.id, tradeName(c.id, c.label)]).sort((a, b) => a[1].localeCompare(b[1]))], state.category, 'Service'),
+        select('area', [['', 'All areas'], ...metros().map((m) => [m.name, m.name])], state.area, 'Area'),
+        select('sort', [['verified', 'Verified first'], ['recent', 'Newest'], ['rating', 'Top-rated pros']], state.sort, 'Sort'),
+      );
+    };
+
+    const sync = () => {
+      const params = new URLSearchParams();
+      if (state.q) params.set('q', state.q);
+      if (state.category) params.set('category', state.category);
+      if (state.area) params.set('area', state.area);
+      if (state.sort !== 'verified') params.set('sort', state.sort);
+      if (state.verified) params.set('verified', 'true');
+      history.replaceState(history.state, '', `/browse${params.toString() ? `?${params}` : ''}`);
+      const title = page.querySelector('h1');
+      if (title) title.textContent = state.category ? tradeName(state.category, categoryById(state.category)?.label) : 'Explore work';
+      paintChips();
+      paintFilters();
+      load();
+    };
+
+    // Search understands jobs, not just titles: "leaking geyser" → plumbing.
+    let resolved = null;
+    if (state.q && !state.category) {
+      try {
+        const r = await api.post('/api/catalogue/resolve', { text: state.q });
+        if (r.resolution && r.resolution.matched) resolved = r.resolution;
+      } catch { /* plain search */ }
     }
-
-    function stepWhat() {
-      const box = h('textarea', {
-        name: 'description', rows: 4, required: true, value: state.description,
-        placeholder: 'e.g. Geyser is leaking onto the kitchen ceiling and needs replacing today',
-        oninput: (event) => { state.description = event.target.value; detect(); },
-      });
-      const advice = h('div.stack', { style: { marginTop: '10px' } });
-      if (state.advice) advice.append(state.advice);
-      const wrap = h('div.stack', [
-        h('label.field', [h('span', 'What do you need done?'), box, h('div.hint', 'Plain language is fine — we work out the trade as you type.')]),
-        advice,
-        h('label.field', [h('span', 'Trade (optional)'), h('select', {
-          name: 'categoryId',
-          onchange: (event) => { state.categoryId = event.target.value; },
-        }, [
-          h('option', { value: '' }, 'Auto-detect from my description'),
-          ...cats.map((c) => h('option', { value: c.id, selected: c.id === state.categoryId }, `${catIcon(c)} ${c.label}`)),
-        ])]),
-        h('div.row.end', [h('button.btn', { onclick: () => { if (!requireDescription()) return; state.step = 2; paint(); } }, 'Next →')]),
-      ]);
-      if (state.description.trim().length > 8) detect();
-      return wrap;
-
-      function requireDescription() {
-        if (state.description.trim().length < 8) {
-          toast('Describe the job in a sentence or two so pros can quote it', 'warn');
-          box.focus();
-          return false;
-        }
-        return true;
-      }
-
-      let debounce = null;
-      async function detect() {
-        clearTimeout(debounce);
-        debounce = setTimeout(async () => {
-          const text = state.description.trim();
-          if (text.length < 8) return;
-          try {
-            const { resolution } = await api.post('/api/catalogue/resolve', { text });
-            advice.innerHTML = '';
-            if (resolution?.matched) {
-              const category = cats.find((c) => c.id === resolution.categoryId);
-              if (!state.categoryId) state.categoryId = resolution.categoryId;
-              const select = panel.querySelector('select[name=categoryId]');
-              if (select) select.value = state.categoryId;
-              advice.append(h('div.banner.info', [
-                h('span.ico', category?.statutoryTrade ? '⚖️' : '🧭'),
-                h('div', [
-                  h('strong', `Looks like: ${category?.label || resolution.categoryId}`),
-                  h('div.small', category?.statutoryTrade
-                    ? `${category.cocName || 'A certificate of compliance'} is required — only pros with it on file can bid.`
-                    : 'Change it if we got it wrong.'),
-                ]),
-              ]));
-            }
-          } catch { /* offline: the select still works by hand */ }
-        }, 420);
-      }
-    }
-
-    function stepWhere() {
-      return h('div.stack', [
-        h('label.field', [h('span', 'Where is the job?'), h('input', {
-          type: 'text', name: 'address', required: true, value: state.address,
-          placeholder: 'e.g. Bryanston, Johannesburg', oninput: (e) => { state.address = e.target.value; },
-        }), h('div.hint', 'Suburb and city is enough. The exact address is shared only with the pro you book.')]),
-        h('label.field', [h('span', 'When do you need it?'), h('select', {
-          name: 'urgency', onchange: (e) => { state.urgency = e.target.value; },
-        }, [
-          h('option', { value: 'EMERGENCY', selected: state.urgency === 'EMERGENCY' }, 'Emergency — today'),
-          h('option', { value: 'URGENT', selected: state.urgency === 'URGENT' }, 'Urgent — within 48 hours'),
-          h('option', { value: 'SOON', selected: state.urgency === 'SOON' }, 'This week'),
-          h('option', { value: 'SCHEDULED', selected: state.urgency === 'SCHEDULED' }, 'A scheduled date'),
-          h('option', { value: 'FLEXIBLE', selected: state.urgency === 'FLEXIBLE' }, 'Flexible'),
-        ])]),
-        h('details.fold', [
-          h('summary', '🏠 Household & access (safety only)'),
-          h('div.fold-body', [
-            h('label.check', [h('input', { type: 'checkbox', checked: state.inHome, onchange: (e) => { state.inHome = e.target.checked; } }), h('span.small', 'Work happens inside the home')]),
-            h('label.check', [h('input', { type: 'checkbox', checked: state.children, onchange: (e) => { state.children = e.target.checked; } }), h('span.small', 'Children on the premises')]),
-            h('label.check', [h('input', { type: 'checkbox', checked: state.vulnerable, onchange: (e) => { state.vulnerable = e.target.checked; } }), h('span.small', 'Elderly or vulnerable occupants')]),
-            h('p.tiny.muted', 'These only add safety steps — arrival codes, check-in prompts, two-person visits. They never change your price or who sees the job.'),
-          ]),
+    const paintSmart = () => {
+      smart.innerHTML = '';
+      const id = state.category || (resolved && resolved.categoryId);
+      if (!id) return;
+      const cat = categoryById(id);
+      smart.append(h('div.card.accent.pad-sm', h('div.row', [
+        tradeIcon(id),
+        h('div.grow', [
+          h('div.strong', (() => {
+            const who = ((cat && cat.label) || tradeName(id)).toLowerCase();
+            const what = tradeName(id).toLowerCase();
+            const an = (w) => (/^[aeiou]/.test(w) ? 'an' : 'a');
+            return state.q && resolved ? `Sounds like a job for ${an(who)} ${who}` : `Need ${an(what)} ${what} pro?`;
+          })()),
+          h('div.small.muted', 'Post it once and verified pros nearby send you quotes. Free, no obligation.'),
         ]),
-        h('div.row.between', [
-          h('button.btn.ghost', { onclick: () => { state.step = 1; paint(); } }, '← Back'),
-          h('button.btn', {
-            onclick: () => {
-              if (state.address.trim().length < 3) { toast('Tell us the suburb so we can match pros near you', 'warn'); return; }
-              state.step = 3; paint();
-            },
-          }, 'Next →'),
-        ]),
-      ]);
-    }
-
-    function stepReview() {
-      const category = cats.find((c) => c.id === state.categoryId);
-      const summaryCard = h('div.review', [
-        reviewLine('Job', state.description.trim()),
-        reviewLine('Trade', category ? `${category.icon || ''} ${category.label}` : 'Auto-detect from the description'),
-        reviewLine('Where', state.address.trim()),
-        reviewLine('When', ({ EMERGENCY: 'Today (emergency)', URGENT: 'Within 48 hours', SOON: 'This week', SCHEDULED: 'A scheduled date', FLEXIBLE: 'Flexible' })[state.urgency]),
-        reviewLine('Budget', state.budget ? money(Math.round(state.budget * 100)) : 'Leave it to the bids'),
-        state.proId ? reviewLine('Preferred pro', 'From the work you were viewing — they get first look') : null,
-      ]);
-      return h('div.stack', [
-        h('label.field', [h('span', 'Budget (optional, rand)'), h('input', {
-          type: 'number', name: 'budget', min: 0, step: 50, placeholder: 'Leave blank to see bids first',
-          value: state.budget == null ? '' : state.budget, oninput: (e) => { state.budget = e.target.value === '' ? null : Number(e.target.value); },
-        }), h('div.hint', 'Every bid is annotated with the real market band for this trade and suburb, so you are never anchored by a fake R99 callout.')]),
-        h('h4', 'Check it over'),
-        summaryCard,
-        h('div.banner.ok', [h('span.ico', '🛡️'), h('div', [
-          h('strong', 'Your money stays in escrow'),
-          h('div.small', 'You pay only when you accept a bid, into escrow. The pro is paid after you confirm the work — 5% is held for a 14-day workmanship warranty.'),
-        ])]),
-        h('div.row.between', [
-          h('button.btn.ghost', { onclick: () => { state.step = 2; paint(); } }, '← Back'),
-          h('button.btn.block.grow', { onclick: (event) => submitJob(event.currentTarget) }, 'Post my job'),
-        ]),
-      ]);
-    }
-
-    function reviewLine(label, value) {
-      return h('div.review-row', [h('span.k', label), h('span.v', value || '—')]);
-    }
-
-    async function submitJob(button) {
-      await withButton(button, async () => {
-        const job = await api.post('/api/jobs', {
-          customerId: session.userId,
-          categoryId: state.categoryId || null,
-          description: state.description.trim(),
-          title: state.description.trim().slice(0, 70),
-          addressText: state.address.trim(),
-          budgetCents: state.budget ? Math.round(state.budget * 100) : null,
-          urgency: state.urgency,
-          locationType: state.inHome ? 'IN_HOME' : 'ON_SITE',
-          householdNotes: { childrenOnPremises: state.children, vulnerableOccupants: state.vulnerable },
-          preferredProId: state.proId || null,
-        });
-        const matched = job.categoryAutoDetected
-          ? ` Matched to ${job.categoryAutoDetected.label} (${job.categoryAutoDetected.confidence}%).`
-          : '';
-        toast(`Job posted — ${job.matchReport?.candidates?.length || 0} verified pro(s) notified.${matched}`, 'ok');
-        navigate(`/job/${job.jobId}`);
-      });
-    }
-  };
-
-  /* ================================================================== *
-   * UPLOAD WORK — the pro side of the storefront
-   * ================================================================== */
-
-  screens['/upload-work'] = async function uploadWork() {
-    const session = api.session();
-    if (!session || session.role !== 'PRO') {
-      return signInGate('Upload your past work', 'Home owners find you through the jobs you have already done. Sign in as a pro, or register — identity, phone, email and bank are verified before you can be booked.');
-    }
-
-    const cats = await categories();
-    const root = h('div.fade-in.stack');
-    root.append(h('h1', 'Upload your work'));
-    root.append(h('div.banner.info', [h('span.ico', icon('camera', 18)), h('div', [
-      h('strong', 'What you upload is what home owners judge you on'),
-      h('div.small', 'Photos are sealed with a hash the moment you upload them. If a photo already belongs to another pro, the upload is refused. Link a ProVeri job and the item earns “Proof of work” — a badge nobody can buy.'),
-    ])]));
-
-    const photos = [];
-    const previews = h('div.photo-previews', [h('span.tiny.muted', 'No photos yet')]);
-    const form = h('form.card.stack', { onsubmit: submit }, [
-      h('label.dropzone', [
-        icon('camera', 26),
-        h('div.t', 'Tap to add photos of the finished job'),
-        h('div.small', 'Up to 8. Real photos of your own work — no stock images, no somebody else’s job. Each one is sealed with a hash as it lands.'),
-        h('input', {
-          type: 'file', name: 'photos', accept: 'image/*', multiple: true,
-          style: { position: 'absolute', width: '1px', height: '1px', opacity: '0', pointerEvents: 'none' },
-          onchange: (event) => readPhotos(event.target.files),
-        }),
-      ]),
-      previews,
-      h('label.field', [h('span', 'What was the job?'), h('input', { type: 'text', name: 'title', required: true, placeholder: 'e.g. 150L geyser replacement, tray and overflow redone' })]),
-      h('label.field', [h('span', 'What did you actually do?'), h('textarea', { name: 'description', rows: 3, placeholder: 'Materials, what was broken, what you fixed, any certificate issued.' })]),
-      h('div.form-grid', [
-        h('label.field', [h('span', 'Trade'), h('select', { name: 'categoryId' }, [
-          h('option', { value: '' }, 'My main trade'),
-          ...cats.map((c) => h('option', { value: c.id }, `${catIcon(c)} ${c.label}`)),
-        ])]),
-        h('label.field', [h('span', 'Suburb'), h('select', { name: 'suburbId' }, [
-          h('option', { value: '' }, 'Where was this?'),
-          ...suburbOptions(),
-        ])]),
-      ]),
-      h('div.form-grid', [
-        h('label.field', [h('span', 'What did it cost the client? (rand)'), h('input', { type: 'number', name: 'price', min: 0, step: 50, placeholder: 'e.g. 6950' })]),
-        h('label.field', [h('span', 'Link a ProVeri job (optional)'), h('input', { type: 'text', name: 'bookingId', placeholder: 'BKG-123456 or leave blank' }), h('div.hint', 'A linked, escrow-released job turns this into proven work.')]),
-      ]),
-      h('button.btn.block', { type: 'submit' }, 'Publish my work'),
-      h('p.tiny.muted', 'Publishing means the photos are yours and the client’s privacy is respected: no house numbers, no faces, no addresses in the frame.'),
-    ]);
-    root.append(form);
-
-    const mine = h('div.stack', [loadingCards(2)]);
-    root.append(sectionHead('Your published work', null, null), mine);
-    loadMine(mine, session.userId);
-
-    return root;
-
-    async function readPhotos(files) {
-      const list = Array.from(files || []).slice(0, 8);
-      previews.innerHTML = '';
-      for (const file of list) {
-        const dataUrl = await readAsDataUrl(file);
-        if (!dataUrl) continue;
-        photos.push({ dataUrl, caption: file.name.replace(/\.[a-z0-9]+$/i, '') });
-      }
-      if (!photos.length) { previews.append(h('span.tiny.muted', 'Could not read those files — try a smaller image.')); return; }
-      previews.append(...photos.map((photo, index) => h('figure.preview', [
-        h('img', { src: photo.dataUrl, alt: photo.caption || `upload ${index + 1}` }),
-        h('figcaption', `${photo.caption || 'Photo'} · ${(photo.dataUrl.length / 1024).toFixed(0)} KB`),
+        h('a.btn.sm', { href: `/post-job?category=${id}${state.q ? `&description=${encodeURIComponent(state.q)}` : ''}` }, 'Get quotes'),
       ])));
-    }
+    };
 
-    function readAsDataUrl(file) {
-      return new Promise((resolve) => {
-        if (typeof FileReader === 'undefined') { resolve(null); return; }
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result || ''));
-        reader.onerror = () => resolve(null);
-        reader.readAsDataURL(file);
-      });
-    }
-
-    async function submit(event) {
-      event.preventDefault();
-      const values = formValues(form);
-      if (!photos.length) { toast('Add at least one photo — home owners decide with their eyes', 'warn'); return; }
-      await withButton(form.querySelector('button[type=submit]'), async () => {
-        const item = await api.post('/api/portfolio', {
-          proId: session.userId,
-          title: values.title,
-          description: values.description || null,
-          categoryId: values.categoryId || null,
-          suburbId: values.suburbId || null,
-          priceCents: values.price ? Math.round(values.price * 100) : null,
-          priceNote: values.price ? 'what this job cost the client' : null,
-          bookingId: values.bookingId ? String(values.bookingId).trim() : null,
-          photos,
-        });
-        closeSheet();
-        toast(`Published as ${item.reference} — ${item.tier === 'SELF_DECLARED' ? 'labelled “Uploaded by the pro” until it is linked to a ProVeri job' : 'verified as proof of work'}`, 'ok');
-        navigate(`/work/${item.itemId}`);
-      });
-    }
-  };
-
-  async function loadMine(container, proId) {
-    try {
-      const items = await api.get(`/api/pros/${proId}/portfolio?limit=30`);
-      container.innerHTML = '';
+    async function load() {
+      grid.innerHTML = '';
+      ui.skeletonItems(6, 'grid').forEach((c) => grid.append(c));
+      paintSmart();
+      const params = new URLSearchParams({ limit: String(state.limit), sort: state.sort });
+      const category = state.category || (resolved && resolved.categoryId) || '';
+      if (category) params.set('categoryId', category);
+      else if (state.q) params.set('q', state.q);
+      if (state.area) params.set('metro', state.area);
+      if (state.verified) params.set('verified', 'true');
+      let items = [];
+      try { items = await api.get(`/api/portfolio?${params}`); } catch (e) { grid.innerHTML = ''; grid.append(h('div', { style: { gridColumn: '1 / -1' } }, ui.empty('offline', 'Could not load work', ui.friendlyError(e)))); return; }
+      grid.innerHTML = '';
+      const proven = items.filter((i) => i.verified).length;
+      countLine.textContent = items.length
+        ? `${plural(items.length, 'job')} by local pros · ${proven} proven on ProVeri`
+        : 'Nothing here yet — 0 proven on ProVeri for this search';
       if (!items.length) {
-        container.append(empty('🧰', 'Nothing published yet', 'Your first upload takes a minute — and it is what home owners see before they message you.'));
+        grid.append(h('div', { style: { gridColumn: '1 / -1' } }, ui.empty('search', 'No work matches yet', 'Pros are joining every week. Post your job anyway — verified pros nearby will still quote.',
+          h('a.btn', { href: `/post-job${category ? `?category=${category}` : ''}` }, 'Post a job — free'))));
+        more.innerHTML = '';
         return;
       }
-      container.append(workGrid(items));
-      container.append(h('div.list', { style: { marginTop: '12px' } }, items.map((item) => h('div.tile.row.between', [
-        h('div.grow', [h('div.t', item.title), h('div.d', `${item.reference} · ${item.tierLabel} · ${timeAgo(item.createdAt)}`)]),
-        h('div.row', { style: { gap: '6px' } }, [
-          h('a.btn.sm.ghost', { href: `/work/${item.itemId}` }, 'View'),
-          h('button.btn.sm.ghost', { onclick: (event) => remove(event.currentTarget, item) }, 'Remove'),
-        ]),
-      ]))));
-    } catch (error) {
-      container.innerHTML = '';
-      container.append(h('div.banner.danger', [h('span.ico', icon('close', 16)), h('div', error.message)]));
+      items.forEach((item) => grid.append(workCard(item)));
+      more.innerHTML = '';
+      if (items.length >= state.limit) more.append(h('button.btn.ghost', { type: 'button', onclick: () => { state.limit += 24; load(); } }, 'Show more work'));
     }
 
-    async function remove(button, item) {
-      await withButton(button, async () => {
-        await api.del(`/api/portfolio/${item.itemId}?actorId=${encodeURIComponent(item.proId)}&reason=${encodeURIComponent('removed by the pro')}`);
-        toast(`${item.reference} removed`, 'ok');
-        loadMine(container, proId);
-      });
-    }
-  }
-
-  /* ================================================================== *
-   * YOU — the hub for everything that is not browsing or ordering
-   * ================================================================== */
-
-  screens['/me'] = async function me() {
-    const session = api.session();
-    const root = h('div.fade-in.stack');
-
-    if (!session) {
-      root.append(h('h1', 'You'));
-      root.append(signInGate('Sign in to ProVeri', 'One account for both sides of the market: hire someone, or publish your work and get found.'));
-      root.append(h('section.section', [h('h2', 'Or just look around'), h('div.list', [
-        tile('search', 'Browse work near you', 'Real jobs done by real pros', '/browse'),
-        tile('shield', 'Trust & transparency', 'Every check, its source and the ledger', '/trust'),
-        tile('car', 'Verified vehicles', 'The second vertical, live in beta', '/vehicles'),
-      ])]));
-      return root;
-    }
-
-    root.append(h('div.card.accent.me-head', [
-      h('div.avatar.lg', (session.name || 'P').slice(0, 1)),
-      h('div.grow', [
-        h('h1', session.name || session.userId),
-        h('div.small.muted', session.role === 'PRO' ? 'Pro account · verified to bid' : 'Home owner account'),
-      ]),
-      h('button.btn.sm.ghost', {
-        onclick: (event) => {
-          const next = session.role === 'PRO' ? 'CUSTOMER' : 'PRO';
-          api.setSession({ ...session, role: next });
-          toast(`Switched to ${next === 'PRO' ? 'working' : 'hiring'}`, 'ok');
-          navigate('/me');
-          event.currentTarget.blur();
-        },
-      }, session.role === 'PRO' ? 'I’m hiring' : 'I’m working'),
-    ]));
-
-    root.append(h('section.section', [h('h2', 'My activity'), h('div.list', [
-      tile('receipt', 'Orders & bookings', 'Jobs, escrow, proof of work', '/orders'),
-      session.role === 'PRO' ? tile('camera', 'Upload my work', 'Publish a job you have done', '/upload-work') : tile('search', 'Browse work', 'Find a pro by what they have done', '/browse'),
-      tile('bell', 'Notifications', 'Bids, messages and payout releases', '/notifications'),
-      session.role === 'PRO' ? tile('wallet', 'Wallet & earnings', 'Balance, holdbacks, SARS summary', '/wallet') : null,
-    ])]));
-
-    root.append(h('section.section', [h('h2', 'Your record'), h('div.list', [
-      tile('user', 'Profile', 'Details, verification, documents', '/profile'),
-      tile('shield', 'Trust & proof', 'The ledger, the rules, the receipts', '/trust'),
-      tile('link', 'Data & integrations', 'What is live, what is simulated', '/integrations'),
-    ])]));
-
-    root.append(h('section.section', [h('h2', 'Grow your business'), h('div.list', [
-      tile('tool', 'Become a verified pro', 'KYC, trade certificate, bank check', '/become-a-pro'),
-      tile('globe', 'Web Studio', 'A free data-bound microsite', '/web-studio'),
-      tile('store', 'Business Site Studio', 'A full website with no dead buttons', '/business-studio'),
-      tile('briefcase', 'Sales desk', 'The pipeline behind the studio', '/sales-desk'),
-      tile('car', 'Verified vehicles', 'Buy and sell with checks', '/vehicles'),
-      tile('home', 'Property (coming soon)', 'Why it is not live, and the waitlist', '/property'),
-      tile('scale', 'Trust desk (admin)', 'Disputes, flags, risk', '/admin'),
-    ])]));
-
-    root.append(h('div.row.wrap', { style: { gap: '8px', padding: '8px 0 28px' } }, [
-      h('button.btn.ghost.sm', { onclick: (event) => withButton(event.currentTarget, () => window.ProVeri.install()) }, [icon('install', 16), h('span', 'Install the app')]),
-      h('button.btn.ghost.sm', {
-        onclick: () => {
-          api.setSession(null);
-          toast('Signed out on this device', 'ok');
-          navigate('/');
-        },
-      }, 'Sign out'),
-    ]));
-
-    return root;
-
-    function tile(name, title, body, href) {
-      return h('a.tile', { href }, [
-        h('span.lead', icon(name, 21)),
-        h('div.grow', [h('div.t', title), h('div.d', body)]),
-        h('span.arrow', icon('chevron', 18)),
-      ]);
-    }
+    paintChips();
+    paintFilters();
+    load();
+    return page;
   };
 
+  /* ------------------------------------------------------------------ *
+   * /work/:itemId — one piece of work
+   * ------------------------------------------------------------------ */
+
+  screens['/work/:itemId'] = async ({ params }) => {
+    const item = await api.get(`/api/portfolio/${encodeURIComponent(params.itemId)}`);
+    const session = api.session();
+    const pro = item.pro || {};
+    const isOwner = session && session.userId === item.proId;
+    const verified = item.tier !== 'SELF_DECLARED';
+    const photos = (item.photos || []).filter((p) => p.url || p.dataUrl);
+    const page = h('div.page');
+
+    // Gallery first: the work is the product.
+    const strip = h('div.photo-strip', photos.length
+      ? photos.map((p, i) => h('figure.photo', [photoImg(p.url || p.dataUrl, p.caption || item.title, { loading: i ? 'lazy' : 'eager' })]))
+      : [h('figure.photo.sealed', h('div.sealed-media', [icon('lock', 30), h('span', 'Photo sealed on record'), h('span', { style: { fontWeight: 500, opacity: 0.75 } }, 'The pro’s photo is fingerprinted, but not published.'), (item.photos || [])[0] && (item.photos || [])[0].hash ? h('code', `#${String((item.photos || [])[0].hash).slice(0, 12)}`) : null]))]);
+    const counter = photos.length > 1 ? h('span.g-count', `1 / ${photos.length}`) : null;
+    if (counter) {
+      strip.addEventListener('scroll', () => {
+        const index = Math.round(strip.scrollLeft / Math.max(1, strip.clientWidth));
+        counter.textContent = `${index + 1} / ${photos.length}`;
+      }, { passive: true });
+    }
+    const gallery = h('div.gallery', [
+      strip,
+      h('div.g-back', h('button.icon-btn.solid', { type: 'button', 'aria-label': 'Back', onclick: () => (history.state && history.state.app ? history.back() : navigate('/browse')) }, icon('arrow-left', 20))),
+      h('div.g-actions', h('button.icon-btn.solid', { type: 'button', 'aria-label': 'Share', onclick: () => ui.share({ title: item.title, text: `${item.title} — on ProVeri`, url: location.href }) }, icon('share', 19))),
+      photos.some((p) => p.illustrative) ? h('span.g-demo', 'Demo photo') : null,
+      counter,
+    ]);
+
+    const statement = item.verification || { lines: [] };
+    const trustCard = verified
+      ? h('div.card.accent', [
+        h('div.row', { style: { gap: '10px', alignItems: 'flex-start' } }, [
+          h('span.lead', { style: { width: '40px', height: '40px', borderRadius: '12px', background: 'var(--brand)', color: '#fff', display: 'grid', placeItems: 'center', flex: 'none' } }, icon('verified', 22)),
+          h('div.grow', [
+            h('div.strong', item.tier === 'CLIENT_CONFIRMED' ? 'Verified job · homeowner approved' : 'Verified job'),
+            h('div.small.muted', statement.label || ''),
+          ]),
+        ]),
+        h('div.trust-points', { style: { marginTop: '14px' } }, (statement.lines || []).map((line) => h('div.trust-point', [h('span.tp-ico', icon('check', 16)), h('span', line)]))),
+        item.ledgerSeal ? h('details.fold', { style: { marginTop: '14px', background: 'transparent', border: '0' } }, [
+          h('summary', { style: { padding: '6px 0' } }, [icon('fingerprint', 18), h('span.small', 'Tamper-proof record')]),
+          h('div.fold-body', { style: { padding: '0' } }, [
+            h('p.small.muted', 'Every verified job is written to ProVeri’s audit ledger. Change one detail and the seal no longer matches.'),
+            h('p.small', h('code', `Ledger seal ${String(item.ledgerSeal).slice(0, 16)}`)),
+          ]),
+        ]) : null,
+      ])
+      : h('div.card.flat', [
+        h('div.row', { style: { gap: '10px' } }, [
+          h('span.lead', { style: { width: '40px', height: '40px', borderRadius: '12px', background: 'var(--surface-3)', color: 'var(--ink-2)', display: 'grid', placeItems: 'center', flex: 'none' } }, icon('upload', 20)),
+          h('div.grow', [h('div.strong', 'Uploaded by the pro'), h('div.small.muted', 'Not yet backed by a job on ProVeri')]),
+        ]),
+        h('div.trust-points', { style: { marginTop: '12px' } }, (statement.lines || []).map((line) => h('div.trust-point.plain', [h('span.tp-ico', icon('info', 16)), h('span', line)]))),
+      ]);
+
+    const proRow = h('a.pro-row.tile', { href: `/pro/${item.proId}` }, [
+      avatar(pro.name || 'Pro', 'lg'),
+      h('div.body', [
+        h('div.t', pro.name || 'Local pro'),
+        h('div.d', [pro.completedJobs ? `${pro.completedJobs} jobs done` : 'New on ProVeri', pro.suburb ? ` · ${pro.suburb}` : '']),
+        h('div.row', { style: { gap: '8px', marginTop: '6px' } }, [rating(pro.rating), pro.badge ? ui.badge(ui.badgeText(pro.badge), /ELITE/.test(pro.badge) ? 'elite' : /VERIFIED/.test(pro.badge) ? 'verified' : 'neutral') : null]),
+      ]),
+      h('span.meta', icon('chevron', 20)),
+    ]);
+
+    const proFirst = firstName(pro.name) || 'the pro';
+    const cta = isOwner
+      ? h('div.cta-bar.desktop-inline', h('div.cta-inner', [
+        h('button.btn.ghost.grow', { type: 'button', onclick: () => ui.share({ title: item.title, url: location.href }) }, [icon('share', 18), 'Share']),
+        h('a.btn.grow', { href: '/upload-work' }, [icon('plus', 18), 'Add more work']),
+      ]))
+      : h('div.cta-bar.desktop-inline', h('div.cta-inner', [
+        h('button.btn.ghost.grow', { type: 'button', onclick: () => messageAbout(item) }, [icon('chat', 18), `Message ${proFirst}`]),
+        h('a.btn.grow', { href: `/post-job?proId=${encodeURIComponent(item.proId)}&category=${encodeURIComponent(item.categoryId || '')}&from=${encodeURIComponent(item.itemId)}` }, `Get a quote`),
+      ]));
+
+    const facts = h('div.detail-meta', [
+      h('span', [icon('t-' + (item.categoryId || ''), 16), item.categoryLabel || 'Service']),
+      item.suburb ? h('span', [icon('pin', 16), item.suburb]) : null,
+      item.completedAt ? h('span', [icon('calendar', 16), `Done ${ui.dateShort(item.completedAt)}`]) : null,
+    ]);
+
+    const main = h('div', [
+      gallery,
+      h('div.detail-title', [h('h1', item.title), facts]),
+      item.priceCents ? h('div.price-block', [h('span.money', money(item.priceCents)), h('span.muted.small', item.priceNote ? `· ${item.priceNote}` : '· what the homeowner paid')]) : null,
+      item.description ? h('div.section.tight', [h('h3', 'About this job'), h('p.muted', { style: { marginTop: '8px', whiteSpace: 'pre-line' } }, item.description)]) : null,
+      item.review ? h('div.section.tight.card', [h('div.row', [ui.starRow(item.rating), h('span.small.muted', 'Homeowner review')]), h('p', { style: { marginTop: '8px' } }, `“${item.review}”`)]) : null,
+    ]);
+    const side = h('div.side-card.stack', [trustCard, proRow, cta]);
+    page.append(h('div.detail-grid', { style: { marginTop: '0' } }, [main, side]));
+
+    const moreBox = h('div.section');
+    page.append(moreBox);
+    api.get(`/api/pros/${encodeURIComponent(item.proId)}/portfolio`).then((rows) => {
+      const others = (rows || []).filter((r) => r.itemId !== item.itemId).slice(0, 4);
+      if (!others.length) return;
+      moreBox.append(ui.sectionHead(`More work by ${proFirst}`, 'See profile', `/pro/${item.proId}`), h('div.work-grid', others.map((o) => workCard(o, { mini: true, hidePro: true }))));
+    }).catch(() => {});
+
+    return page;
+  };
+
+  function messageAbout(item) {
+    const session = api.session();
+    const go = (s) => navigate(`/inbox/${encodeURIComponent(`work.${item.itemId}.${s.userId}`)}`);
+    if (!session) return account().openSignIn({ reason: `Sign in to message ${firstName(item.pro && item.pro.name) || 'the pro'} — it takes a few seconds.`, onDone: go });
+    if (session.userId === item.proId) return toast('This is your own work.', 'warn');
+    go(session);
+  }
+  window.ProVeri.messageAbout = messageAbout;
+
+  /* ------------------------------------------------------------------ *
+   * /orders — your jobs (homeowner) · leads & jobs (pro)
+   * ------------------------------------------------------------------ */
+
+  screens['/orders'] = async ({ query }) => {
+    const session = api.session();
+    const page = h('div.page.mid');
+    if (!session) {
+      page.append(h('div.page-head', h('div.titles', h('h1', 'Your jobs'))));
+      page.append(account().signInPanel({ title: 'Sign in to see your jobs', body: 'Track quotes, payments and progress for every job in one place.', iconName: 'jobs' }));
+      return page;
+    }
+    if (session.role === 'PRO' && window.ProVeri.proJobs) return window.ProVeri.proJobs({ query });
+
+    page.append(h('div.page-head', [h('div.titles', [h('h1', 'Your jobs'), h('p.page-sub', 'Everything you have posted and booked.')]), h('a.btn.sm.hide-mobile', { href: '/post-job' }, [icon('plus', 16), 'Post a job'])]));
+    const seg = h('div.seg');
+    const list = h('div.list', { style: { marginTop: '16px' } }, ui.skeletonItems(2, 'card'));
+    page.append(seg, list);
+
+    const [jobs, bookings] = await Promise.all([
+      api.get(`/api/jobs?customerId=${encodeURIComponent(session.userId)}`).catch(() => []),
+      api.get(`/api/bookings?customerId=${encodeURIComponent(session.userId)}`).catch(() => []),
+    ]);
+    const cards = orderCards(jobs || [], bookings || []);
+    const active = cards.filter((c) => !c.past);
+    const past = cards.filter((c) => c.past);
+    const paint = (which) => {
+      seg.innerHTML = '';
+      seg.append(
+        h('button' + (which === 'active' ? '.active' : ''), { type: 'button', onclick: () => paint('active') }, `Active · ${active.length}`),
+        h('button' + (which === 'past' ? '.active' : ''), { type: 'button', onclick: () => paint('past') }, `Past · ${past.length}`),
+      );
+      list.innerHTML = '';
+      const rows = which === 'active' ? active : past;
+      if (!rows.length) {
+        list.append(which === 'active'
+          ? ui.empty('clipboard-check', 'No jobs yet', 'Post a job in about a minute and verified pros nearby will send you quotes.', h('div.btn-row', { style: { justifyContent: 'center' } }, [h('a.btn', { href: '/post-job' }, 'Post a job'), h('a.btn.ghost', { href: '/browse' }, 'Explore work')]))
+          : ui.empty('history', 'Nothing finished yet', 'Completed jobs and their warranties will be kept here.'));
+        return;
+      }
+      rows.forEach((c) => list.append(c.node));
+    };
+    paint(query.tab === 'past' ? 'past' : (active.length || !past.length ? 'active' : 'past'));
+    return page;
+  };
+
+  /** One card per job: a posted job and its booking are the same thing to a homeowner. */
+  function orderCards(jobs, bookings) {
+    const byJob = new Map(bookings.map((b) => [b.jobId, b]));
+    const used = new Set();
+    const cards = [];
+    for (const j of jobs) {
+      const b = j.bookingId ? bookings.find((x) => x.bookingId === j.bookingId) : byJob.get(j.jobId);
+      if (b) { used.add(b.bookingId); cards.push(bookingCard(b)); continue; }
+      const words = ui.jobWords(j.status, j.bidCount);
+      const past = ['CANCELLED', 'EXPIRED', 'COMPLETED'].includes(j.status);
+      cards.push({
+        at: j.postedAt,
+        past,
+        node: h('a.order-card', { href: `/job/${j.jobId}` }, [
+          h('div.oc-top', [tradeIcon(j.categoryId), h('div.grow', [h('div.oc-title', j.title), h('div.oc-sub', `${j.suburb || ''}${j.suburb ? ' · ' : ''}posted ${timeAgo(j.postedAt)}`), h('div.oc-status', ui.statusPill(words))])]),
+          ui.tracker(0),
+          past ? null : h('div.oc-next' + (j.bidCount ? '.action' : ''), [icon(j.bidCount ? 'quote' : 'hourglass', 18), h('span.grow', j.bidCount ? `Compare ${plural(j.bidCount, 'quote')} and pick your pro` : 'Pros nearby have been told — quotes usually arrive within hours'), icon('chevron', 18)]),
+        ]),
+      });
+    }
+    for (const b of bookings) if (!used.has(b.bookingId)) cards.push(bookingCard(b));
+    return cards.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  }
+
+  function bookingCard(b) {
+    const words = ui.bookingWords(b.status);
+    const past = ['CLOSED', 'CANCELLED', 'REFUNDED'].includes(b.status);
+    const next = {
+      AWARDED: ['lock', `Pay ${money(b.totalCents)} to confirm — held safely until you approve`, true],
+      SCHEDULED: ['calendar', `Booked for ${ui.relDay(b.scheduledAt)} — check the pro’s arrival code at the door`, false],
+      EN_ROUTE: ['navigation', `${b.proName} is on the way — have the booking screen ready`, true],
+      ON_SITE: ['tool', 'Work is under way', false],
+      STARTED: ['tool', 'Work is under way', false],
+      IN_PROGRESS: ['tool', 'Work is under way', false],
+      AWAITING_CONFIRMATION: ['check-circle', 'Check the finished work and approve payment', true],
+      IN_WARRANTY: ['shield', b.reviewId ? `Covered by warranty until ${ui.dateShort(b.warrantyEndsAt)}` : 'How did it go? Leave a review', !b.reviewId],
+      DISPUTED: ['alert', 'We are reviewing this job — your money is frozen safely', true],
+    }[b.status];
+    return {
+      at: b.createdAt,
+      past,
+      node: h('a.order-card', { href: `/order/${b.bookingId}` }, [
+        h('div.oc-top', [
+          tradeIcon(b.categoryId),
+          h('div.grow', [h('div.oc-title', b.title), h('div.oc-sub', `${b.proName} · ${money(b.totalCents)}`), h('div.oc-status', ui.statusPill(words))]),
+        ]),
+        ui.tracker(ui.bookingReached(b.status)),
+        next ? h('div.oc-next' + (next[2] ? '.action' : ''), [icon(next[0], 18), h('span.grow', next[1]), icon('chevron', 18)]) : null,
+      ]),
+    };
+  }
+  window.ProVeri.bookingCard = bookingCard;
+
+  screens['/order/:bookingId'] = async (ctx) => window.ProVeri.bookingTracker(ctx);
+
+  /* ------------------------------------------------------------------ *
+   * /post-job — three steps
+   * ------------------------------------------------------------------ */
+
+  const URGENCY = [
+    { id: 'EMERGENCY', t: 'Emergency', d: 'Today, as soon as possible', icon: 'zap' },
+    { id: 'URGENT', t: 'Within 2 days', d: 'Soon, but not an emergency', icon: 'timer' },
+    { id: 'SOON', t: 'This week', d: 'Any day in the next 7 days', icon: 'calendar' },
+    { id: 'FLEXIBLE', t: 'I’m flexible', d: 'Pick a time that suits the pro', icon: 'clock' },
+  ];
+
+  screens['/post-job'] = async ({ query }) => {
+    const session = api.session();
+    const page = h('div.page.narrow');
+    if (session && session.role === 'PRO') {
+      page.append(ui.backButton('/'), ui.empty('briefcase', 'You are signed in as a pro', 'Posting jobs is for homeowners. Switch to a homeowner account, or find jobs to quote on in Leads.',
+        h('div.btn-row', { style: { justifyContent: 'center' } }, [h('a.btn', { href: '/orders' }, 'See my leads'), h('button.btn.ghost', { type: 'button', onclick: () => account().openSignIn({ title: 'Switch account' }) }, 'Switch account')])));
+      return page;
+    }
+
+    let customer = null;
+    if (session) customer = await api.get(`/api/customers/${encodeURIComponent(session.userId)}`).catch(() => null);
+    const sharedText = query.description || query.text || sessionStorage.getItem('proveri.share-draft') || '';
+    sessionStorage.removeItem('proveri.share-draft');
+
+    const draft = {
+      description: [query.title, sharedText].filter(Boolean).join(' — '),
+      categoryId: query.category || '',
+      detected: null,
+      title: '',
+      suburbId: (customer && customer.suburbId) || '',
+      addressText: '',
+      urgency: 'SOON',
+      preferredDate: '',
+      accessNotes: '',
+      pets: false,
+      budget: '',
+      photos: [],
+      proId: query.proId || '',
+      from: query.from || '',
+    };
+    let invitedPro = null;
+    if (draft.proId) api.get(`/api/pros/${encodeURIComponent(draft.proId)}`).then((p) => { invitedPro = p; paint(); }).catch(() => {});
+
+    let step = 1;
+    const stepper = h('div.stepper');
+    const body = h('div');
+    page.append(ui.backButton('/'), stepper, body);
+
+    const paintStepper = () => {
+      stepper.innerHTML = '';
+      ['What', 'Where & when', 'Budget & post'].forEach((label, index) => {
+        const n = index + 1;
+        stepper.append(h('div.step-pill' + (n < step ? '.done' : n === step ? '.current' : ''), [
+          h('span.bar', h('i')),
+          h('span.lbl', [h('span.n', n < step ? icon('check', 12, { stroke: 3.2 }) : String(n)), label]),
+        ]));
+      });
+    };
+
+    const paint = () => {
+      paintStepper();
+      body.innerHTML = '';
+      if (step === 1) body.append(stepWhat());
+      if (step === 2) body.append(stepWhere());
+      if (step === 3) body.append(stepBudget());
+      window.scrollTo({ top: 0 });
+    };
+
+    /* ---- step 1: what ---- */
+    function stepWhat() {
+      const textarea = h('textarea', {
+        name: 'description', rows: '5', required: true, maxlength: '2000',
+        placeholder: 'e.g. Our geyser is leaking through the kitchen ceiling and needs replacing.',
+      });
+      textarea.value = draft.description;
+      const error = h('div.field-error', { hidden: true });
+      const detectedBox = h('div', { style: { marginTop: '14px' } });
+      const ideas = h('div.chip-wrap', { style: { marginTop: '10px' } });
+
+      const paintDetected = () => {
+        detectedBox.innerHTML = '';
+        ideas.innerHTML = '';
+        const id = draft.categoryId || (draft.detected && draft.detected.categoryId);
+        if (!id) {
+          detectedBox.append(h('button.tile', { type: 'button', onclick: chooseTrade }, [h('span.lead.grey', icon('grid', 20)), h('div.body', [h('div.t', 'Choose a service'), h('div.d', 'Or keep typing and we will suggest one')]), h('span.meta', icon('chevron', 18))]));
+          return;
+        }
+        const cat = categoryById(id);
+        detectedBox.append(h('button.tile', { type: 'button', onclick: chooseTrade }, [
+          tradeIcon(id),
+          h('div.body', [h('div.d', draft.categoryId ? 'Service' : 'We think this is a job for'), h('div.t', cat ? cat.label : tradeName(id))]),
+          h('span.meta', ['Change', icon('chevron', 18)]),
+        ]));
+        if (cat && cat.statutoryTrade) detectedBox.append(h('p.hint', [icon('shield', 14), ` By law this needs a registered pro. We only send it to pros whose ${cat.regulator && cat.regulator.body ? cat.regulator.body : 'trade'} registration is on file.`]));
+        if (cat && (cat.commonJobs || []).length) {
+          ideas.append(h('div.tiny.muted', { style: { width: '100%' } }, 'Common jobs — tap to use as the title'));
+          cat.commonJobs.slice(0, 5).forEach((job) => ideas.append(h('button.chip.sm' + (draft.title === job ? '.active' : ''), { type: 'button', onclick: () => { draft.title = draft.title === job ? '' : job; paintDetected(); } }, job)));
+        }
+      };
+
+      function chooseTrade() {
+        allTradesSheet(null, (id) => {
+          draft.categoryId = id;
+          draft.title = '';
+          paintDetected();
+        });
+      }
+
+      let timer = null;
+      textarea.addEventListener('input', () => {
+        draft.description = textarea.value;
+        error.hidden = true;
+        clearTimeout(timer);
+        if (draft.categoryId) return;
+        timer = setTimeout(async () => {
+          if (textarea.value.trim().length < 6) return;
+          try {
+            const r = await api.post('/api/catalogue/resolve', { text: textarea.value });
+            draft.detected = r.resolution && r.resolution.matched ? r.resolution : null;
+            paintDetected();
+          } catch { /* offline: the server still detects on submit */ }
+        }, 450);
+      });
+      paintDetected();
+
+      const next = h('button.btn.block.lg', {
+        type: 'button',
+        onclick: () => {
+          draft.description = textarea.value.trim();
+          if (draft.description.length < 10) {
+            error.textContent = 'Tell the pro a little more — what is wrong, and where?';
+            error.hidden = false;
+            textarea.setAttribute('aria-invalid', 'true');
+            textarea.focus();
+            return;
+          }
+          if (!draft.categoryId && !draft.detected) { chooseTrade(); toast('Pick the closest service so we can find the right pros.', 'warn'); return; }
+          step = 2;
+          paint();
+        },
+      }, ['Continue', icon('arrow', 18)]);
+
+      return h('div.stack.lg', [
+        h('div', [
+          h('h1', { style: { fontSize: '28px' } }, invitedPro ? `What do you need ${firstName(invitedPro.displayName || invitedPro.name)} to do?` : 'What do you need done?'),
+          h('p.page-sub', { style: { marginTop: '6px' } }, 'Describe it like you would to a friend. Pros quote better with detail.'),
+        ]),
+        invitedPro ? h('div.tile', [avatar(invitedPro.displayName || invitedPro.name), h('div.body', [h('div.d', 'This job goes to'), h('div.t', invitedPro.displayName || invitedPro.name)]), h('span.meta', ui.badge('Invited', 'verified'))]) : null,
+        h('label.field', [h('span', ['Describe the job ', h('small', 'what, where in the house, how big')]), textarea, error]),
+        h('div', [detectedBox, ideas]),
+        next,
+        h('p.tiny.muted.center', [icon('lock', 13), ' Free to post. No obligation to hire.']),
+      ]);
+    }
+
+    /* ---- step 2: where & when ---- */
+    function stepWhere() {
+      const error = h('div.field-error', { hidden: true });
+      const suburb = h('select', { name: 'suburbId', required: true }, [h('option', { value: '' }, 'Choose your suburb'), ...account().suburbOptions(draft.suburbId)]);
+      suburb.value = draft.suburbId;
+      const address = h('input', { name: 'address', type: 'text', autocomplete: 'street-address', placeholder: 'e.g. 12 Jacaranda Street (optional)', value: draft.addressText });
+      const options = h('div.options', URGENCY.map((u) => h('label.option' + (draft.urgency === u.id ? '.selected' : ''), [
+        h('input', { type: 'radio', name: 'urgency', value: u.id, checked: draft.urgency === u.id, onchange: () => { draft.urgency = u.id; for (const o of Array.from(options.querySelectorAll('.option'))) o.classList.remove('selected'); options.querySelectorAll('.option')[URGENCY.indexOf(u)].classList.add('selected'); } }),
+        h('span.o-ico', icon(u.icon, 18)),
+        h('span.o-t', u.t),
+        h('span.o-d', u.d),
+      ])));
+      const date = h('input', { name: 'preferredDate', type: 'date', value: draft.preferredDate, min: new Date().toISOString().slice(0, 10) });
+      const access = h('textarea', { name: 'accessNotes', rows: '2', placeholder: 'Gate code, parking, which entrance… (only shared with the pro you hire)', style: { minHeight: '84px' } });
+      access.value = draft.accessNotes;
+      const pets = h('input', { type: 'checkbox', name: 'pets', checked: draft.pets });
+
+      /* Photos — at least 3, so pros quote the real job instead of guessing. */
+      const thumbs = h('div.thumbs');
+      const photoCount = h('div.tiny.muted', { style: { marginTop: '6px' } });
+      const fileInput = h('input', { type: 'file', name: 'jobPhotos', accept: 'image/*', multiple: true, 'aria-label': 'Add photos of the problem' });
+      const uploader = h('label.uploader', [
+        fileInput,
+        h('span.u-ico', icon('camera', 26)),
+        h('span.u-t', 'Add photos of the problem'),
+        h('span.u-d', 'At least 3 · wide shot, close-up, one more angle · we shrink big photos for you'),
+      ]);
+      const paintThumbs = () => {
+        thumbs.innerHTML = '';
+        draft.photos.forEach((p, index) => thumbs.append(h('div.thumb', [
+          h('img', { src: p.dataUrl, alt: `Photo ${index + 1}` }),
+          h('button.x', { type: 'button', 'aria-label': 'Remove photo', onclick: () => { draft.photos.splice(index, 1); paintThumbs(); } }, icon('close', 16)),
+        ])));
+        photoCount.innerHTML = '';
+        photoCount.append(draft.photos.length < 3
+          ? h('span', { style: { color: 'var(--danger)' } }, `Add at least 3 photos — ${3 - draft.photos.length} more to go`)
+          : h('span', { style: { color: 'var(--brand)' } }, `${draft.photos.length} photos added — pros will quote more accurately`));
+      };
+      paintThumbs();
+      fileInput.addEventListener('change', async () => {
+        const files = Array.from(fileInput.files || []).slice(0, 6 - draft.photos.length);
+        for (const file of files) {
+          try {
+            const dataUrl = await ui.compressImage(file, { maxEdge: 1600, maxBytes: 450 * 1024 });
+            draft.photos.push({ dataUrl });
+            paintThumbs();
+          } catch (e) { toast(ui.friendlyError(e), 'warn'); }
+        }
+        fileInput.value = '';
+      });
+
+      return h('div.stack.lg', [
+        h('div', [h('h1', { style: { fontSize: '28px' } }, 'Where, when and photos'), h('p.page-sub', { style: { marginTop: '6px' } }, 'We match you with pros who work in your area. Photos get you better quotes.')]),
+        h('label.field', [h('span', 'Suburb'), suburb, error]),
+        h('label.field', [h('span', ['Street address ', h('small', 'shared only with the pro you hire')]), address]),
+        h('div.field', [h('div.label', ['Photos ', h('small', 'minimum 3 — only pros who quote see them')]), uploader, thumbs, photoCount]),
+        h('div.field', [h('div.label', 'How soon?'), options]),
+        h('label.field', [h('span', ['Preferred date ', h('small', 'optional')]), date]),
+        h('details.fold', [
+          h('summary', [icon('home', 18), h('span', ['Household & access', h('div.sub', 'Optional — helps the pro arrive prepared')])]),
+          h('div.fold-body.stack', [
+            h('label.field', [h('span', 'Access notes'), access]),
+            h('label.check-row', [pets, h('div', [h('div.t', 'There are pets at home'), h('div.d', 'So the pro knows before they arrive')])]),
+          ]),
+        ]),
+        h('div.btn-row', [
+          h('button.btn.ghost.lg', { type: 'button', onclick: () => { save(); step = 1; paint(); } }, 'Back'),
+          h('button.btn.lg', {
+            type: 'button', style: { flex: '2' },
+            onclick: () => {
+              save();
+              if (!draft.suburbId) { error.textContent = 'Choose your suburb so we can find pros near you.'; error.hidden = false; suburb.setAttribute('aria-invalid', 'true'); suburb.focus(); return; }
+              if (draft.photos.length < 3) { toast(`Add at least 3 photos — ${3 - draft.photos.length} more to go. Pros quote the real job when they can see it.`, 'warn'); return; }
+              step = 3;
+              paint();
+            },
+          }, ['Continue', icon('arrow', 18)]),
+        ]),
+      ]);
+
+      function save() {
+        draft.suburbId = suburb.value;
+        draft.addressText = address.value.trim();
+        draft.preferredDate = date.value;
+        draft.accessNotes = access.value.trim();
+        draft.pets = pets.checked;
+      }
+    }
+
+    /* ---- step 3: budget & post ---- */
+    function stepBudget() {
+      const categoryId = draft.categoryId || (draft.detected && draft.detected.categoryId);
+      const cat = categoryById(categoryId);
+      const suburb = metros().flatMap((m) => (m.suburbs || []).map((s) => ({ ...s, metroId: m.id, metroName: m.name }))).find((s) => s.id === draft.suburbId);
+      const guide = h('div.card', [h('div.skeleton.line', { style: { width: '60%' } }), h('div.skeleton.line', { style: { width: '80%' } })]);
+      if (categoryId) {
+        api.get(`/api/price-band?categoryId=${encodeURIComponent(categoryId)}${suburb ? `&metroId=${suburb.metroId}` : ''}`).then((band) => {
+          guide.innerHTML = '';
+          guide.append(
+            h('div.row.between', [h('div.strong', [icon('trend', 18), ` Typical price in ${suburb ? suburb.metroName.replace('City of ', '') : 'your area'}`]), h('span.badge.neutral', band.confidence === 'HIGH' ? 'Lots of data' : 'Early estimate')]),
+            h('div.row', { style: { marginTop: '12px', gap: '10px', alignItems: 'baseline' } }, [h('span.money.big', band.format ? band.format.typical : money(band.p50Cents)), h('span.small.muted', 'typical')]),
+            h('div.small.muted', { style: { marginTop: '4px' } }, band.format ? `Most jobs cost between ${band.format.low} and ${band.format.high}, depending on size.` : ''),
+          );
+        }).catch(() => { guide.innerHTML = ''; guide.append(h('p.small.muted', 'Price guide unavailable offline — pros will quote anyway.')); });
+      } else guide.hidden = true;
+
+      const budget = h('input', { name: 'budget', type: 'number', inputmode: 'numeric', min: '0', step: '50', placeholder: 'Not sure? Leave it empty', value: draft.budget });
+      const summary = h('div.group', [
+        summaryRow('What', draft.title || draft.description, () => { step = 1; paint(); }),
+        summaryRow('Service', cat ? cat.label : 'We will match it', () => { step = 1; paint(); }),
+        summaryRow('Where', suburb ? `${suburb.name}${draft.addressText ? ` · ${draft.addressText}` : ''}` : '—', () => { step = 2; paint(); }),
+        summaryRow('When', (URGENCY.find((u) => u.id === draft.urgency) || {}).t + (draft.preferredDate ? ` · from ${ui.relDay(draft.preferredDate)}` : ''), () => { step = 2; paint(); }),
+        summaryRow('Photos', `${draft.photos.length} added — pros can see the job`, () => { step = 2; paint(); }),
+      ]);
+
+      const postButton = h('button.btn.block.lg', { type: 'button', onclick: () => submit() }, ['Post my job — free', icon('arrow', 18)]);
+      const identity = h('div');
+      const paintIdentity = () => {
+        identity.innerHTML = '';
+        const s = api.session();
+        if (s) {
+          identity.append(h('div.tile', [avatar(s.name), h('div.body', [h('div.d', 'Posting as'), h('div.t', s.name)]), h('span.meta', h('button.btn.sm.subtle', { type: 'button', onclick: () => account().openSignIn({ title: 'Switch account', onDone: () => paintIdentity() }) }, 'Switch'))]));
+          postButton.hidden = false;
+        } else {
+          postButton.hidden = true;
+          identity.append(h('div.card', [
+            h('h3', 'Last step: your contact number'),
+            h('p.small.muted', { style: { margin: '4px 0 14px' } }, 'So pros can send you quotes. Your number stays private until you hire someone.'),
+            account().signInFlow({ showDemo: true, suburbId: draft.suburbId, onDone: () => { paintIdentity(); submit(); } }),
+          ]));
+        }
+      };
+      paintIdentity();
+
+      async function submit() {
+        const s = api.session();
+        if (!s) return;
+        draft.budget = budget.value;
+        const description = [draft.description, draft.pets ? 'There are pets at home.' : null].filter(Boolean).join('\n');
+        // No title picked? Use the homeowner's own first sentence, not a catalogue guess.
+        const firstSentence = draft.description.split(/(?<=[.!?])\s|\n/)[0].trim().replace(/[.!?]+$/, '');
+        const ownTitle = firstSentence.length > 70 ? `${firstSentence.slice(0, 67).replace(/\s+\S*$/, '')}…` : firstSentence;
+        const payload = {
+          customerId: s.userId,
+          description,
+          title: draft.title || ownTitle || undefined,
+          categoryId: categoryId || undefined,
+          suburbId: draft.suburbId,
+          addressText: draft.addressText || undefined,
+          urgency: draft.urgency,
+          preferredDates: draft.preferredDate ? [draft.preferredDate] : [],
+          accessNotes: draft.accessNotes || undefined,
+          budgetCents: draft.budget ? Math.round(Number(draft.budget) * 100) : undefined,
+          householdNotes: draft.pets ? { pets: true } : {},
+          photos: draft.photos.map((p) => ({ dataUrl: p.dataUrl, caption: null })),
+          source: draft.proId ? 'PWA_INVITE' : 'PWA',
+        };
+        try {
+          const job = await withButton(postButton, () => api.post('/api/jobs', payload));
+          window.ProVeri.refreshBadges && window.ProVeri.refreshBadges(true);
+          body.innerHTML = '';
+          stepper.innerHTML = '';
+          body.append(successScreen(job, cat || categoryById(job.categoryId), suburb));
+          window.scrollTo({ top: 0 });
+        } catch { /* toasted */ }
+      }
+
+      return h('div.stack.lg', [
+        h('div', [h('h1', { style: { fontSize: '28px' } }, 'Budget, then post'), h('p.page-sub', { style: { marginTop: '6px' } }, 'A budget helps, but pros will quote either way.')]),
+        guide,
+        h('label.field', [h('span', ['Your budget ', h('small', 'optional')]), h('div.input-prefix', [h('b', 'R'), budget])]),
+        h('div', [h('div.group-label', { style: { marginTop: 0 } }, 'Your job'), summary]),
+        identity,
+        postButton,
+        h('div.trust-points', [
+          h('div.trust-point', [h('span.tp-ico', icon('verified', 16)), h('span', [h('b', 'Only verified pros quote'), 'ID, phone and bank checked — and trade registration where the law requires it.'])]),
+          h('div.trust-point', [h('span.tp-ico', icon('lock', 16)), h('span', [h('b', 'Your money waits for you'), 'When you book, payment is held in escrow and released only when you approve the work.'])]),
+        ]),
+        h('button.btn.ghost', { type: 'button', onclick: () => { draft.budget = budget.value; step = 2; paint(); } }, 'Back'),
+      ]);
+    }
+
+    function summaryRow(label, value, onEdit) {
+      return h('div.tile', [h('div.body', [h('div.d', label), h('div.t', { style: { fontSize: '15px', fontWeight: 650 } }, value)]), h('button.btn.sm.link', { type: 'button', onclick: onEdit }, 'Edit')]);
+    }
+
+    function successScreen(job, cat, suburb) {
+      const pros = job.matchCount ?? (job.matchedProIds || []).length;
+      return h('div.center', { style: { paddingTop: '18px' } }, [
+        h('div.success-mark', { html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>' }),
+        h('h1', { style: { fontSize: '30px' } }, 'Your job is live'),
+        h('p.lead-text', { style: { marginTop: '10px' } }, pros
+          ? `We sent it to ${plural(pros, `verified ${(cat ? tradeName(cat.id, cat.label) : 'pro').toLowerCase()} pro`)} near ${suburb ? suburb.name : 'you'}.`
+          : `We are finding verified pros near ${suburb ? suburb.name : 'you'} and will let you know as quotes arrive.`),
+        job.categoryAutoDetected ? h('p.small.muted', { style: { marginTop: '6px' } }, `We filed it under ${job.categoryAutoDetected.label}.`) : null,
+        h('div.card', { style: { textAlign: 'left', marginTop: '22px' } }, [
+          h('h3', 'What happens next'),
+          h('ol.next-steps', { style: { marginTop: '14px' } }, [
+            h('li', h('div', [h('b', 'Quotes arrive'), h('span.muted', 'Usually within a few hours. We will notify you.')])),
+            h('li', h('div', [h('b', 'Compare and choose'), h('span.muted', 'Look at each pro’s past work, reviews and price.')])),
+            h('li', h('div', [h('b', 'Pay safely'), h('span.muted', 'Your money is held until you approve the finished job.')])),
+          ]),
+        ]),
+        h('div.btn-row', { style: { marginTop: '22px' } }, [
+          h('a.btn.lg', { href: `/job/${job.jobId}` }, 'Track my job'),
+          h('a.btn.ghost.lg', { href: '/browse' }, 'Explore work'),
+        ]),
+      ]);
+    }
+
+    paint();
+    return page;
+  };
+
+  /* ------------------------------------------------------------------ *
+   * /upload-work — a pro adds past work
+   * ------------------------------------------------------------------ */
+
+  screens['/upload-work'] = async () => {
+    const session = api.session();
+    const page = h('div.page.narrow');
+    page.append(ui.backButton('/'));
+    const why = h('div.card.flat', [
+      h('h3', 'How badges work'),
+      h('div.trust-points', { style: { marginTop: '12px' } }, [
+        h('div.trust-point', [h('span.tp-ico', icon('fingerprint', 16)), h('span', 'Every photo is sealed with a hash the moment you publish, so it cannot be quietly swapped later.')]),
+        h('div.trust-point', [h('span.tp-ico', icon('x-circle', 16)), h('span', 'A photo another pro has already published is refused — the oldest trick in the trade does not work here.')]),
+        h('div.trust-point', [h('span.tp-ico', icon('verified', 16)), h('span', 'Uploads show as “Uploaded by the pro”. Link a job you did through ProVeri and it earns the Verified badge — a badge nobody can buy.')]),
+      ]),
+    ]);
+
+    if (!session || session.role !== 'PRO') {
+      page.append(
+        h('div.page-head', h('div.titles', [h('h1', 'Upload your past work'), h('p.page-sub', 'Homeowners hire the pro whose work they have seen. Show yours.')])),
+        h('div.card.pad-lg.stack', [
+          h('div.trust-points', [
+            h('div.trust-point', [h('span.tp-ico', icon('camera', 16)), h('span', [h('b', 'Photos of real jobs'), 'Before and after shots win the most enquiries.'])]),
+            h('div.trust-point', [h('span.tp-ico', icon('chat', 16)), h('span', [h('b', 'Homeowners message you'), 'Straight from the photo, about that exact job.'])]),
+            h('div.trust-point', [h('span.tp-ico', icon('coins', 16)), h('span', [h('b', 'No lead fees'), 'You pay 10% only when you win and get paid.'])]),
+          ]),
+          h('div.btn-row', [
+            h('a.btn.lg', { href: '/become-a-pro' }, 'Join as a pro'),
+            !session ? h('button.btn.ghost.lg', { type: 'button', onclick: () => account().openSignIn({ role: 'PRO', reason: 'Sign in with the number on your pro account.' }) }, 'I already have an account') : null,
+          ]),
+          session ? h('p.small.muted', 'You are signed in as a homeowner. Pro accounts are separate so your jobs and your business stay apart.') : null,
+        ]),
+        why,
+      );
+      return page;
+    }
+
+    const [me, bookings, mine] = await Promise.all([
+      api.get(`/api/pros/${encodeURIComponent(session.userId)}`).catch(() => null),
+      api.get(`/api/bookings?proId=${encodeURIComponent(session.userId)}`).catch(() => []),
+      api.get(`/api/pros/${encodeURIComponent(session.userId)}/portfolio`).catch(() => []),
+    ]);
+
+    const photos = [];
+    const thumbs = h('div.thumbs');
+    const photoCount = h('div.tiny.muted', { style: { marginTop: '6px' } });
+    const fileInput = h('input', { type: 'file', name: 'photos', accept: 'image/*', multiple: true, 'aria-label': 'Add photos' });
+    const uploader = h('label.uploader', [
+      fileInput,
+      h('span.u-ico', icon('camera', 26)),
+      h('span.u-t', 'Add photos of the job'),
+      h('span.u-d', 'At least 3 · before, during and after works best · we shrink big photos for you'),
+    ]);
+    const paintThumbs = () => {
+      thumbs.innerHTML = '';
+      photos.forEach((p, index) => thumbs.append(h('div.thumb', [
+        h('img', { src: p.dataUrl, alt: `Photo ${index + 1}` }),
+        index === 0 ? h('span.cover', 'Cover') : null,
+        h('button.x', { type: 'button', 'aria-label': 'Remove photo', onclick: () => { photos.splice(index, 1); paintThumbs(); } }, icon('close', 16)),
+      ])));
+      photoCount.innerHTML = '';
+      photoCount.append(photos.length < 3
+        ? h('span', { style: { color: 'var(--danger)' } }, `Add at least 3 photos — ${3 - photos.length} more to go`)
+        : h('span', { style: { color: 'var(--brand)' } }, `${photos.length} photos — homeowners trust work they can see`));
+    };
+    paintThumbs();
+    fileInput.addEventListener('change', async () => {
+      const files = Array.from(fileInput.files || []).slice(0, 6 - photos.length);
+      for (const file of files) {
+        try {
+          const dataUrl = await ui.compressImage(file, { maxEdge: 1600, maxBytes: 450 * 1024 });
+          photos.push({ dataUrl, caption: '' });
+          paintThumbs();
+        } catch (e) { toast(ui.friendlyError(e), 'warn'); }
+      }
+      fileInput.value = '';
+    });
+
+    const eligible = (bookings || []).filter((b) => ['IN_WARRANTY', 'CLOSED', 'COMPLETED'].includes(b.status));
+    const linkOptions = h('div.options.one', [
+      h('label.option.selected', [h('input', { type: 'radio', name: 'bookingId', value: '', checked: true }), h('span.o-t', 'Not a ProVeri job'), h('span.o-d', 'Shows as “Uploaded by the pro”')]),
+      ...eligible.map((b) => h('label.option', [h('input', { type: 'radio', name: 'bookingId', value: b.bookingId }), h('span.o-t', b.title), h('span.o-d', `${b.customerName} · ${money(b.totalCents)} · earns the Verified badge`)])),
+    ]);
+    linkOptions.addEventListener('change', () => {
+      for (const o of Array.from(linkOptions.querySelectorAll('.option'))) {
+        const radio = o.querySelector('input');
+        if (radio && radio.checked) o.classList.add('selected'); else o.classList.remove('selected');
+      }
+    });
+
+    const form = h('form.stack.lg', {
+      onsubmit: async (event) => {
+        event.preventDefault();
+        const values = formValues(form);
+        if (photos.length < 3) { toast(`Add at least 3 photos of the job — ${3 - photos.length} more to go.`, 'warn'); return; }
+        if (!String(values.title || '').trim()) { toast('Give the job a short title.', 'warn'); return; }
+        const button = form.querySelector('button[type=submit]');
+        try {
+          const created = await withButton(button, () => api.post('/api/portfolio', {
+            proId: session.userId,
+            title: values.title,
+            description: values.description || null,
+            categoryId: values.categoryId || null,
+            suburbId: values.suburbId || null,
+            priceCents: values.price ? Math.round(Number(values.price) * 100) : null,
+            completedAt: values.completedAt || null,
+            bookingId: values.bookingId || null,
+            photos: photos.map((p) => ({ dataUrl: p.dataUrl, caption: p.caption || null })),
+          }));
+          toast(created.tier === 'SELF_DECLARED' ? 'Published. Homeowners can now message you about it.' : 'Published with the Verified badge.', 'ok');
+          navigate(`/work/${created.itemId}`);
+        } catch { /* toasted */ }
+      },
+    }, [
+      h('div.field', [h('div.label', ['Photos ', h('small', 'minimum 3')]), uploader, thumbs, photoCount]),
+      h('label.field', [h('span', 'Job title'), h('input', { name: 'title', type: 'text', required: true, maxlength: '120', placeholder: 'e.g. Geyser replaced and ceiling repaired' })]),
+      h('div.form-grid.two', [
+        h('label.field', [h('span', 'Service'), h('select', { name: 'categoryId' }, categories().map((c) => h('option', { value: c.id, selected: me && c.id === me.primaryCategory ? true : null }, tradeName(c.id, c.label))))]),
+        h('label.field', [h('span', 'Suburb'), h('select', { name: 'suburbId' }, [h('option', { value: '' }, 'Choose'), ...account().suburbOptions(me && me.location ? me.location.suburbId : '')])]),
+      ]),
+      h('div.form-grid.two', [
+        h('label.field', [h('span', ['Price ', h('small', 'optional')]), h('div.input-prefix', [h('b', 'R'), h('input', { name: 'price', type: 'number', min: '0', step: '50', inputmode: 'numeric', placeholder: '0' })])]),
+        h('label.field', [h('span', ['Finished on ', h('small', 'optional')]), h('input', { name: 'completedAt', type: 'date', max: new Date().toISOString().slice(0, 10) })]),
+      ]),
+      h('label.field', [h('span', ['What you did ', h('small', 'optional')]), h('textarea', { name: 'description', rows: '4', placeholder: 'Materials, how long it took, anything that made it tricky…' })]),
+      h('div.field', [h('div.label', ['Was this a ProVeri job?', eligible.length ? h('small', `${eligible.length} eligible`) : null]), linkOptions]),
+      h('button.btn.block.lg', { type: 'submit' }, [icon('upload', 18), 'Publish work']),
+    ]);
+
+    page.append(
+      h('div.page-head', h('div.titles', [h('h1', 'Add your work'), h('p.page-sub', 'A photo of a finished job is worth a hundred adverts.')])),
+      h('div.card.pad-lg', form),
+      h('div.section.tight', why),
+      h('div.section', [
+        ui.sectionHead('Your published work', mine.length ? 'View profile' : null, `/pro/${session.userId}`),
+        mine.length ? h('div.work-grid', mine.map((i) => workCard(i, { mini: true, hidePro: true }))) : h('p.muted', 'Nothing yet — your first upload will appear here. Jobs you finish on ProVeri are added automatically.'),
+      ]),
+    );
+    return page;
+  };
+
+  /* ------------------------------------------------------------------ *
+   * /me — account
+   * ------------------------------------------------------------------ */
+
+  screens['/me'] = async () => {
+    const session = api.session();
+    const page = h('div.page.narrow');
+    if (!session) {
+      page.append(
+        h('div.page-head', h('div.titles', [h('h1', 'Sign in to ProVeri'), h('p.page-sub', 'One account to hire pros, track jobs and pay safely.')])),
+        h('div.card.pad-lg', account().signInFlow({})),
+        h('div.group-label', 'Explore'),
+        h('div.group', [
+          tile('/trust', 'shield', 'How we protect you', 'Escrow, verification and disputes, explained'),
+          tile('/become-a-pro', 'briefcase', 'Join as a pro', 'Get hired for work you have already done', 'gold'),
+        ]),
+        installTile(),
+      );
+      return page;
+    }
+
+    const isPro = session.role === 'PRO';
+    const profile = await api.get(isPro ? `/api/pros/${encodeURIComponent(session.userId)}` : `/api/customers/${encodeURIComponent(session.userId)}`).catch(() => null);
+    const subtitle = isPro
+      ? `${(profile && profile.primaryCategoryLabel) || 'Pro'}${profile && profile.location && profile.location.suburb ? ` · ${profile.location.suburb}` : ''}`
+      : `Homeowner${profile && profile.suburb ? ` · ${profile.suburb}` : ''}`;
+
+    page.append(
+      h('div.page-head', h('div.titles', h('h1', 'Account'))),
+      h('div.me-card', [
+        avatar(session.name, 'xl'),
+        h('div.grow', [
+          h('h2', session.name),
+          h('div.muted', subtitle),
+          isPro && profile ? h('div', { style: { marginTop: '8px' } }, ui.trustBadge(profile.badge, profile.trustScore)) : null,
+        ]),
+      ]),
+    );
+
+    if (isPro) {
+      page.append(
+        h('div.group-label', 'Your business'),
+        h('div.group', [
+          tile(`/pro/${session.userId}`, 'user', 'Public profile', 'What homeowners see'),
+          tile('/upload-work', 'camera', 'Add your work', 'Photos win enquiries'),
+          tile('/orders', 'jobs', 'Leads & jobs', 'Quote, schedule and get paid'),
+          tile('/wallet', 'wallet', 'Earnings', 'Payouts and what is on the way'),
+          tile('/become-a-pro', 'shield', 'Verification', profile && profile.canBid ? 'You are cleared to quote' : 'Finish to start quoting', profile && profile.canBid ? '' : 'gold'),
+        ]),
+      );
+    } else {
+      page.append(
+        h('div.group-label', 'Your activity'),
+        h('div.group', [
+          tile('/orders', 'jobs', 'Your jobs', 'Quotes, bookings and warranties'),
+          tile('/inbox', 'inbox', 'Messages', 'Conversations with pros'),
+          tile('/notifications', 'bell', 'Updates', 'Quotes, payments and progress'),
+          tile(`/member/${session.userId}`, 'star', 'My public profile', 'What pros see: your reviews and rating'),
+        ]),
+      );
+    }
+
+    page.append(
+      h('div.group-label', 'More from ProVeri'),
+      h('div.group', [
+        isPro ? tile('/notifications', 'bell', 'Updates', 'New leads, payments and reviews') : tile('/become-a-pro', 'briefcase', 'Join as a pro', 'Earn from your skills — no lead fees', 'gold'),
+        tile('/business-studio', 'store', 'Business sites', 'A website for your business, with bookings'),
+        tile('/web-studio', 'globe', 'Web Studio', 'Free microsite from your verified profile'),
+        tile('/vehicles', 'car', 'Verified vehicles', 'Buy and sell cars with escrow'),
+        tile('/property', 'building', 'Property', 'Coming soon'),
+      ]),
+      h('div.group-label', 'Help & trust'),
+      h('div.group', [
+        tile('/trust', 'shield', 'How we protect you', 'Escrow, verification and disputes'),
+        tile('/integrations', 'link', 'Data & integrations', 'The live sources behind ProVeri'),
+      ]),
+      h('div.group-label', 'Team tools'),
+      h('div.group', [
+        tile('/admin', 'gauge', 'Trust desk', 'Risk, disputes and verification queue'),
+        tile('/sales-desk', 'trend', 'Sales desk', 'Leads and campaigns'),
+      ]),
+      h('div.group-label', 'Settings'),
+      appearance(),
+      installTile(),
+      h('div.btn-row', { style: { marginTop: '22px' } }, [
+        h('button.btn.ghost', { type: 'button', onclick: () => account().openSignIn({ title: 'Switch account', reason: 'Sign in with another number, or pick a demo account.' }) }, [icon('users', 18), 'Switch account']),
+        h('button.btn.danger', { type: 'button', onclick: () => { api.signOut(); toast('Signed out.', 'ok'); navigate('/'); } }, [icon('logout', 18), 'Sign out']),
+      ]),
+    );
+    return page;
+  };
+
+  function tile(href, iconName, title, sub, tone) {
+    return h('a.tile', { href }, [h('span.lead' + (tone ? '.' + tone : ''), icon(iconName, 20)), h('div.body', [h('div.t', title), sub ? h('div.d', sub) : null]), h('span.meta', icon('chevron', 18))]);
+  }
+
+  function installTile() {
+    const standalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+    return h('div.group', { style: { marginTop: '10px' } }, h('button.tile', { type: 'button', onclick: () => window.ProVeri.install && window.ProVeri.install() }, [
+      h('span.lead.grey', icon('install', 20)),
+      h('div.body', [h('div.t', standalone ? 'Installed on this device' : 'Install the app'), h('div.d', 'Opens like an app and works on a weak signal')]),
+      h('span.meta', icon('chevron', 18)),
+    ]));
+  }
+
+  function appearance() {
+    const current = localStorage.getItem('proveri.theme') || 'system';
+    const seg = h('div.seg.block');
+    const set = (mode) => {
+      if (mode === 'system') { localStorage.removeItem('proveri.theme'); document.documentElement.removeAttribute('data-theme'); }
+      else { localStorage.setItem('proveri.theme', mode); document.documentElement.setAttribute('data-theme', mode); }
+      for (const b of Array.from(seg.querySelectorAll('button'))) { if (b.dataset.mode === mode) b.classList.add('active'); else b.classList.remove('active'); }
+    };
+    [['system', 'Automatic'], ['light', 'Light'], ['dark', 'Dark']].forEach(([mode, label]) => {
+      const b = h('button' + (mode === current ? '.active' : ''), { type: 'button', onclick: () => set(mode) }, label);
+      b.dataset.mode = mode;
+      seg.append(b);
+    });
+    return h('div.card.pad-sm', [h('div.row.between', { style: { marginBottom: '10px' } }, [h('div.strong', [icon('sun', 18), ' Appearance'])]), seg]);
+  }
 })();

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Trust Kernel primitives.
+ * ProVeri — Trust Kernel primitives.
  *
  * The kernel is the single source of truth for:
  *   - deterministic identity generation

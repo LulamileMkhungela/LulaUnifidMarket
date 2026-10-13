@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Lula ProVeri PWA — API client
+   ProVeri PWA — API client
    Relative URLs only: the app is served from the same origin as the API, so it
    works on any host (localhost, the Arena preview host, a future domain) with
    no configuration and no CORS.
@@ -31,6 +31,8 @@ window.ProVeri = window.ProVeri || {};
     state.session = session;
     if (session) localStorage.setItem('proveri.session', JSON.stringify(session));
     else localStorage.removeItem('proveri.session');
+    // The header, tab badges and home screen all depend on who is signed in.
+    try { window.dispatchEvent(new CustomEvent('proveri:session', { detail: { session } })); } catch { /* no window events */ }
   }
 
   class ApiError extends Error {
@@ -40,6 +42,7 @@ window.ProVeri = window.ProVeri || {};
       this.payload = payload;
       this.policyDecision = payload?.policyDecision || null;
       this.details = payload?.details || null;
+      this.queued = Boolean(payload?.queued);
     }
   }
 
@@ -59,7 +62,7 @@ window.ProVeri = window.ProVeri || {};
         state.queuedMutations += 1;
         window.dispatchEvent(new CustomEvent('proveri:offline-queue', { detail: { count: state.queuedMutations } }));
       }
-      throw new ApiError(0, { message: navigator.onLine ? 'Network error' : 'You are offline — the change is saved on this device and will sync when you reconnect.', offline: true });
+      throw new ApiError(0, { message: navigator.onLine ? 'Could not reach ProVeri — check your connection and try again.' : 'You are offline. Reconnect and try again.', offline: true });
     }
 
     if (response.status === 204) return null;
@@ -68,6 +71,11 @@ window.ProVeri = window.ProVeri || {};
     try { payload = text ? JSON.parse(text) : null; } catch { payload = { raw: text }; }
 
     if (!response.ok) throw new ApiError(response.status, payload);
+    // The service worker answers 202 + queued when a write was saved for later.
+    // That is not the created thing the screen asked for, so say so plainly.
+    if (response.status === 202 && payload && payload.queued) {
+      throw new ApiError(0, { message: 'You are offline — saved on this phone and it will send by itself when you reconnect.', offline: true, queued: true });
+    }
     return payload;
   }
 
@@ -99,6 +107,9 @@ window.ProVeri = window.ProVeri || {};
 
     session: () => state.session,
     setSession: writeSession,
+    signOut: () => writeSession(null),
+    isPro: () => state.session?.role === 'PRO',
+    isCustomer: () => Boolean(state.session) && state.session.role !== 'PRO',
   };
 
   window.ProVeri.api = api;

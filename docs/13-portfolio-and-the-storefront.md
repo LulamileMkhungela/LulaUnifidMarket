@@ -5,7 +5,7 @@
 > 📍 In South Africa, for South Africa 🇿🇦 · Connecting local businesses with home
 > owners · Reshaping the future of employment.
 
-This is the front door of Lula ProVeri. Everything else in the platform — the
+This is the front door of ProVeri. Everything else in the platform — the
 trust kernel, escrow, proof of work, the studios — exists to make this one loop
 trustworthy:
 

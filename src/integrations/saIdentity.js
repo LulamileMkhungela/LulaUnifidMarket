@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — South African identity validation (offline, deterministic).
+ * ProVeri — South African identity validation (offline, deterministic).
  *
  * The 13-digit SA ID is self-validating: it encodes date of birth, gender,
  * citizenship and a Luhn check digit. Validating it locally costs nothing,

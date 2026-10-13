@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Seed dataset.
+ * ProVeri — Seed dataset.
  *
  * A realistic South African marketplace snapshot so the PWA, the API and the
  * demo all have something true to show: verified pros across the metros, live
@@ -212,7 +212,7 @@ async function seed(marketplace, { withLiveIntegrations = false } = {}) {
     verified.verification = kernel.recordCheck(verified.proId, verified.verification, { subjectId: verified.proId, primaryTrade: verified.trade }, {
       name: 'platform_history',
       status: CHECK_STATUS.PASS,
-      source: 'Lula ProVeri completed-job ledger',
+      source: 'ProVeri completed-job ledger',
       reference: `SEED_${fingerprint(verified.proId, 6)}`,
       finding: `${row.jobs} escrow-released job(s), ${verified.stats.disputeCount} dispute(s)`,
       evidence: { completedJobs: row.jobs, disputeRate: verified.stats.disputeCount / Math.max(row.jobs, 1) },

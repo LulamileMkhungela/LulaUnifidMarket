@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Web Studio.
+ * ProVeri — Web Studio.
  *
  * ServicePro's Web Studio sells websites on a "preview first, pay after"
  * promise. ProVeri keeps the promise and changes the economics:
@@ -123,7 +123,7 @@ class WebStudioService {
       recurringCents: 0,
       generatedFrom: 'verified profile + hash-chained ledger',
       seo: {
-        title: `${pro.primaryCategoryLabel} in ${pro.location.suburb || pro.location.metro} | ${pro.displayName} | Lula ProVeri`,
+        title: `${pro.primaryCategoryLabel} in ${pro.location.suburb || pro.location.metro} | ${pro.displayName} | ProVeri`,
         description: `${pro.displayName} — ${pro.badge.replace(/_/g, ' ').toLowerCase()}, ${pro.trustScore}/100 trust score, ${profile.stats.completedJobs} escrow-protected jobs, ${profile.ratings.average || 'new'}★ from ${profile.ratings.count} verified review(s). Serving ${pro.location.suburb || pro.location.metro} and ${pro.location.serviceRadiusKm} km around it.`,
         keywords: [pro.primaryCategoryLabel, pro.location.suburb, pro.location.metro, 'verified', 'escrow', ...(pro.certification.body ? [pro.certification.body] : [])].filter(Boolean),
         ogImage: `/api/pros/${proId}/card.png`,
@@ -222,10 +222,10 @@ class WebStudioService {
 <link rel="canonical" href="${esc(site.seo.canonical)}">
 <link rel="stylesheet" href="/styles/microsite.css">
 </head><body>
-<header class="proveri"><a href="/">← Lula ProVeri</a><span class="pill">Free verified microsite</span></header>
+<header class="proveri"><a href="/">← ProVeri</a><span class="pill">Free verified microsite</span></header>
 <main>${sections}</main>
 <footer><p>Generated ${esc(site.lastRegeneratedAt.slice(0, 10))} · content hash ${esc(site.contentHash.slice(0, 16))}</p>
-<p>Lula ProVeri — verified pros, escrow-protected money, proof of work. Proudly South African 🇿🇦</p></footer>
+<p>ProVeri — verified pros, escrow-protected money, proof of work. Proudly South African 🇿🇦</p></footer>
 </body></html>`;
   }
 

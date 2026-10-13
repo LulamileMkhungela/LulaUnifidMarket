@@ -3,61 +3,68 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Lula ProVeri — Real work near you. Verified pros. Escrow-protected money.</title>
-  <meta name="description" content="📍 In South Africa, for South Africa 🇿🇦 · Connecting local businesses with home owners. Browse real work pros have done near you, message them about it, and pay into escrow until you confirm the job is done. Reshaping the future of employment.">
-  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#0d1512" media="(prefers-color-scheme: dark)">
+  <title>ProVeri — hire a pro with proof</title>
+  <meta name="description" content="In South Africa, for South Africa. See real jobs local pros have done near you, get quotes from ID-verified pros, and only release payment when you are happy with the work.">
+  <meta name="theme-color" content="#f4f3ee" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0a0f0d" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-  <link rel="mask-icon" href="/icons/icon-192.png" color="#0E7C5A">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="ProVeri">
-  <meta property="og:site_name" content="Lula ProVeri">
-  <meta property="og:title" content="Lula ProVeri — see the work before you hire">
-  <meta property="og:description" content="📍 In South Africa, for South Africa 🇿🇦 · Home owners browse real jobs done near them and reach out to the pro who did them. Money stays in escrow until the work is confirmed.">
+  <meta property="og:site_name" content="ProVeri">
+  <meta property="og:title" content="ProVeri — hire a pro with proof">
+  <meta property="og:description" content="In South Africa, for South Africa. See real work by verified local pros, compare quotes, and pay safely — money is only released when you approve the job.">
   <meta property="og:image" content="/icons/og-card.png">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
+  <link rel="preload" href="/fonts/jakarta-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/bricolage-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/styles/app.css">
-  <link rel="preload" href="/js/app.js" as="script">
+  <script>
+    /* Apply a saved light/dark choice before first paint so there is no flash. */
+    try { var t = localStorage.getItem('proveri.theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+  </script>
 </head>
 <body>
+  <a class="sr-only" href="#app-main">Skip to content</a>
   <div id="app-shell">
     <header id="app-header">
-      <a class="brand" href="/" data-link>
-        <img src="/icons/icon-192.png" alt="" width="32" height="32">
-        <span>Lula ProVeri<small>Real work · Real pros 🇿🇦</small></span>
+      <a class="brand" href="/" aria-label="ProVeri home">
+        <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></span>
+        <span class="word"><b>Pro</b><span>Veri</span></span>
       </a>
+      <nav class="header-nav" id="header-nav" aria-label="Main"></nav>
       <span class="spacer"></span>
-      <span id="conn-pill" class="conn" title="Connectivity">●</span>
-      <button class="head-btn" id="btn-notifications" aria-label="Notifications" title="Notifications"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.4 9.6a5.6 5.6 0 1 1 11.2 0c0 4.6 1.8 5.8 1.8 5.8H4.6s1.8-1.2 1.8-5.8"/><path d="M10.2 19.4a1.9 1.9 0 0 0 3.6 0"/></svg><span class="dot" id="notif-dot" hidden></span></button>
-      <button class="head-btn" id="btn-profile" aria-label="You" title="You"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8.2" r="3.8"/><path d="M4.6 20.4c1.4-3.7 4.4-5.6 7.4-5.6s6 1.9 7.4 5.6"/></svg></button>
+      <span id="offline-pill" hidden>Offline</span>
+      <div class="head-actions" id="head-actions"></div>
     </header>
 
-    <main id="app-main" role="main" aria-live="polite"></main>
+    <main id="app-main" tabindex="-1"></main>
 
     <nav id="app-nav" aria-label="Primary">
-      <button data-nav="/" aria-label="Home"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 10.6 12 3.4l8.5 7.2"/><path d="M5.6 9.4V20a1 1 0 0 0 1 1h10.8a1 1 0 0 0 1-1V9.4"/></svg></span>Home</button>
-      <button data-nav="/browse" aria-label="Browse work near you"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.6"/><path d="m16 16 4.6 4.6"/></svg></span>Browse</button>
-      <span class="fab-slot" aria-hidden="true"></span>
-      <button data-nav="/orders" aria-label="My orders and jobs"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 3h11v18l-1.9-1.4L13.7 21l-1.7-1.4L10.3 21l-1.9-1.4L6.5 21Z"/><path d="M9.5 8h5M9.5 12h5"/></svg></span>Orders</button>
-      <button data-nav="/me" aria-label="You"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.2" r="3.8"/><path d="M4.6 20.4c1.4-3.7 4.4-5.6 7.4-5.6s6 1.9 7.4 5.6"/></svg></span>You</button>
+      <button data-nav="/" aria-label="Home"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>Home</button>
+      <button data-nav="/browse" aria-label="Explore work near you"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg></span>Explore</button>
+      <div class="post-slot">
+        <button id="fab" type="button" aria-label="Post a job or add your work"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+        <span id="fab-label">Post</span>
+      </div>
+      <button data-nav="/orders" aria-label="Your jobs"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></span>Jobs</button>
+      <button data-nav="/inbox" aria-label="Inbox"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg></span>Inbox</button>
     </nav>
-    <button id="fab" aria-label="Post a job or upload your work" title="Post a job or upload your work"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5.5v13M5.5 12h13"/></svg></button>
   </div>
 
   <div id="sheet-backdrop"></div>
   <div id="sheet" role="dialog" aria-modal="true" aria-label="Dialog"></div>
-  <div id="toasts" aria-live="assertive"></div>
+  <div id="toasts" aria-live="polite"></div>
 
   <noscript>
     <div style="padding:30px;font-family:sans-serif">
-      <h1>Lula ProVeri</h1>
+      <h1>ProVeri</h1>
       <p>This marketplace is a progressive web app and needs JavaScript. Everything the studio publishes, by contrast, is plain server-rendered HTML and works without it:</p>
       <ul>
         <li><a href="/api/portfolio">The work feed</a> — past jobs published by local pros, proven ones first</li>
@@ -68,10 +75,12 @@
   </noscript>
 
   <script src="/js/api.js" defer></script>
+  <script src="/js/icons.js" defer></script>
   <script src="/js/ui.js" defer></script>
   <script src="/js/screens-market.js" defer></script>
   <script src="/js/screens-shop.js" defer></script>
   <script src="/js/screens-work.js" defer></script>
+  <script src="/js/screens-account.js" defer></script>
   <script src="/js/screens-verticals.js" defer></script>
   <script src="/js/screens-studio.js" defer></script>
   <script src="/js/screens-trust.js" defer></script>

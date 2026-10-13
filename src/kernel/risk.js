@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Risk engine.
+ * ProVeri — Risk engine.
  *
  * Turns raw signals into a weighted 0–100 risk score, a tier, and a recommended
  * action. Two independent scores are maintained:
@@ -150,7 +150,7 @@ class RiskEngine {
       weight: Math.round(definition.weight * severityMultiplier),
       action: definition.action,
       label: definition.label,
-      source: source || 'Lula ProVeri detection',
+      source: source || 'ProVeri detection',
       message: message || definition.label,
       metadata: deepClone(metadata),
       observedAt,

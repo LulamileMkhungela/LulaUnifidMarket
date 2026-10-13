@@ -262,7 +262,7 @@ function installDom(origin) {
 }
 
 function loadPwaScripts() {
-  for (const file of ['js/api.js', 'js/ui.js', 'js/screens-market.js', 'js/screens-shop.js', 'js/screens-work.js', 'js/screens-verticals.js', 'js/screens-trust.js', 'js/screens-studio.js']) {
+  for (const file of ['js/api.js', 'js/icons.js', 'js/ui.js', 'js/screens-market.js', 'js/screens-shop.js', 'js/screens-work.js', 'js/screens-account.js', 'js/screens-verticals.js', 'js/screens-trust.js', 'js/screens-studio.js']) {
     const code = fs.readFileSync(path.join(PWA_ROOT, file), 'utf8');
     // eslint-disable-next-line no-new-func
     new Function(code)();
@@ -746,11 +746,15 @@ function screen(route) {
   return handler;
 }
 
-test('the storefront is the shell: four tabs, one action button, no information flood', () => {
+test('the storefront is the shell: four tabs around one Post button, no information flood', () => {
   const indexHtml = fs.readFileSync(path.join(PWA_ROOT, 'index.html'), 'utf8');
   const tabs = [...indexHtml.matchAll(/data-nav="([^"]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(tabs, ['/', '/browse', '/orders', '/me'], 'four tabs, in the order a shopper reads them');
-  assert.ok(indexHtml.includes('id="fab"'), 'one floating action button for both sides of the market');
+  assert.deepEqual(tabs, ['/', '/browse', '/orders', '/inbox'], 'home, explore, jobs and inbox — the account lives behind the avatar');
+  assert.ok(indexHtml.includes('id="fab"'), 'one Post button for both sides of the market');
+  assert.ok(indexHtml.indexOf('/js/screens-account.js') > 0 && indexHtml.indexOf('<script src="/js/screens-account.js"') < indexHtml.indexOf('<script src="/js/app.js"'), 'sign-in and the inbox load before the router');
+  assert.ok(indexHtml.indexOf('<script src="/js/icons.js"') < indexHtml.indexOf('<script src="/js/ui.js"'), 'the icon set loads before the toolkit that draws it');
+  assert.ok(fs.existsSync(path.join(PWA_ROOT, 'fonts', 'jakarta-latin.woff2')) && fs.existsSync(path.join(PWA_ROOT, 'fonts', 'bricolage-latin.woff2')), 'the brand type is self-hosted');
+  assert.ok(fs.existsSync(path.join(PWA_ROOT, 'fonts', 'OFL-PlusJakartaSans.txt')), 'with its licence alongside');
   assert.ok(indexHtml.includes('/js/screens-shop.js'), 'the shop bundle is loaded');
   assert.ok(indexHtml.indexOf('<script src="/js/screens-shop.js"') > indexHtml.indexOf('<script src="/js/screens-market.js"'),
     'and loaded after the marketplace screens so it owns the storefront routes');
@@ -759,14 +763,16 @@ test('the storefront is the shell: four tabs, one action button, no information 
   assert.match(indexHtml, /In South Africa, for South Africa/, 'the positioning is on the page itself');
 
   const appSource = fs.readFileSync(path.join(PWA_ROOT, 'js/app.js'), 'utf8');
-  for (const route of ['/browse', '/orders', '/me', '/upload-work']) {
+  for (const route of ['/browse', '/orders', '/me', '/upload-work', '/inbox']) {
     assert.ok(appSource.includes(`'${route}'`), `${route} needs a document title`);
   }
   assert.match(appSource, /getElementById\('fab'\)/, 'the action button is wired');
 
   const sw = fs.readFileSync(path.join(PWA_ROOT, 'sw.js'), 'utf8');
   assert.ok(sw.includes('/js/screens-shop.js'), 'the service worker precaches the shop for offline');
-  assert.match(sw, /VERSION = 'proveri-v4'/, 'and the cache version moved so phones pick it up');
+  assert.ok(sw.includes('/js/screens-account.js') && sw.includes('/fonts/jakarta-latin.woff2'), 'and the new account screens and fonts');
+  assert.match(sw, /VERSION = 'proveri-v6'/, 'and the cache version moved so phones pick it up');
+  assert.ok(!/return cached \|\| networkPromise/.test(sw), 'API reads are network-first: a marketplace never shows yesterday’s quotes');
 });
 
 test('the home screen is a search box, categories and work — nothing else', async () => {
@@ -779,7 +785,9 @@ test('the home screen is a search box, categories and work — nothing else', as
   assert.ok(node.querySelectorAll('.work-card').length >= 3, 'real work is on the first screen');
   assert.match(text, /Work done near you/i);
   assert.match(text, /escrow-released|backed by/i, 'and one honest line about what the feed is made of');
-  assert.match(text, /Did the work\? Put it here\./, 'the other side of the market gets one card, not a lecture');
+  assert.match(text, /Your best work is your best advert\./, 'the other side of the market gets one card, not a lecture');
+  assert.match(text, /Hire a pro with proof\./, 'the promise is the headline');
+  assert.ok(node.querySelectorAll('.how-step').length === 3, 'how it works fits in three sentences');
 
   // The old flood is gone.
   assert.ok(!text.includes('How ProVeri protects both sides'), 'no four-step essay on the home screen');
@@ -799,7 +807,7 @@ test('the browse screen filters like a shop floor', async () => {
   assert.match(text, /proven on ProVeri/, 'and it says how much of it is proven');
 
   const provenChip = node.querySelectorAll('.chip')[1];
-  assert.match(textOf(provenChip), /Proof of work/);
+  assert.match(textOf(provenChip), /Verified jobs only/);
 });
 
 test('a piece of work renders as a product page with the truth about its badge', async () => {
@@ -816,8 +824,8 @@ test('a piece of work renders as a product page with the truth about its badge',
   assert.ok(provenNode.querySelector('.photo-strip'), 'photos first');
   assert.ok(provenNode.querySelector('.pro-row'), 'the pro who did it is one tap away');
   assert.ok(provenNode.querySelector('.cta-bar'), 'and the two things a home owner can do are pinned');
-  assert.match(provenText, /Message about this/, 'reach out');
-  assert.match(provenText, /Hire for my job/, 'or post the job');
+  assert.match(provenText, /Message [A-Z][a-z]+/, 'reach out — to a person, by name');
+  assert.match(provenText, /Get a quote/, 'or ask them to quote');
   assert.match(provenText, /Ledger seal [0-9a-f]{16}/, 'the seal is printed, not hidden');
 
   const declaredNode = await screen('/work/:itemId')({ params: { itemId: declared.itemId }, query: {} });
@@ -843,16 +851,18 @@ test('the pro profile leads with their published work', async () => {
   const profile = await marketplace.people.publicProfile(withWork.proId);
   const node = await screen('/pro/:proId')({ params: { proId: profile.proId }, query: {} });
   const text = assertCleanRender(node, `/pro/${profile.proId}`);
-  assert.match(text, /Work they have published/, 'the shelf comes before the CV');
+  assert.match(text, /Work by [A-Z]/, 'the shelf comes before the CV');
   assert.ok(node.querySelectorAll('.work-card.mini').length >= 1, 'each item links to its own page');
-  assert.match(text, /Proof of work|Uploaded by the pro/, 'with the tier it earned');
+  assert.match(text, /verified jobs?|uploaded by the pro/i, 'with how much of it is proven');
+  assert.match(text, /What ProVeri checked/, 'and the checks are ours, not their claims');
 });
 
 test('orders is the tracking view, and it asks you to sign in first', async () => {
   global.window.ProVeri.api.setSession(null);
   const anon = await screen('/orders')({ params: {}, query: {} });
   const anonText = assertCleanRender(anon, '/orders (signed out)');
-  assert.match(anonText, /Sign in to see your orders/);
+  assert.match(anonText, /Sign in to see your jobs/);
+  assert.ok(anon.querySelector('input[name=identifier]'), 'and the sign-in is right there, not a dead end');
 
   const customer = marketplace.store.all('customers')[0];
   global.window.ProVeri.api.setSession({ userId: customer.customerId, role: 'CUSTOMER', name: customer.fullName });
@@ -860,11 +870,12 @@ test('orders is the tracking view, and it asks you to sign in first', async () =
   await new Promise((resolve) => setTimeout(resolve, 300));
   const text = assertCleanRender(node, '/orders');
   assert.ok(node.querySelector('.seg'), 'the two sides of the market are one tap apart');
-  if (node.querySelector('.order-row')) {
-    assert.ok(node.querySelectorAll('.track-step').length >= 5, 'each order shows where it is');
-    assert.match(text, /In escrow|Confirmed|Paid out/);
+  if (node.querySelector('.order-card')) {
+    assert.ok(node.querySelectorAll('.track-step').length >= 5, 'each job shows where it is');
+    assert.match(text, /Booked|Approved|Completed|warranty|Waiting for payment|quote|Finding pros|review|Under review/i, 'in words, not status codes');
+    assert.ok(!/IN_WARRANTY|AWAITING_CONFIRMATION|DISPUTED/.test(text), 'no raw status codes on screen');
   } else {
-    assert.match(text, /No orders yet|Browse work/);
+    assert.match(text, /No jobs yet|Explore work/);
   }
 
   const booking = marketplace.store.all('bookings').find((b) => b.customerId === customer.customerId) || marketplace.store.all('bookings')[0];
@@ -1064,6 +1075,92 @@ test('a job posted without a trade is matched from its own description', async (
   });
   assert.equal(vague.status, 400, 'a description we cannot match asks for a trade');
   assert.match(JSON.stringify(vague.payload), /pick a trade|categoryId/);
+});
+
+/* ==================================================================== *
+ * 7. ProVeri: the name, two-way reviews, easy cancel, three photos
+ * ==================================================================== */
+
+test('the app is ProVeri — one name, everywhere', () => {
+  const indexHtml = fs.readFileSync(path.join(PWA_ROOT, 'index.html'), 'utf8');
+  assert.match(indexHtml, /<title>ProVeri — hire a pro with proof<\/title>/);
+  assert.ok(indexHtml.includes('<b>Pro</b><span>Veri</span>'), 'the wordmark reads Pro + Veri');
+  const manifest = JSON.parse(fs.readFileSync(path.join(PWA_ROOT, 'manifest.webmanifest'), 'utf8'));
+  assert.equal(manifest.short_name, 'ProVeri');
+  assert.match(manifest.name, /^ProVeri/);
+  for (const file of ['index.html', 'offline.html', 'sw.js', 'js/app.js', 'js/ui.js', 'js/api.js', 'js/icons.js', 'js/screens-shop.js', 'js/screens-market.js', 'js/screens-work.js', 'js/screens-account.js']) {
+    const src = fs.readFileSync(path.join(PWA_ROOT, file), 'utf8');
+    assert.ok(!src.includes('Lula ProVeri'), `${file} still carries the old name`);
+  }
+});
+
+test('two-way trust: the pro rates the homeowner on a public member profile', async () => {
+  const booking = marketplace.store.all('bookings').find((b) => ['IN_WARRANTY', 'CLOSED'].includes(b.status));
+  assert.ok(booking, 'the seed carries a paid-out booking');
+  if (!booking.customerReviewId) {
+    marketplace.bookings.writeCustomerReview({ bookingId: booking.bookingId, proId: booking.proId, rating: 5, comment: 'Clear brief, easy access — would work for them again.' });
+  }
+
+  const response = await get(`/api/customers/${booking.customerId}/public-profile`);
+  assert.equal(response.status, 200);
+  const profile = await response.body;
+  assert.ok(profile.reviews.length >= 1, 'the pro’s review is on the member profile');
+  assert.match(profile.reviews[0].comment, /Clear brief, easy access/);
+  const customerRecord = marketplace.store.get('customers', booking.customerId);
+  const published = JSON.stringify(profile);
+  assert.ok(!published.includes(customerRecord.mobile), 'a public profile never carries the mobile number');
+  assert.ok(!published.includes(customerRecord.email), 'a public profile never carries the email address');
+  assert.match(profile.privacyNote, /first name and last initial/i);
+
+  global.window.ProVeri.api.setSession(null);
+  const node = await screen('/member/:customerId')({ params: { customerId: booking.customerId }, query: {} });
+  const text = assertCleanRender(node, `/member/${booking.customerId}`);
+  assert.match(text, /Reviews from pros/);
+  assert.match(text, /Clear brief, easy access/);
+  assert.match(text, /paid through ProVeri/i, 'the gate is explained, not assumed');
+
+  // The pro’s tracker either asks for the review or thanks them for it.
+  global.window.ProVeri.api.setSession({ userId: booking.proId, role: 'PRO', name: booking.proName });
+  const trackerNode = await screen('/order/:bookingId')({ params: { bookingId: booking.bookingId }, query: {} });
+  const trackerText = assertCleanRender(trackerNode, `/order/${booking.bookingId} (pro)`);
+  assert.match(trackerText, /Thanks — you rated|Rate /, 'the ask lives at the moment of payout');
+  assert.match(trackerText, /Their profile/, 'and the pro can see the profile their review landed on');
+  global.window.ProVeri.api.setSession(null);
+});
+
+test('easy to cancel: the homeowner closes their own job in one tap', async () => {
+  const customer = marketplace.store.all('customers')[0];
+  const job = await marketplace.jobs.postJob({
+    customerId: customer.customerId, categoryId: 'painting', title: 'Repaint the lounge',
+    description: 'Repaint the lounge walls — scuff marks and one patched crack.', suburbId: customer.suburbId,
+    photos: [{ dataUrl: 'photo-one' }, { dataUrl: 'photo-two' }, { dataUrl: 'photo-three' }],
+  });
+  assert.equal(job.photos.length, 3, 'the job keeps the photos the homeowner took');
+  assert.ok(job.photos[0].dataUrl, 'viewable, not just a hash');
+
+  global.window.ProVeri.api.setSession({ userId: customer.customerId, role: 'CUSTOMER', name: customer.fullName });
+  const node = await screen('/job/:jobId')({ params: { jobId: job.jobId }, query: {} });
+  const text = assertCleanRender(node, `/job/${job.jobId}`);
+  assert.match(text, /Cancel this job/, 'the way out is on the page, in plain words');
+
+  const cancelled = await post(`/api/jobs/${job.jobId}/cancel`, { customerId: customer.customerId, reason: 'Changed my mind' });
+  assert.equal(cancelled.status, 200);
+  assert.equal(cancelled.payload.status, 'CANCELLED');
+
+  const after = await screen('/job/:jobId')({ params: { jobId: job.jobId }, query: {} });
+  const afterText = assertCleanRender(after, `/job/${job.jobId} (cancelled)`);
+  assert.match(afterText, /You cancelled this job/, 'the page says what happened');
+  assert.match(afterText, /Post it again/, 'and offers the door back in');
+  global.window.ProVeri.api.setSession(null);
+});
+
+test('three photos minimum — on the job post and on the work upload', () => {
+  const shop = fs.readFileSync(path.join(PWA_ROOT, 'js/screens-shop.js'), 'utf8');
+  assert.match(shop, /minimum 3/);
+  assert.match(shop, /At least 3/);
+  assert.ok((shop.match(/photos\.length < 3/g) || []).length >= 3, 'post-a-job and upload-work both enforce it, before submit and while adding');
+  assert.match(shop, /Add at least 3 photos of the job/);
+  assert.match(shop, /Add at least 3 photos — /, 'with a count of what is still missing');
 });
 
 test('shutdown', () => {

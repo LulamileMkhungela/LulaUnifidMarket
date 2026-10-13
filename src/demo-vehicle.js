@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — vehicles journey demo (the merged TrustShield rail).
+ * ProVeri — vehicles journey demo (the merged TrustShield rail).
  *
  * Prints one complete private vehicle sale on a fresh marketplace:
  * listing → verification (VIN, ownership, stolen, finance, condition) →

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Sales desk for the Business Site Studio.
+ * ProVeri — Sales desk for the Business Site Studio.
  *
  * The reference implementation keeps its sales process in markdown: a lead list
  * template with a website-status vocabulary and a 1–5 priority guide, a cold
