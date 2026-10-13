@@ -29,8 +29,9 @@
 /* 2 ─ tokens ──────────────────────────────────────────────────────────────── */
 :root {
   color-scheme: light;
-  --font-ui: 'Jakarta', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-display: 'Bricolage', 'Jakarta', ui-sans-serif, system-ui, sans-serif;
+  /* Native app type: the platform's own UI font (SF Pro on iOS, Roboto on Android). */
+  --font-ui: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, ui-sans-serif, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, ui-sans-serif, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
 
   --bg: #f4f3ee;
@@ -132,6 +133,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
   overflow-x: hidden;
+  overscroll-behavior-y: contain;
   min-height: 100dvh;
 }
 [hidden] { display: none !important; }
@@ -606,7 +608,7 @@ body.focus-mode #toasts { bottom: calc(96px + var(--safe-b)); }
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 75;
   max-height: 92dvh; display: flex; flex-direction: column;
   background: var(--surface); border-radius: 28px 28px 0 0; box-shadow: var(--sh-3);
-  transform: translateY(105%); transition: transform .34s var(--ease); visibility: hidden;
+  transform: translateY(105%); transition: transform .42s cubic-bezier(.32, .72, 0, 1); visibility: hidden;
 }
 #sheet.open { transform: translateY(0); visibility: visible; }
 #sheet .grab { width: 40px; height: 5px; border-radius: 3px; background: var(--line-2); margin: 10px auto 2px; flex: none; }
@@ -1079,86 +1081,50 @@ ol.next-steps { padding: 0; margin: 0; }
 .on-dark { color: #fff; }
 
 /* 15 ─ responsive · motion · utilities ────────────────────────────────────── */
-@media (min-width: 640px) {
-  :root { --gutter: 28px; }
-  h1 { font-size: 36px; }
-  .work-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px 16px; }
-  .trades { grid-template-columns: repeat(8, 1fr); }
-  .kpis { grid-template-columns: repeat(4, 1fr); }
-  .steps-strip { grid-auto-flow: row; grid-auto-columns: auto; grid-template-columns: repeat(3, 1fr); overflow: visible; padding: 0; margin: 0; }
-  .rail { grid-auto-columns: minmax(260px, 32%); }
-  .hero-home { padding: 40px 36px 34px; }
-  .stat-grid { grid-template-columns: repeat(3, 1fr); }
-  .cat-grid { grid-template-columns: repeat(3, 1fr); }
-  .trade-list { grid-template-columns: repeat(3, 1fr); }
-  .site-footer .cols { grid-template-columns: 2fr 1fr 1fr 1fr; }
-  #sheet {
-    left: 50%; right: auto; bottom: auto; top: 50%; width: min(560px, calc(100vw - 48px)); max-height: 86dvh; border-radius: 26px;
-    transform: translate(-50%, -46%) scale(.97); opacity: 0; transition: transform .26s var(--ease), opacity .2s;
-  }
-  #sheet.open { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-  #sheet .grab { display: none; }
-  #sheet .sheet-head { padding-top: 20px; }
-  #sheet .sheet-foot { padding-bottom: 18px; border-radius: 0 0 26px 26px; }
-  .gallery { margin: 0; border-radius: 24px; overflow: hidden; }
-  .profile-cover { margin: 0; border-radius: 0 0 26px 26px; }
-}
+/* ── strictly mobile ───────────────────────────────────────────────────────
+   ProVeri is a phone app: iOS/Android patterns only — bottom tab bar, sheets,
+   one column. On bigger screens the shell stays a centred phone-width column
+   (like a device preview); there are no desktop-only layouts any more. */
+:root { --frame: #e7e5dd; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) { --frame: #050908; } }
+:root[data-theme='dark'] { --frame: #050908; }
 
-@media (min-width: 960px) {
-  :root { --gutter: 36px; --header-h: 72px; }
-  body { font-size: 16px; }
-  .header-nav { display: flex; }
-  .head-actions .head-post { display: inline-flex; }
-  #app-nav { display: none; }
-  #app-main, body.focus-mode #app-main { padding-bottom: 40px; }
-  #toasts, body.focus-mode #toasts { bottom: 24px; }
-  .page-head { padding-top: 26px; }
-  h1 { font-size: 40px; }
-  .section { margin-top: 48px; }
-  .section-head h2 { font-size: 28px; }
-  .work-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 30px 20px; }
-  .hero-home { display: grid; grid-template-columns: 1.08fr .92fr; gap: 40px; align-items: center; padding: 56px 56px 50px; margin-top: 12px; border-radius: 34px; }
-  .hero-home h1 { font-size: 66px; }
-  .hero-home .sub { font-size: 18px; }
-  .hero-home .search-bar { max-width: 560px; height: 64px; }
-  .hero-home .search-bar .btn { height: 50px; }
-  .hero-home .chip-row { margin: 14px 0 0; padding: 2px 0; flex-wrap: wrap; overflow: visible; }
-  .hero-art { display: block; position: relative; height: 420px; }
-  .hero-art .ha-card {
-    position: absolute; width: 62%; aspect-ratio: 4 / 5; border-radius: 24px; overflow: hidden; background: var(--night-3);
-    box-shadow: 0 30px 60px -20px rgba(0, 0, 0, .6); border: 5px solid rgba(255, 255, 255, .95);
+@media (min-width: 540px) {
+  body { background: var(--frame); }
+  #app-shell {
+    width: min(480px, 100vw); margin: 0 auto; position: relative; background: var(--bg);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 10%, transparent), 0 36px 90px -36px rgba(3, 14, 9, .55);
   }
-  .hero-art .ha-card img { width: 100%; height: 100%; object-fit: cover; }
-  .hero-art .ha-card:nth-child(1) { left: 2%; top: 6%; transform: rotate(-6deg); }
-  .hero-art .ha-card:nth-child(2) { right: 0; top: 0; transform: rotate(5deg); z-index: 2; }
-  .hero-art .ha-card:nth-child(3) { left: 22%; bottom: -8%; transform: rotate(-1deg); z-index: 3; width: 56%; }
-  .hero-art .ha-chip {
-    position: absolute; z-index: 5; display: flex; align-items: center; gap: 10px; padding: 10px 14px 10px 10px; border-radius: 16px;
-    background: #fff; color: var(--ink); box-shadow: 0 18px 36px -14px rgba(0, 0, 0, .45); font-size: 13.5px; font-weight: 700; line-height: 1.25;
+  /* fixed bars belong to the phone column, not the browser window */
+  #app-nav, #sheet, #toasts, .cta-bar, .composer {
+    left: calc(50% - min(240px, 50vw)); right: auto; width: min(480px, 100vw);
   }
-  .hero-art .ha-chip small { display: block; font-weight: 550; color: #5f6c66; font-size: 12px; }
-  .hero-art .ha-chip .ic { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: #e2f3ea; color: #065038; }
-  .hero-art .ha-chip.one { left: -6%; bottom: 18%; animation: float 6s ease-in-out infinite; }
-  .hero-art .ha-chip.two { right: -4%; top: 44%; animation: float 7s ease-in-out -2s infinite; }
-  .hero-art .ha-chip.two .ic { background: #fff1d3; color: #6f4500; }
-  .rail { grid-auto-columns: minmax(260px, 24%); }
-  .detail-grid { grid-template-columns: minmax(0, 1.5fr) minmax(320px, 1fr); gap: 36px; align-items: start; }
-  .detail-grid .side-card { position: sticky; top: calc(var(--header-h) + 18px); }
-  .cta-bar.desktop-inline { position: static; background: none; border: 0; padding: 0; backdrop-filter: none; -webkit-backdrop-filter: none; }
-  .gallery .photo { aspect-ratio: 16 / 10; }
-  .pro-band { padding: 40px; display: grid; grid-template-columns: 1.4fr 1fr; gap: 30px; align-items: center; }
-  .pro-band h2 { font-size: 34px; }
-  .kpis { gap: 14px; }
-  .dash-head h1 { font-size: 34px; }
-  .two-col { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 28px; align-items: start; }
-}
-
-@media (min-width: 1280px) {
-  .work-grid.wide { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .composer form { max-width: none; }
 }
 
 .hide-mobile { display: none !important; }
-@media (min-width: 960px) { .hide-mobile { display: initial !important; } .hide-desktop { display: none !important; } }
+
+/* native-feel press states */
+.btn:active { transform: scale(.97); }
+.tile:active, .conv:active, .order-card:active, .work-card:active, .pro-card:active,
+.lead-card:active, .order-row:active, .pro-row:active { transform: scale(.985); }
+
+/* the sign-in gate: the app opens with authentication, like a native app */
+body.auth-gate #app-nav, body.auth-gate .head-actions { visibility: hidden; pointer-events: none; }
+.gate-page { padding-top: max(14px, 5dvh); }
+.gate-hero { text-align: center; padding: 6px 8px 18px; }
+.gate-mark {
+  width: 64px; height: 64px; border-radius: 22px; margin: 0 auto 14px;
+  display: grid; place-items: center; color: #fff;
+  background: linear-gradient(145deg, #12a172 0%, var(--brand) 45%, var(--night-2) 100%);
+  box-shadow: 0 14px 30px -12px var(--brand-glow), inset 0 1px 0 rgba(255, 255, 255, .25);
+}
+.gate-title { font-size: 28px; margin-bottom: 6px; }
+.gate-sub { color: var(--ink-2); font-size: 14.5px; max-width: 36ch; margin: 0 auto; }
+.gate-points { display: grid; gap: 9px; padding: 0 6px; margin-top: 4px; }
+.gate-points .gp { display: flex; align-items: center; gap: 10px; font-size: 13.5px; font-weight: 640; color: var(--ink-2); }
+.gate-points .gp .icon { color: var(--brand); flex: none; }
+.gate-legal { text-align: center; padding: 10px 14px 4px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .mt-0 { margin-top: 0 !important; } .mt-8 { margin-top: 8px; } .mt-12 { margin-top: 12px; } .mt-16 { margin-top: 16px; } .mt-24 { margin-top: 24px; } .mt-32 { margin-top: 32px; }
 

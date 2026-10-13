@@ -767,11 +767,19 @@ test('the storefront is the shell: four tabs around one Post button, no informat
     assert.ok(appSource.includes(`'${route}'`), `${route} needs a document title`);
   }
   assert.match(appSource, /getElementById\('fab'\)/, 'the action button is wired');
+  assert.match(appSource, /AUTH_FREE = \/\^\\\/sign-in/, 'everything except the sign-in screen sits behind the gate');
+  assert.match(appSource, /auth-gate/, 'and the shell marks the gate on the body');
+
+  const css = fs.readFileSync(path.join(PWA_ROOT, 'styles/app.css'), 'utf8');
+  assert.match(css, /width: min\(480px, 100vw\)/, 'on big screens the app stays a centred phone-width column');
+  assert.match(css, /-apple-system/, 'with the platform system font, like a native iOS/Android app');
+  assert.match(css, /\.gate-page/, 'and a real sign-in gate screen');
+  assert.ok(!/@media \(min-width: 960px\)/.test(css), 'no desktop-only layouts — the UI is strictly mobile');
 
   const sw = fs.readFileSync(path.join(PWA_ROOT, 'sw.js'), 'utf8');
   assert.ok(sw.includes('/js/screens-shop.js'), 'the service worker precaches the shop for offline');
   assert.ok(sw.includes('/js/screens-account.js') && sw.includes('/fonts/jakarta-latin.woff2'), 'and the new account screens and fonts');
-  assert.match(sw, /VERSION = 'proveri-v6'/, 'and the cache version moved so phones pick it up');
+  assert.match(sw, /VERSION = 'proveri-v7'/, 'and the cache version moved so phones pick it up');
   assert.ok(!/return cached \|\| networkPromise/.test(sw), 'API reads are network-first: a marketplace never shows yesterday’s quotes');
 });
 

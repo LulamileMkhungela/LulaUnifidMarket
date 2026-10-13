@@ -501,7 +501,7 @@
     if (!session) {
       page.append(h('div.card.accent', { style: { marginTop: '14px' } }, h('div.row', [
         h('div.grow', [h('div.strong', 'Are you a pro?'), h('div.small.muted', 'Sign in with your pro account to quote on this job.')]),
-        h('button.btn.sm', { type: 'button', onclick: () => account().openSignIn({ role: 'PRO', reason: 'Sign in with the number on your pro account.' }) }, 'Sign in'),
+        h('button.btn.sm', { type: 'button', onclick: () => account().openSignIn({ role: 'PRO', reason: 'Sign in to your pro account.' }) }, 'Sign in'),
       ])));
     } else {
       page.append(h('div.banner.info', { style: { marginTop: '14px' } }, [h('span.ico', icon('info', 20)), h('div.small', 'This job belongs to another homeowner. Only verified pros can quote on it.')]));

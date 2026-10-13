@@ -41,6 +41,32 @@
    */
   const FOCUS_ROUTES = /^\/(work\/|order\/|booking\/|job\/|post-job|upload-work|pro\/|inbox\/|site\/|vehicle\/|checkout|become-a-pro)/;
 
+  /**
+   * Like a native app, the whole product sits behind real sign-in: profiles,
+   * quotes, feeds, inbox — everything except the sign-in screen itself.
+   * After Google/email sign-in the flow re-renders the very page you asked
+   * for, so deep links survive the gate.
+   */
+  const AUTH_FREE = /^\/sign-in\/?$/;
+
+  function signInGate() {
+    document.body.classList.add('auth-gate');
+    return h('div.page.gate-page', [
+      h('div.gate-hero', [
+        h('div.gate-mark', icon('shield', 30)),
+        h('h1.gate-title', 'Welcome to ProVeri'),
+        h('p.gate-sub', 'Sign in to see verified pros, real work near you and your own jobs. Google or email — it takes a few seconds.'),
+      ]),
+      h('div.card.pad-lg', window.ProVeri.account.signInFlow({})),
+      h('div.gate-points', [
+        h('div.gp', [icon('user-check', 17), h('span', 'ID-verified pros with checked trade badges')]),
+        h('div.gp', [icon('lock', 17), h('span', 'Payment held in escrow until you approve the work')]),
+        h('div.gp', [icon('star', 17), h('span', 'Reviews only from jobs really paid through ProVeri')]),
+      ]),
+      h('p.tiny.muted.gate-legal', 'No demo accounts — every sign-in is a real identity. By continuing you agree to our terms and privacy policy.'),
+    ]);
+  }
+
   /* ---------------- render ---------------- */
 
   let currentRender = 0;
@@ -53,6 +79,19 @@
 
     const matched = matchRoute(pathname);
     updateChrome(pathname);
+
+    if (!api.session()) {
+      document.body.classList.add('auth-gate'); // auth screens own the whole phone: no tab bar, no header actions
+      if (!AUTH_FREE.test(pathname)) {
+        document.title = 'Sign in · ProVeri';
+        main.innerHTML = '';
+        main.append(signInGate());
+        return;
+      }
+    } else {
+      document.body.classList.remove('auth-gate');
+    }
+
     if (!matched) {
       main.innerHTML = '';
       main.append(h('div.page.narrow', h('div.empty', [
@@ -213,6 +252,9 @@
   window.addEventListener('popstate', render);
   window.addEventListener('proveri:session', () => {
     badgeCount = 0;
+    const gated = document.body.classList.contains('auth-gate');
+    // Signed in on the gate, or signed out somewhere inside: re-render.
+    if ((api.session() && gated) || (!api.session() && !AUTH_FREE.test(location.pathname))) { render(); return; }
     paintHeader(activeTab(location.pathname));
     refreshBadges(true);
   });

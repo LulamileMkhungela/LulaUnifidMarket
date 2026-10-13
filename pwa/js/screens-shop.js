@@ -915,7 +915,7 @@
           identity.append(h('div.card', [
             h('h3', 'Last step: your contact number'),
             h('p.small.muted', { style: { margin: '4px 0 14px' } }, 'So pros can send you quotes. Your number stays private until you hire someone.'),
-            account().signInFlow({ showDemo: true, suburbId: draft.suburbId, onDone: () => { paintIdentity(); submit(); } }),
+            account().signInFlow({ suburbId: draft.suburbId, onDone: () => { paintIdentity(); submit(); } }),
           ]));
         }
       };
@@ -1029,7 +1029,7 @@
           ]),
           h('div.btn-row', [
             h('a.btn.lg', { href: '/become-a-pro' }, 'Join as a pro'),
-            !session ? h('button.btn.ghost.lg', { type: 'button', onclick: () => account().openSignIn({ role: 'PRO', reason: 'Sign in with the number on your pro account.' }) }, 'I already have an account') : null,
+            !session ? h('button.btn.ghost.lg', { type: 'button', onclick: () => account().openSignIn({ role: 'PRO', reason: 'Sign in to your pro account.' }) }, 'I already have an account') : null,
           ]),
           session ? h('p.small.muted', 'You are signed in as a homeowner. Pro accounts are separate so your jobs and your business stay apart.') : null,
         ]),
@@ -1228,7 +1228,7 @@
       appearance(),
       installTile(),
       h('div.btn-row', { style: { marginTop: '22px' } }, [
-        h('button.btn.ghost', { type: 'button', onclick: () => account().openSignIn({ title: 'Switch account', reason: 'Sign in with another number, or pick a demo account.' }) }, [icon('users', 18), 'Switch account']),
+        h('button.btn.ghost', { type: 'button', onclick: () => account().openSignIn({ title: 'Switch account', reason: 'Sign in with another account.' }) }, [icon('users', 18), 'Switch account']),
         h('button.btn.danger', { type: 'button', onclick: () => { api.signOut(); toast('Signed out.', 'ok'); navigate('/'); } }, [icon('logout', 18), 'Sign out']),
       ]),
     );

@@ -21,7 +21,7 @@
  * The worker is served with Cache-Control: no-cache, so a deploy always wins.
  */
 
-const VERSION = 'proveri-v6';   // v6: ProVeri rebrand — two-way reviews, member profiles, job cancel, 3-photo minimum
+const VERSION = 'proveri-v7';   // v7: real cloud auth (Firebase/Supabase), sign-in gate, strictly-mobile native shell
 const SHELL_CACHE = `${VERSION}-shell`;
 const DATA_CACHE = `${VERSION}-data`;
 const QUEUE_KEY = `${VERSION}-mutation-queue`;
