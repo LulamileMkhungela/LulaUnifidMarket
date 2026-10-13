@@ -1,7 +1,7 @@
 /* ==========================================================================
    ProVeri PWA — accounts and conversations
 
-   /sign-in            one flow: number or email → code → (new? your name)
+   /sign-in            one flow: email + password, or Google (Firebase Auth)
    /inbox              every conversation, plus job updates
    /inbox/:id          one conversation with a composer
 
@@ -21,11 +21,57 @@
    * Sign in
    * ================================================================== */
 
-  let rosterCache = null;
-  async function roster() {
-    if (rosterCache) return rosterCache;
-    try { rosterCache = await api.get('/api/demo/roster'); } catch { rosterCache = { customers: [], pros: [] }; }
-    return rosterCache;
+  /* ================================================================== *
+   * Sign in — email + password, or Google. Both are real Firebase
+   * identities; there are no demo accounts in this app.
+   * ================================================================== */
+
+  const FIREBASE_SDK = [
+    'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
+    'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js',
+  ];
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const tag = document.createElement('script');
+      tag.src = src;
+      tag.async = true;
+      tag.addEventListener('load', resolve);
+      tag.addEventListener('error', () => reject(new Error(`could not load ${src}`)));
+      document.head.append(tag);
+    });
+  }
+
+  let firebasePromise = null;
+  /** Lazily boot the Firebase web SDK (only when a cloud config exists). */
+  function firebaseAuth() {
+    if (window.firebase && window.firebase.auth) return Promise.resolve(window.firebase.auth());
+    if (!firebasePromise) {
+      const cfg = (api.cloud() || {}).firebase;
+      if (!cfg || !cfg.apiKey) return Promise.reject(new Error('Firebase is not configured on this server.'));
+      firebasePromise = (async () => {
+        for (const src of FIREBASE_SDK) await loadScript(src);
+        if (!window.firebase.apps.length) {
+          window.firebase.initializeApp({
+            apiKey: cfg.apiKey,
+            authDomain: cfg.authDomain,
+            projectId: cfg.projectId,
+            messagingSenderId: cfg.messagingSenderId,
+            appId: cfg.appId || undefined,
+          });
+        }
+        return window.firebase.auth();
+      })();
+    }
+    return firebasePromise;
+  }
+
+  async function googleSignIn() {
+    const auth = await firebaseAuth();
+    const provider = new window.firebase.auth.GoogleAuthProvider();
+    const result = await auth.signInWithPopup(provider);
+    const idToken = await result.user.getIdToken();
+    return api.post('/api/auth/session', { idToken });
   }
 
   /**
@@ -34,155 +80,92 @@
    */
   function signInFlow(opts) {
     const options = opts || {};
-    const box = h('div.signin');
-    let identifier = '';
+    const cloud = api.cloud() || {};
+    let mode = 'login';
 
-    const finish = (session, isNew) => {
+    const error = h('div.field-error', { hidden: true });
+    const email = h('input', { name: 'email', type: 'email', autocomplete: 'email', required: true, placeholder: 'you@example.co.za' });
+    const password = h('input', { name: 'password', type: 'password', autocomplete: 'current-password', required: true, minlength: '6', placeholder: 'Your password' });
+    const nameField = h('label.field', [h('span', 'Your name'), h('input', { name: 'fullName', type: 'text', autocomplete: 'name', placeholder: 'First and last name' })]);
+    const suburbField = h('label.field', [h('span', ['Your suburb ', h('small', 'so we show pros near you')]), h('select', { name: 'suburbId' }, [h('option', { value: '' }, 'Choose later'), ...suburbOptions(options.suburbId || '')])]);
+    nameField.hidden = true;
+    suburbField.hidden = true;
+
+    const submit = h('button.btn.block.lg', { type: 'button' }, 'Sign in');
+    const modeLink = h('button.btn.sm.link', { type: 'button' }, 'Create one instead');
+
+    function finish(session) {
       api.setSession(session);
-      closeSheet();
-      toast(isNew ? `Welcome to ProVeri, ${firstName(session.name)}.` : `Signed in as ${session.name}.`, 'ok');
+      window.ProVeri.refreshBadges && window.ProVeri.refreshBadges(true);
+      toast(session.name ? `Welcome, ${firstName(session.name)}.` : 'Signed in.', 'ok');
       if (options.onDone) options.onDone(session);
-      else window.dispatchEvent(new PopStateEvent('popstate'));
-    };
+      else navigate(location.pathname, { replace: true });
+    }
+    function fail(message) {
+      error.textContent = message;
+      error.hidden = false;
+    }
 
-    stepIdentifier();
+    function paintMode() {
+      const registering = mode === 'register';
+      nameField.hidden = !registering;
+      suburbField.hidden = !registering;
+      password.autocomplete = registering ? 'new-password' : 'current-password';
+      password.placeholder = registering ? 'At least 6 characters' : 'Your password';
+      submit.innerHTML = '';
+      submit.append(registering ? 'Create my account' : 'Sign in', icon('arrow', 18));
+      modeLink.innerHTML = '';
+      modeLink.append(registering ? 'Already have an account? Sign in' : 'No account yet? Create one instead');
+    }
+    modeLink.addEventListener('click', () => { mode = mode === 'login' ? 'register' : 'login'; error.hidden = true; paintMode(); });
+
+    submit.addEventListener('click', async () => {
+      error.hidden = true;
+      const values = { email: email.value.trim(), password: password.value };
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(values.email)) { fail('Enter a valid email address.'); email.focus(); return; }
+      if (!values.password) { fail('Enter your password.'); password.focus(); return; }
+      const body = mode === 'register'
+        ? { ...values, fullName: (nameField.querySelector('input') || {}).value || '', suburbId: (suburbField.querySelector('select') || {}).value || null }
+        : values;
+      try {
+        const result = await withButton(submit, () => api.post(mode === 'register' ? '/api/auth/register' : '/api/auth/login', body));
+        closeSheet();
+        finish(result.session);
+      } catch (e) {
+        fail(ui.friendlyError(e));
+      }
+    });
+
+    const google = h('button.btn.block.lg.subtle', { type: 'button' }, [icon('globe', 18), 'Continue with Google']);
+    google.addEventListener('click', async () => {
+      error.hidden = true;
+      try {
+        const result = await withButton(google, googleSignIn);
+        closeSheet();
+        finish(result.session);
+      } catch (e) {
+        fail(`${ui.friendlyError(e)} — email sign-in works too.`);
+      }
+    });
+
+    paintMode();
+    const box = h('div.stack', [
+      cloud.online === false
+        ? h('div.banner.warn', [h('span.ico', icon('alert', 18)), h('div.small', 'This server cannot reach Firebase right now. Email accounts will be created on this server only, and Google sign-in is unavailable until it can.')])
+        : null,
+      google,
+      h('div.or-line', 'or with your email'),
+      h('label.field', [h('span', 'Email'), email]),
+      h('label.field', [h('span', 'Password'), password]),
+      nameField,
+      suburbField,
+      error,
+      submit,
+      h('p.tiny.muted.center', modeLink),
+      h('p.tiny.muted.center', ['Are you a tradesperson? ', h('a', { href: '/become-a-pro', onclick: () => closeSheet() }, 'Join as a pro'), '.']),
+    ]);
+    setTimeout(() => email.focus(), 50);
     return box;
-
-    function stepIdentifier(prefill) {
-      box.innerHTML = '';
-      const input = h('input', {
-        name: 'identifier', type: 'text', inputmode: 'email', autocomplete: 'username',
-        placeholder: '082 123 4567 or you@email.co.za', value: prefill || identifier || '', required: true,
-        'aria-label': 'Mobile number or email',
-      });
-      const error = h('div.field-error', { hidden: true });
-      const submit = h('button.btn.block.lg', { type: 'submit' }, ['Continue', icon('arrow', 18)]);
-      const form = h('form.stack', {
-        onsubmit: async (event) => {
-          event.preventDefault();
-          error.hidden = true;
-          input.removeAttribute('aria-invalid');
-          identifier = input.value.trim();
-          if (!identifier) { error.textContent = 'Enter your mobile number or email.'; error.hidden = false; input.setAttribute('aria-invalid', 'true'); return; }
-          try {
-            const challenge = await withButton(submit, () => api.post('/api/auth/start', { identifier, role: options.role || null }));
-            stepCode(challenge);
-          } catch (e) {
-            error.textContent = ui.friendlyError(e);
-            error.hidden = false;
-            input.setAttribute('aria-invalid', 'true');
-          }
-        },
-      }, [
-        h('label.field', [h('span', 'Mobile number or email'), input]),
-        error,
-        submit,
-        h('p.tiny.muted.center', 'We will send you a 6-digit code. No passwords to remember.'),
-      ]);
-      box.append(form);
-      if (options.showDemo !== false) box.append(demoAccounts());
-    }
-
-    function stepCode(challenge) {
-      box.innerHTML = '';
-      const code = h('input.otp-input', {
-        name: 'code', type: 'text', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: '6',
-        pattern: '[0-9]*', placeholder: '••••••', required: true, 'aria-label': '6-digit code',
-      });
-      const error = h('div.field-error', { hidden: true });
-      const submit = h('button.btn.block.lg', { type: 'submit' }, 'Confirm');
-      const verify = async () => {
-        error.hidden = true;
-        try {
-          const result = await withButton(submit, () => api.post('/api/auth/verify', { challengeId: challenge.challengeId, code: code.value.trim() }));
-          if (result.newUser) stepCreate(result);
-          else finish(result.session, false);
-        } catch (e) {
-          error.textContent = ui.friendlyError(e);
-          error.hidden = false;
-          code.setAttribute('aria-invalid', 'true');
-        }
-      };
-      code.addEventListener('input', () => {
-        code.value = code.value.replace(/\D/g, '').slice(0, 6);
-        if (code.value.length === 6) verify();
-      });
-      box.append(h('form.stack', { onsubmit: (event) => { event.preventDefault(); verify(); } }, [
-        h('p', ['We sent a code to ', h('b', challenge.destination), '.']),
-        challenge.demoCode ? h('div.demo-code', [
-          icon('info', 20),
-          h('div.grow', [h('div.tiny', 'Demo server — no SMS is sent. Your code is'), h('b', challenge.demoCode)]),
-          h('button.btn.sm.subtle', { type: 'button', onclick: () => { code.value = challenge.demoCode; verify(); } }, 'Use it'),
-        ]) : null,
-        h('label.field', [h('span', 'Enter the 6-digit code'), code]),
-        error,
-        submit,
-        h('div.row.between', [
-          h('button.btn.link', { type: 'button', onclick: () => stepIdentifier(identifier) }, ['Use a different number']),
-          h('button.btn.link', {
-            type: 'button',
-            onclick: async (event) => {
-              try { stepCode(await withButton(event.currentTarget, () => api.post('/api/auth/start', { identifier }))); toast('New code sent.', 'ok'); } catch { /* toasted */ }
-            },
-          }, 'Send a new code'),
-        ]),
-      ]));
-      setTimeout(() => code.focus(), 50);
-    }
-
-    function stepCreate(result) {
-      box.innerHTML = '';
-      const suburbs = suburbOptions(options.suburbId);
-      const name = h('input', { name: 'fullName', type: 'text', autocomplete: 'name', placeholder: 'e.g. Naledi Sithole', required: true });
-      const submit = h('button.btn.block.lg', { type: 'submit' }, 'Create my account');
-      box.append(h('form.stack', {
-        onsubmit: async (event) => {
-          event.preventDefault();
-          const values = ui.formValues(event.currentTarget);
-          if (!String(values.fullName || '').trim()) { name.setAttribute('aria-invalid', 'true'); name.focus(); return; }
-          try {
-            const created = await withButton(submit, () => api.post('/api/auth/register', { signupToken: result.signupToken, fullName: values.fullName, suburbId: values.suburbId || null }));
-            finish(created.session, true);
-          } catch { /* toasted */ }
-        },
-      }, [
-        h('div.banner.ok', [h('span.ico', icon('check-circle', 20)), h('div', [h('strong', 'Number confirmed'), h('div.small', 'You are new here — two quick details and you are in.')])]),
-        h('label.field', [h('span', 'Your name'), name]),
-        h('label.field', [h('span', ['Your suburb ', h('small', 'so we show pros near you')]), h('select', { name: 'suburbId' }, [h('option', { value: '' }, 'Choose later'), ...suburbs])]),
-        submit,
-        h('p.tiny.muted.center', ['Are you a tradesperson? ', h('a', { href: '/become-a-pro', onclick: () => closeSheet() }, 'Join as a pro instead'), '.']),
-      ]));
-      setTimeout(() => name.focus(), 50);
-    }
-
-    function demoAccounts() {
-      const list = h('div.list', [h('div.skeleton.card', { style: { height: '64px' } })]);
-      roster().then((r) => {
-        list.innerHTML = '';
-        const customer = (r.customers || [])[0];
-        const metro = customer ? customer.metro : null;
-        const preferred = ['Plumber', 'Handyman', 'Electrician'];
-        const pros = (r.pros || []).filter((p) => p.canBid && (!metro || p.metro === metro))
-          .sort((a, b) => (preferred.indexOf(a.category) + 1 || 9) - (preferred.indexOf(b.category) + 1 || 9)).slice(0, 2);
-        const people = [
-          customer ? { session: { userId: customer.customerId, role: 'CUSTOMER', name: customer.name }, d: `Homeowner · ${customer.suburb}` } : null,
-          ...pros.map((p) => ({ session: { userId: p.proId, role: 'PRO', name: p.name }, d: `${p.category} · ${p.suburb}` })),
-        ].filter(Boolean);
-        for (const person of people) {
-          list.append(h('button.persona', { type: 'button', onclick: () => finish(person.session, false) }, [
-            avatar(person.session.name),
-            h('div.grow', [h('div.t', person.session.name), h('div.d', person.d)]),
-            icon('chevron', 18),
-          ]));
-        }
-        if (!people.length) list.append(h('p.tiny.muted', 'Demo accounts are not available on this server.'));
-      });
-      return h('div', [
-        h('div.or-line', 'or explore with a demo account'),
-        list,
-        h('p.tiny.muted', { style: { marginTop: '10px' } }, 'Demo accounts skip the code so you can try both sides of the marketplace. No real money moves.'),
-      ]);
-    }
   }
 
   function suburbOptions(selected) {

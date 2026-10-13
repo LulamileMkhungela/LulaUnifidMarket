@@ -21,6 +21,7 @@ const { BusinessSiteStudio } = require('./businessSites');
 const { SalesDeskService } = require('./leads');
 const { PortfolioService } = require('./portfolio');
 const { AuthService } = require('./auth');
+const { CloudService } = require('../integrations/cloud');
 const integrations = require('../integrations');
 const { nowIso, deepClone, sha256 } = require('../kernel/util');
 
@@ -38,10 +39,11 @@ class Marketplace {
       verticals: VERTICALS,
     });
     this.store = new Store({ persist, file: storeFile });
+    this.cloud = new CloudService({ kernel: this.kernel });
     this.catalog = new Catalog({ store: this.store });
     this.people = new PeopleService({ store: this.store, kernel: this.kernel, catalog: this.catalog });
-    this.jobs = new JobService({ store: this.store, kernel: this.kernel, catalog: this.catalog, people: this.people });
-    this.portfolio = new PortfolioService({ store: this.store, kernel: this.kernel, catalog: this.catalog, people: this.people });
+    this.jobs = new JobService({ store: this.store, kernel: this.kernel, catalog: this.catalog, people: this.people, cloud: this.cloud });
+    this.portfolio = new PortfolioService({ store: this.store, kernel: this.kernel, catalog: this.catalog, people: this.people, cloud: this.cloud });
     this.bookings = new BookingService({ store: this.store, kernel: this.kernel, catalog: this.catalog, people: this.people, jobs: this.jobs });
     this.bookings.attachPortfolio(this.portfolio);
     this.people.attachPortfolio(this.portfolio);
@@ -50,7 +52,7 @@ class Marketplace {
     this.businessSites = new BusinessSiteStudio({ store: this.store, kernel: this.kernel, catalog: this.catalog, people: this.people, jobs: this.jobs });
     this.salesDesk = new SalesDeskService({ store: this.store, kernel: this.kernel, catalog: this.catalog, businessSites: this.businessSites, webStudio: this.webStudio, people: this.people });
     this.integrations = integrations;
-    this.auth = new AuthService({ store: this.store, people: this.people, kernel: this.kernel, configuredPartners: () => integrations.configuredPartners() });
+    this.auth = new AuthService({ store: this.store, people: this.people, kernel: this.kernel, cloud: this.cloud });
     this.startedAt = nowIso();
     this.schedulerTimer = null;
   }

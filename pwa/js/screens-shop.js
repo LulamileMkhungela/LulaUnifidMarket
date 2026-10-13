@@ -830,7 +830,8 @@
         for (const file of files) {
           try {
             const dataUrl = await ui.compressImage(file, { maxEdge: 1600, maxBytes: 450 * 1024 });
-            draft.photos.push({ dataUrl });
+            const url = await api.uploadPhoto(dataUrl, 'jobs'); // Supabase bucket, or null offline
+            draft.photos.push({ dataUrl, url });
             paintThumbs();
           } catch (e) { toast(ui.friendlyError(e), 'warn'); }
         }
@@ -940,7 +941,7 @@
           accessNotes: draft.accessNotes || undefined,
           budgetCents: draft.budget ? Math.round(Number(draft.budget) * 100) : undefined,
           householdNotes: draft.pets ? { pets: true } : {},
-          photos: draft.photos.map((p) => ({ dataUrl: p.dataUrl, caption: null })),
+          photos: draft.photos.map((p) => ({ dataUrl: p.dataUrl, url: p.url || null, caption: null })),
           source: draft.proId ? 'PWA_INVITE' : 'PWA',
         };
         try {
@@ -1071,7 +1072,8 @@
       for (const file of files) {
         try {
           const dataUrl = await ui.compressImage(file, { maxEdge: 1600, maxBytes: 450 * 1024 });
-          photos.push({ dataUrl, caption: '' });
+          const url = await api.uploadPhoto(dataUrl, 'work'); // Supabase bucket, or null offline
+          photos.push({ dataUrl, url, caption: '' });
           paintThumbs();
         } catch (e) { toast(ui.friendlyError(e), 'warn'); }
       }
@@ -1107,7 +1109,7 @@
             priceCents: values.price ? Math.round(Number(values.price) * 100) : null,
             completedAt: values.completedAt || null,
             bookingId: values.bookingId || null,
-            photos: photos.map((p) => ({ dataUrl: p.dataUrl, caption: p.caption || null })),
+            photos: photos.map((p) => ({ dataUrl: p.dataUrl, url: p.url || null, caption: p.caption || null })),
           }));
           toast(created.tier === 'SELF_DECLARED' ? 'Published. Homeowners can now message you about it.' : 'Published with the Verified badge.', 'ok');
           navigate(`/work/${created.itemId}`);

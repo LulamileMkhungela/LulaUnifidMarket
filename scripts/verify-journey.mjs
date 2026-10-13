@@ -58,17 +58,15 @@ async function main() {
   const suburb = suburbs.suburbs ? suburbs.suburbs[0] : suburbs[0];
   log('Demo world ready', `${roster.pros.length} pros · ${roster.customers.length} homeowners · ${suburb.name}`);
 
-  /* ---------------- 1. entry point: passwordless sign-up ---------------- */
-  section('Entry point — a new homeowner signs up with a phone number');
+  /* ---------------- 1. entry point: real email sign-up ------------------ */
+  section('Entry point — a new homeowner registers with email + password');
+  const email = `journey+${Date.now()}@proveri.test`;
   const mobile = `083${String(Math.floor(1000000 + Math.random() * 8999999))}`;
-  const challenge = await post('/api/auth/start', { identifier: mobile });
-  assert(challenge.demoCode, 'the demo server shows the one-time PIN on screen');
-  const verified = await post('/api/auth/verify', { challengeId: challenge.challengeId, code: challenge.demoCode });
-  assert(verified.signupToken, 'an unknown number gets a sign-up token, not an error');
-  const registered = await post('/api/auth/register', { signupToken: verified.signupToken, fullName: 'Journey Tester', suburbId: suburb.id, mobile });
-  const customerId = (registered.session && registered.session.userId) || (registered.user && registered.user.userId) || registered.userId;
-  assert(customerId, 'the account exists after registration');
-  log('Signed up and signed in', `${mobile} → ${customerId}`);
+  const registered = await post('/api/auth/register', { email, password: 'journey-pass-2026', fullName: 'Journey Tester', suburbId: suburb.id, mobile });
+  assert(registered.session && registered.session.userId, 'the account exists after registration');
+  const customerId = registered.session.userId;
+  const via = registered.session.provider === 'firebase' ? 'Firebase account' : 'server-local fallback (cloud offline here)';
+  log('Signed up and signed in', `${email} → ${customerId} · ${via}`);
 
   /* ---------------- 2. post a job with at least 3 photos ---------------- */
   section('Post a job — three photos, live trade detection, real price band');
@@ -199,6 +197,7 @@ async function main() {
   assert(memberProfile.reviews.length === 1 && /Would work for them again/.test(memberProfile.reviews[0].comment), 'the pro’s review is live on the homeowner’s public member profile');
   assert(memberProfile.ratings.count === 1 && memberProfile.ratings.average === 4.5, 'their average is computed from verified jobs only');
   assert(!JSON.stringify(memberProfile).includes(mobile), 'the public profile never leaks the mobile number');
+  assert(!JSON.stringify(memberProfile).includes(email), 'and never leaks the email address either');
   assert(memberProfile.displayName === 'Journey T.', `privacy: shown as “${memberProfile.displayName}”, not the full name`);
   const dupBlocked = await post(`/api/bookings/${booking.bookingId}/customer-reviews`, { proId: pro.proId, rating: 5 }).then(() => false).catch(() => true);
   assert(dupBlocked, 'one review per side per job — ratings cannot be stuffed');

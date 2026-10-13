@@ -61,11 +61,12 @@ const URGENCY = Object.freeze({
 });
 
 class JobService {
-  constructor({ store, kernel, catalog, people }) {
+  constructor({ store, kernel, catalog, people, cloud = null }) {
     this.store = store;
     this.kernel = kernel;
     this.catalog = catalog;
     this.people = people;
+    this.cloud = cloud;
   }
 
   /* ================================================================== *
@@ -201,6 +202,26 @@ class JobService {
 
     // Persist first so matching and notifications can read the job back.
     this.store.put('jobs', jobId, job);
+
+    // The post is real: mirror it to Supabase so it outlives this process.
+    if (this.cloud) {
+      this.cloud.mirrorPost({
+        id: jobId,
+        kind: 'job',
+        reference,
+        authorUid: customer.firebaseUid || null,
+        authorName: customer.fullName,
+        title: job.title,
+        description: job.description,
+        categoryId,
+        categoryLabel: category.label,
+        suburb: job.location.suburb,
+        metro: job.location.metro,
+        priceCents: job.budget.statedCents,
+        photos: job.photos.map((ph) => ({ url: ph.url || null, caption: ph.caption || null, hash: ph.hash })),
+        createdAt: job.postedAt,
+      }, { ledger: this.kernel.ledger, subject: jobId }).catch(() => {});
+    }
 
     // Match immediately — this is what makes quotes arrive in minutes.
     const match = await this.matchPros(jobId);
@@ -768,6 +789,34 @@ class JobService {
     const bid = this.store.get('bids', bidId);
     if (!bid) throw new Error(`bid ${bidId} not found`);
     return deepClone(bid);
+  }
+
+  /**
+   * listJobs + the homeowner's cloud-mirrored posts, so a job posted today is
+   * still theirs after a restart (Supabase is the durable copy).
+   */
+  async listJobsWithCloud({ customerId, proId, status, categoryId, metroId, limit = 50 } = {}) {
+    const local = this.listJobs({ customerId, proId, status, categoryId, metroId, limit });
+    if (!this.cloud || !customerId) return local;
+    const uid = (this.store.get('customers', customerId) || {}).firebaseUid;
+    if (!uid) return local;
+    const rows = (await this.cloud.fetchPosts({ limit: 100 }))
+      .filter((r) => r.kind === 'job' && r.author_uid === uid && !local.some((j) => j.jobId === r.id));
+    return [...local, ...rows.map((r) => ({
+      jobId: r.id,
+      reference: r.reference || null,
+      title: r.title,
+      categoryId: r.category_id || null,
+      categoryLabel: r.category_label || null,
+      excerpt: r.description || null,
+      status: 'OPEN',
+      suburb: r.suburb || null,
+      metro: r.metro || null,
+      bidCount: 0,
+      postedAt: r.created_at,
+      cloud: true,
+      photos: r.photos || [],
+    }))].sort((a, b) => String(b.postedAt).localeCompare(String(a.postedAt))).slice(0, limit);
   }
 
   listJobs({ customerId, proId, status, categoryId, metroId, limit = 50 } = {}) {

@@ -191,7 +191,7 @@ function buildApiRoutes({ marketplace }) {
 
   /* ================= portfolio — the past work homeowners browse ================= */
 
-  router.get('/api/portfolio', ({ query }) => mp.portfolio.list({
+  router.get('/api/portfolio', ({ query }) => mp.portfolio.listWithCloud({
     categoryId: query.categoryId || null,
     suburbId: query.suburbId || null,
     metro: query.metro || null,
@@ -220,7 +220,7 @@ function buildApiRoutes({ marketplace }) {
     return mp.portfolio.addItem(body);
   }), { tags: ['portfolio'], summary: 'Upload past work (photos are sealed; a tier is computed, never claimed)' });
 
-  router.get('/api/portfolio/:itemId', ({ params }) => mp.portfolio.detail(params.itemId), { tags: ['portfolio'], summary: 'One piece of work: photos, seals, tier statement, the pro, enquiry count' });
+  router.get('/api/portfolio/:itemId', wrap(async ({ params }) => mp.portfolio.detailWithCloud(params.itemId)), { tags: ['portfolio'], summary: 'One piece of work: photos, seals, tier statement, the pro, enquiry count (cloud copy after a restart)' });
 
   router.patch('/api/portfolio/:itemId', wrap(async ({ params, body }) => {
     const { actorId, ...patch } = body;
@@ -259,23 +259,24 @@ function buildApiRoutes({ marketplace }) {
 
   /* ================= sign-in & inbox ================= */
 
-  router.post('/api/auth/start', wrap(async ({ body }) => mp.auth.start({
-    identifier: require_(body.identifier, 'identifier'),
-    role: body.role || null,
-  })), { tags: ['auth'], summary: 'Passwordless sign-in, step 1 — send a one-time PIN to a mobile number or email (never reveals whether an account exists)' });
+  router.get('/api/cloud-config', ({ }) => mp.cloud.clientConfig(), { tags: ['auth'], summary: 'Public client config: Firebase web keys + Supabase URL/anon key/bucket, and whether the clouds are reachable' });
 
-  router.post('/api/auth/verify', wrap(async ({ body }) => mp.auth.verify({
-    challengeId: require_(body.challengeId, 'challengeId'),
-    code: require_(body.code, 'code'),
-  })), { tags: ['auth'], summary: 'Passwordless sign-in, step 2 — a correct PIN signs a known account in, or returns a sign-up token' });
-
-  router.post('/api/auth/register', wrap(async ({ body }) => mp.auth.register({
-    signupToken: require_(body.signupToken, 'signupToken'),
+  router.post('/api/auth/register', wrap(async ({ body }) => mp.auth.registerWithEmail({
+    email: require_(body.email, 'email'),
+    password: require_(body.password, 'password'),
     fullName: require_(body.fullName, 'fullName'),
     suburbId: body.suburbId || null,
-    email: body.email || null,
-    mobile: body.mobile || null,
-  })), { tags: ['auth'], summary: 'Passwordless sign-in, step 3 — create a homeowner account on a verified number' });
+    ...(body.mobile ? { mobile: body.mobile } : {}),
+  })), { tags: ['auth'], summary: 'Create an account with email + password (Firebase Auth; local hash only if Firebase is unreachable)' });
+
+  router.post('/api/auth/login', wrap(async ({ body }) => mp.auth.signInWithEmail({
+    email: require_(body.email, 'email'),
+    password: require_(body.password, 'password'),
+  })), { tags: ['auth'], summary: 'Sign in with email + password' });
+
+  router.post('/api/auth/session', wrap(async ({ body }) => mp.auth.signInWithFirebaseToken({
+    idToken: require_(body.idToken, 'idToken'),
+  })), { tags: ['auth'], summary: 'Exchange a Firebase ID token (Google popup or web session) for a ProVeri session' });
 
   router.get('/api/inbox/:userId', ({ params }) => mp.inbox(params.userId), { tags: ['inbox'], summary: 'Every conversation a person is in — work enquiries and booking chats — with unread counts' });
 
@@ -318,7 +319,7 @@ function buildApiRoutes({ marketplace }) {
     return autoDetected ? { ...posted, categoryAutoDetected: autoDetected } : posted;
   }), { tags: ['jobs'], summary: 'Post a job — the trade is auto-detected from the description if it is not supplied; matching, weather, load-shedding and holiday advice run immediately' });
 
-  router.get('/api/jobs', ({ query }) => mp.jobs.listJobs({
+  router.get('/api/jobs', ({ query }) => mp.jobs.listJobsWithCloud({
     customerId: query.customerId,
     proId: query.proId,
     status: query.status,

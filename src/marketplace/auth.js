@@ -1,42 +1,34 @@
 'use strict';
 
 /**
- * ProVeri — passwordless sign-in.
+ * ProVeri sign-in & registration — real identities, no demo accounts.
  *
- * One flow for everybody, the way South Africans already sign in to their
- * banking and taxi apps:
+ * Two ways in, both through Firebase Auth:
  *
- *   1. start    — "your mobile number or email" → a six-digit one-time PIN
- *   2. verify   — the PIN proves the number; a known account is signed in, an
- *                 unknown one gets a short-lived sign-up token instead
- *   3. register — name (and suburb) turns that token into a homeowner account,
- *                 with the confirmed channel already recorded as verified
+ *   email + password   registerWithEmail / signInWithEmail talk to Firebase's
+ *                      identitytoolkit REST endpoints server-side;
+ *   Google             the browser runs the Google popup through the Firebase
+ *                      web SDK and hands us the resulting ID token, which
+ *                      signInWithFirebaseToken verifies server-side
+ *                      (accounts:lookup) before a session is signed.
  *
- * Nothing in step 1 says whether an account exists, so the endpoint cannot be
- * used to probe who is a customer. Codes are stored as hashes, expire after
- * ten minutes and allow five attempts.
+ * A Firebase identity is mapped onto a local marketplace profile the first
+ * time it signs in (first name + email, role CUSTOMER); pros still graduate
+ * through /become-a-pro, which layers trade verification on top.
  *
- * With no SMS or email partner configured the PIN cannot be delivered, so the
- * response says exactly that and returns the code for the screen to show —
- * the same honest-simulation rule every other integration in this build
- * follows. With CLICKATELL_API_KEY / BREVO_API_KEY set the code is never
- * returned to the client.
+ * Honest degradation: with no route to Firebase (air-gapped dev box, CI, the
+ * unit suite) registration and sign-in fall back to a local password-hash
+ * account so the product remains usable and testable — labelled `local` on
+ * the session, never disguised as a cloud identity, and the moment Firebase
+ * is reachable again the same endpoints use it.
  */
 
-const { nextId, nowIso, sha256, normalizeMobile, normalizeEmail, fingerprint } = require('../kernel/util');
+const { nextId, nowIso, sha256, normalizeEmail } = require('../kernel/util');
 
-const CODE_TTL_MS = 10 * 60 * 1000;
-const SIGNUP_TTL_MS = 30 * 60 * 1000;
-const MAX_ATTEMPTS = 5;
-const MAX_LIVE_CHALLENGES = 2000;
+const MAX_SESSIONS = 5_000;
 
-function maskMobile(mobile) {
-  return `${mobile.slice(0, 3)} *** ${mobile.slice(-4)}`;
-}
-
-function maskEmail(email) {
-  const [user, domain] = email.split('@');
-  return `${user.slice(0, 2)}${'•'.repeat(Math.max(1, user.length - 2))}@${domain}`;
+function localHash(email, password) {
+  return sha256(`proveri-local:${normalizeEmail(email)}:${password}`);
 }
 
 class AuthService {
@@ -44,149 +36,140 @@ class AuthService {
    * @param {object} deps
    * @param {import('./store').Store} deps.store
    * @param {import('./people').PeopleService} deps.people
-   * @param {() => { notifications: boolean }} deps.configuredPartners
+   * @param {import('../integrations/cloud').CloudService} deps.cloud
    */
-  constructor({ store, people, kernel, configuredPartners }) {
+  constructor({ store, people, kernel, cloud }) {
     this.store = store;
     this.people = people;
     this.kernel = kernel;
-    this.configuredPartners = configuredPartners || (() => ({ notifications: false }));
-    this.challenges = new Map();
-    this.signups = new Map();
+    this.cloud = cloud;
+    this.sessions = new Map();
   }
 
-  /** Parse "082 123 4567", "+27821234567" or "naledi@example.co.za". */
-  static parseIdentifier(identifier) {
-    const raw = String(identifier || '').trim();
-    if (!raw) throw new Error('a mobile number or email is required');
-    if (raw.includes('@')) {
-      const email = normalizeEmail(raw);
-      if (!email) throw new Error('that email address looks invalid — check it and try again');
-      return { kind: 'email', value: email };
-    }
-    const mobile = normalizeMobile(raw);
-    if (!mobile) throw new Error('that mobile number looks invalid — use a South African number like 082 123 4567');
-    return { kind: 'mobile', value: mobile };
-  }
+  /* ---------------- register & sign in with email ---------------- */
 
-  /** Every account that answers to this identifier, homeowner first. */
-  accountsFor({ kind, value }) {
-    const matches = (row) => row[kind] && row[kind] === value;
-    const customers = this.store.find('customers', matches).map((c) => ({ userId: c.customerId, role: 'CUSTOMER', name: c.fullName }));
-    const pros = this.store.find('pros', matches).map((p) => ({ userId: p.proId, role: 'PRO', name: p.displayName || p.fullName }));
-    return [...customers, ...pros];
-  }
-
-  start({ identifier, role } = {}) {
-    const parsed = AuthService.parseIdentifier(identifier);
-    this.#sweep();
-    const code = String(100000 + (parseInt(sha256(`${nextId('otp')}:${Math.random()}`).slice(0, 8), 16) % 900000));
-    const challengeId = nextId('otp');
-    const live = Boolean(this.configuredPartners().notifications);
-    const challenge = {
-      challengeId,
-      identifier: parsed,
-      roleHint: role === 'PRO' || role === 'CUSTOMER' ? role : null,
-      codeHash: sha256(`${challengeId}:${code}`),
-      attempts: 0,
-      createdAt: nowIso(),
-      expiresAt: new Date(Date.now() + CODE_TTL_MS).toISOString(),
-    };
-    this.challenges.set(challengeId, challenge);
-    return {
-      challengeId,
-      channel: parsed.kind === 'email' ? 'email' : 'sms',
-      destination: parsed.kind === 'email' ? maskEmail(parsed.value) : maskMobile(parsed.value),
-      expiresInSeconds: CODE_TTL_MS / 1000,
-      delivery: live
-        ? { simulated: false, provider: parsed.kind === 'email' ? 'Brevo' : 'Clickatell' }
-        : {
-          simulated: true,
-          provider: parsed.kind === 'email' ? 'Brevo (not configured)' : 'Clickatell (not configured)',
-          note: 'No SMS or email partner is configured on this server, so the code is shown on screen instead of being sent.',
-        },
-      ...(live ? {} : { demoCode: code }),
-    };
-  }
-
-  verify({ challengeId, code } = {}) {
-    if (!challengeId) throw new Error('challengeId is required');
-    const challenge = this.challenges.get(challengeId);
-    if (!challenge || Date.parse(challenge.expiresAt) < Date.now()) {
-      this.challenges.delete(challengeId);
-      throw new Error('that code is invalid or has expired — request a new one');
-    }
-    if (challenge.attempts >= MAX_ATTEMPTS) {
-      this.challenges.delete(challengeId);
-      throw new Error('Too many incorrect codes — request a new one');
-    }
-    challenge.attempts += 1;
-    if (sha256(`${challengeId}:${String(code || '').trim()}`) !== challenge.codeHash) {
-      const left = MAX_ATTEMPTS - challenge.attempts;
-      throw new Error(`that code is invalid — ${left} attempt${left === 1 ? '' : 's'} left`);
-    }
-    this.challenges.delete(challengeId);
-
-    const accounts = this.accountsFor(challenge.identifier);
-    if (!accounts.length) {
-      const signupToken = nextId('signup');
-      this.signups.set(signupToken, {
-        identifier: challenge.identifier,
-        verifiedAt: nowIso(),
-        expiresAt: new Date(Date.now() + SIGNUP_TTL_MS).toISOString(),
-      });
-      return { verified: true, newUser: true, signupToken, identifier: challenge.identifier };
+  async registerWithEmail({ email, password, fullName, suburbId, mobile }) {
+    const clean = normalizeEmail(email);
+    if (!clean) throw new Error('An email address is required.');
+    if (!fullName || String(fullName).trim().length < 2) throw new Error('Your name is required.');
+    if (!password || String(password).length < 6) throw new Error('Passwords must be at least 6 characters.');
+    if (this.store.findOne('customers', (c) => c.email && c.email === clean)) {
+      throw new Error('An account with this email already exists — sign in instead.');
     }
 
-    const preferred = accounts.find((a) => a.role === challenge.roleHint) || accounts[0];
-    this.kernel?.ledger?.append({
-      action: 'SIGNED_IN',
-      subject: preferred.userId,
-      visibility: 'PRIVATE',
-      payload: { summary: `${preferred.role === 'PRO' ? 'Pro' : 'Homeowner'} signed in with a one-time PIN (${challenge.identifier.kind})` },
-    });
-    return {
-      verified: true,
-      newUser: false,
-      session: { userId: preferred.userId, role: preferred.role, name: preferred.name },
-      accounts,
-    };
-  }
-
-  /** Turn a verified sign-up token into a homeowner account and a session. */
-  register({ signupToken, fullName, suburbId, email, mobile } = {}) {
-    if (!signupToken) throw new Error('signupToken is required');
-    const signup = this.signups.get(signupToken);
-    if (!signup || Date.parse(signup.expiresAt) < Date.now()) {
-      this.signups.delete(signupToken);
-      throw new Error('this sign-up link is invalid or has expired — start again with your number');
+    const health = await this.cloud.health();
+    let uid = null;
+    let provider = 'local';
+    if (health.online) {
+      const signed = await this.cloud.firebaseSignUp({ email: clean, password });
+      uid = signed.uid;
+      provider = 'password';
     }
-    if (!fullName || !String(fullName).trim()) throw new Error('fullName is required');
-    const { kind, value } = signup.identifier;
+
     const customer = this.people.registerCustomer({
       fullName: String(fullName).trim(),
-      email: kind === 'email' ? value : email,
-      mobile: kind === 'mobile' ? value : mobile,
-      suburbId: suburbId || undefined,
+      email: clean,
+      suburbId: suburbId || null,
+      ...(mobile ? { mobile } : {}),
+      passwordHash: provider === 'local' ? localHash(clean, password) : null,
     });
-    this.people.verifyCustomerChannel(customer.customerId, {
-      channel: kind === 'email' ? 'email' : 'mobile',
-      reference: `OTP_${fingerprint(signupToken, 8)}`,
+    if (uid) this.#attachUid(customer, uid, provider);
+    this.kernel.ledger.append({
+      action: 'ACCOUNT_REGISTERED',
+      subject: customer.customerId,
+      visibility: 'PRIVATE',
+      payload: { summary: `Account registered with ${provider === 'local' ? 'local credentials (Firebase unreachable)' : 'Firebase email auth'}`, provider },
     });
-    this.signups.delete(signupToken);
-    return {
-      created: true,
-      session: { userId: customer.customerId, role: 'CUSTOMER', name: customer.fullName },
-    };
+    return { created: true, session: this.#startSession(customer, provider) };
   }
 
-  #sweep() {
-    const now = Date.now();
-    for (const [id, c] of this.challenges) if (Date.parse(c.expiresAt) < now) this.challenges.delete(id);
-    for (const [id, s] of this.signups) if (Date.parse(s.expiresAt) < now) this.signups.delete(id);
-    // A hard ceiling so a flood of start() calls cannot grow memory without bound.
-    while (this.challenges.size > MAX_LIVE_CHALLENGES) this.challenges.delete(this.challenges.keys().next().value);
+  async signInWithEmail({ email, password }) {
+    const clean = normalizeEmail(email);
+    if (!clean || !password) throw new Error('Email and password are required.');
+
+    const health = await this.cloud.health();
+    if (health.online) {
+      const signed = await this.cloud.firebaseSignInWithEmail({ email: clean, password });
+      const customer = this.#findByUid(signed.uid) || this.#findByEmail(clean) || this.#createFromFirebase({ uid: signed.uid, email: signed.email, name: clean.split('@')[0] });
+      if (!customer.firebaseUid) this.#attachUid(customer, signed.uid, 'password');
+      return { session: this.#startSession(customer, 'password') };
+    }
+
+    // Firebase unreachable: local credential accounts only, and say so.
+    const customer = this.#findByEmail(clean);
+    if (!customer || !customer.passwordHash) {
+      throw new Error('No local account for that email, and Firebase cannot be reached from this server right now.');
+    }
+    if (customer.passwordHash !== localHash(clean, password)) throw new Error('That password is invalid — check it and try again.');
+    return { session: this.#startSession(customer, 'local') };
+  }
+
+  /* ---------------- Google / SDK-issued ID tokens ---------------- */
+
+  async signInWithFirebaseToken({ idToken }) {
+    if (!idToken) throw new Error('A sign-in token is required.');
+    const health = await this.cloud.health();
+    if (!health.online) throw new Error('Firebase cannot be reached from this server right now — Google sign-in needs it.');
+    const identity = await this.cloud.firebaseLookup(idToken);
+    if (!identity.email) throw new Error('That Google account has no shared email address — use email sign-in instead.');
+
+    let customer = this.#findByUid(identity.uid) || this.#findByEmail(identity.email);
+    if (!customer) {
+      customer = this.#createFromFirebase(identity);
+    } else if (!customer.firebaseUid) {
+      this.#attachUid(customer, identity.uid, identity.provider === 'google.com' ? 'google' : 'password');
+    }
+    return { session: this.#startSession(customer, identity.provider === 'google.com' ? 'google' : 'password') };
+  }
+
+  /** A session for server-side actors (tests, the journey script). */
+  issueLocalSession(userId) {
+    const customer = this.store.get('customers', userId) || this.store.get('pros', userId);
+    if (!customer) throw new Error(`no such user: ${userId}`);
+    return this.#startSession(customer, customer.role === 'PRO' ? 'pro' : 'local');
+  }
+
+  /* ---------------- internals ---------------- */
+
+  #attachUid(customer, uid, provider) {
+    customer.firebaseUid = uid;
+    customer.authProvider = provider;
+    customer.updatedAt = nowIso();
+    this.store.put('customers', customer.customerId, customer);
+  }
+
+  #findByUid(uid) {
+    return uid ? this.store.findOne('customers', (c) => c.firebaseUid === uid) : null;
+  }
+
+  #findByEmail(email) {
+    return this.store.findOne('customers', (c) => c.email && c.email === email);
+  }
+
+  #createFromFirebase(identity) {
+    const name = identity.name || (identity.email ? identity.email.split('@')[0].replace(/[._]/g, ' ') : 'New member');
+    const titled = name.split(/\s+/).map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w)).join(' ');
+    const customer = this.people.registerCustomer({ fullName: titled, email: identity.email });
+    this.#attachUid(customer, identity.uid, identity.provider === 'google.com' ? 'google' : 'password');
+    return customer;
+  }
+
+  #startSession(customer, provider) {
+    const sessionId = nextId('session');
+    const session = {
+      sessionId,
+      userId: customer.customerId,
+      role: customer.role || 'CUSTOMER',
+      name: customer.fullName,
+      email: customer.email || null,
+      provider,
+      createdAt: nowIso(),
+    };
+    this.store.put('sessions', sessionId, session);
+    if (this.sessions.size > MAX_SESSIONS) this.sessions.clear();
+    this.sessions.set(sessionId, true);
+    return { userId: session.userId, role: session.role, name: session.name, email: session.email, provider, sessionId };
   }
 }
 
-module.exports = { AuthService, maskMobile, maskEmail };
+module.exports = { AuthService };

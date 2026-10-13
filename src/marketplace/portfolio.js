@@ -48,11 +48,66 @@ const MAX_PHOTOS = 8;
 const MAX_DATAURL_CHARS = 1_200_000;   // ~900 KB of image; enough for a phone photo
 
 class PortfolioService {
-  constructor({ store, kernel, catalog, people }) {
+  constructor({ store, kernel, catalog, people, cloud = null }) {
     this.store = store;
     this.kernel = kernel;
     this.catalog = catalog;
     this.people = people;
+    this.cloud = cloud;
+  }
+
+  /** A Supabase posts row rendered as a feed item. */
+  #cloudWorkItem(row) {
+    const photos = Array.isArray(row.photos) ? row.photos.filter((ph) => ph && (ph.url || ph.dataUrl)) : [];
+    return {
+      itemId: row.id,
+      reference: row.reference || null,
+      title: row.title || 'Untitled work',
+      description: row.description || null,
+      categoryId: row.category_id || null,
+      categoryLabel: row.category_label || null,
+      suburb: row.suburb || null,
+      metro: row.metro || null,
+      priceCents: row.price_cents ?? null,
+      photos,
+      photo: photos[0] || null,
+      tier: PORTFOLIO_TIER.SELF_DECLARED,
+      tierLabel: TIER_LABEL[PORTFOLIO_TIER.SELF_DECLARED],
+      verified: false,
+      cloud: true,
+      proId: null,
+      proName: row.author_name || 'ProVeri member',
+      completedAt: row.created_at,
+      createdAt: row.created_at,
+      stats: { views: 0, saves: 0, enquiries: 0 },
+    };
+  }
+
+  /** The public feed: local shelf first, then cloud-mirrored work. */
+  async listWithCloud(opts = {}) {
+    const local = this.list(opts);
+    if (!this.cloud || opts.proId) return local;
+    const known = new Set(local.map((i) => i.itemId));
+    const rows = (await this.cloud.fetchPosts({ limit: opts.limit || 60 }))
+      .filter((r) => r.kind === 'work' && !known.has(r.id));
+    const merged = [...local, ...rows.map((r) => this.#cloudWorkItem(r))];
+    return merged.sort((a, b) => String(b.completedAt || b.createdAt || '').localeCompare(String(a.completedAt || a.createdAt || '')));
+  }
+
+  /** One item, falling back to the cloud copy after a restart. */
+  async detailWithCloud(itemId) {
+    const local = this.store.get('portfolioItems', itemId);
+    if (local) return this.detail(itemId);
+    if (!this.cloud) throw new Error(`portfolio item ${itemId} not found`);
+    const health = await this.cloud.health();
+    if (!health.online || health.supabase === false) throw new Error(`portfolio item ${itemId} not found`);
+    try {
+      const rows = await this.cloud.supabaseSelect('posts', `select=*&id=eq.${encodeURIComponent(itemId)}`);
+      if (!rows || !rows[0]) throw new Error(`portfolio item ${itemId} not found`);
+      return this.#cloudWorkItem(rows[0]);
+    } catch (error) {
+      throw new Error(`portfolio item ${itemId} not found`);
+    }
   }
 
   tiers() {
@@ -155,6 +210,26 @@ class PortfolioService {
 
     item.ledgerSeal = sha256({ itemId: item.itemId, proId, photos: item.photos.map((p) => p.hash), at: item.createdAt }).slice(0, 16);
     this.store.put('portfolioItems', item.itemId, item);
+
+    // The upload is real: mirror it to Supabase so it outlives this process.
+    if (this.cloud) {
+      this.cloud.mirrorPost({
+        id: item.itemId,
+        kind: 'work',
+        reference: item.reference || null,
+        authorUid: pro.firebaseUid || null,
+        authorName: pro.displayName,
+        title: item.title,
+        description: item.description || null,
+        categoryId: item.categoryId,
+        categoryLabel: item.categoryLabel,
+        suburb: item.suburb,
+        metro: item.metro,
+        priceCents: item.priceCents,
+        photos: item.photos.map((ph) => ({ url: ph.url || null, caption: ph.caption || null, hash: ph.hash })),
+        createdAt: item.createdAt,
+      }, { ledger: this.kernel.ledger, subject: item.itemId }).catch(() => {});
+    }
 
     this.kernel.ledger.append({
       action: 'PORTFOLIO_ITEM_ADDED',

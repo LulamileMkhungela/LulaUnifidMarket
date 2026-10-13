@@ -862,7 +862,7 @@ test('orders is the tracking view, and it asks you to sign in first', async () =
   const anon = await screen('/orders')({ params: {}, query: {} });
   const anonText = assertCleanRender(anon, '/orders (signed out)');
   assert.match(anonText, /Sign in to see your jobs/);
-  assert.ok(anon.querySelector('input[name=identifier]'), 'and the sign-in is right there, not a dead end');
+  assert.ok(anon.querySelector('input[name=email]'), 'and the sign-in is right there, not a dead end');
 
   const customer = marketplace.store.all('customers')[0];
   global.window.ProVeri.api.setSession({ userId: customer.customerId, role: 'CUSTOMER', name: customer.fullName });
