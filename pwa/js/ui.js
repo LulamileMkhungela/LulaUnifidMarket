@@ -514,6 +514,21 @@ window.ProVeri = window.ProVeri || {};
     window.dispatchEvent(new PopStateEvent('popstate'));
   }
 
+  /** Normalise a legacy address onto its canonical URL — no re-render, no history entry. */
+  function redirectTo(path) {
+    try { history.replaceState(history.state || {}, '', path); } catch { /* older browsers */ }
+  }
+
+  /** Explore is one destination with two modes: the work, and the pros who do it. */
+  function exploreSeg(active) {
+    const tab = (id, to, label) => h('button' + (active === id ? '.active' : ''), {
+      type: 'button',
+      ...(active === id ? { 'aria-current': 'page' } : {}),
+      onclick: () => { if (active !== id) navigate(to); },
+    }, label);
+    return h('div.seg', { style: { margin: '2px 0 4px' } }, [tab('work', '/browse', 'Work near you'), tab('pros', '/find-a-pro', 'Verified pros')]);
+  }
+
   /** ← Back: to where you came from inside the app, else to a sensible parent. */
   function backButton(fallback, label) {
     return h('button.back-btn', {
@@ -679,7 +694,7 @@ window.ProVeri = window.ProVeri || {};
     h, money, moneyBig, timeAgo, shortStamp, relDay, relDayInline, dateShort, dateTimeShort, countdown, plural, firstName, shortName, initials,
     stars, starRow, rating, icon, hasIcon, flagZA, thumb, photoImg, avatar, tradeIcon, tradeName,
     catIcon, badge, badgeText, trustBadge, bookingWords, jobWords, statusPill, tracker, bookingReached, TRACK_LABELS,
-    toast, sheet, closeSheet, loading, loadingCards, loadingGrid, skeletonItems, empty, navigate, backButton, formValues, withButton, friendlyError,
+    toast, sheet, closeSheet, loading, loadingCards, loadingGrid, skeletonItems, empty, navigate, redirectTo, exploreSeg, backButton, formValues, withButton, friendlyError,
     copy, share, trustBar, sectionHead, compressImage,
   };
 })();

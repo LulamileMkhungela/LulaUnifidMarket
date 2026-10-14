@@ -113,6 +113,11 @@
       main.innerHTML = '';
       node.classList.add('screen-enter');
       main.append(node);
+      if (location.pathname !== pathname) {
+        // a legacy address normalised itself mid-render: sync chrome to the canonical URL
+        document.title = titleFor(location.pathname);
+        updateChrome(location.pathname);
+      }
     } catch (error) {
       if (token !== currentRender) return;
       main.innerHTML = '';
@@ -140,11 +145,9 @@
       '/upload-work': 'Add your work · ProVeri',
       '/find-a-pro': 'Find a verified pro · ProVeri',
       '/post-job': 'Post a job · ProVeri',
-      '/bookings': 'Your jobs · ProVeri',
       '/trust': 'How we protect you · ProVeri',
       '/vehicles': 'Verified vehicles · ProVeri',
       '/property': 'Property (coming soon) · ProVeri',
-      '/web-studio': 'Web Studio · ProVeri',
       '/business-studio': 'Business Site Studio · ProVeri',
       '/sites': 'Sites built on ProVeri',
       '/sales-desk': 'Sales desk · ProVeri',
@@ -152,8 +155,6 @@
       '/admin': 'Trust desk · ProVeri',
       '/integrations': 'Data & integrations · ProVeri',
       '/wallet': 'Earnings · ProVeri',
-      '/notifications': 'Updates · ProVeri',
-      '/profile': 'Profile · ProVeri',
     };
     if (titles[pathname]) return titles[pathname];
     if (pathname.startsWith('/work/')) return 'Work · ProVeri';

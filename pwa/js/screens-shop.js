@@ -89,7 +89,7 @@
           h('p', { style: { maxWidth: '36ch' } }, 'In South Africa, for South Africa. Verified local pros, real proof of work and payments that wait for your approval.'),
         ]),
         h('div', [h('h4', 'Homeowners'), h('a', { href: '/post-job' }, 'Post a job'), h('a', { href: '/browse' }, 'Explore work'), h('a', { href: '/find-a-pro' }, 'Find a pro'), h('a', { href: '/trust' }, 'How we protect you')]),
-        h('div', [h('h4', 'Pros'), h('a', { href: '/become-a-pro' }, 'Join as a pro'), h('a', { href: '/upload-work' }, 'Add your work'), h('a', { href: '/web-studio' }, 'Free website')]),
+        h('div', [h('h4', 'Pros'), h('a', { href: '/become-a-pro' }, 'Join as a pro'), h('a', { href: '/upload-work' }, 'Add your work'), h('a', { href: '/business-studio' }, 'Business sites')]),
         h('div', [h('h4', 'More'), h('a', { href: '/business-studio' }, 'Business sites'), h('a', { href: '/vehicles' }, 'Verified vehicles'), h('a', { href: '/integrations' }, 'Data & integrations')]),
       ]),
       h('div.fine', [h('span', `© ${new Date().getFullYear()} ProVeri`), ui.flagZA(), h('span', 'Payments held in escrow by registered partners · POPIA-aligned')]),
@@ -302,7 +302,8 @@
     };
 
     const countLine = h('p.page-sub', 'Loading work…');
-    page.append(h('div.page-head', h('div.titles', [h('h1', state.category ? tradeName(state.category, categoryById(state.category)?.label) : 'Explore work'), countLine])));
+    page.append(h('div.page-head', h('div.titles', [h('h1', state.category ? tradeName(state.category, categoryById(state.category)?.label) : 'Explore'), countLine])));
+    page.append(ui.exploreSeg('work'));
     page.append(searchForm(state.q, { compact: true, placeholder: 'Search, e.g. bathroom', button: 'Go' }));
 
     const smart = h('div', { style: { marginTop: '14px' } });
@@ -1189,6 +1190,7 @@
           tile(`/pro/${session.userId}`, 'user', 'Public profile', 'What homeowners see'),
           tile('/upload-work', 'camera', 'Add your work', 'Photos win enquiries'),
           tile('/orders', 'jobs', 'Leads & jobs', 'Quote, schedule and get paid'),
+          tile('/inbox', 'inbox', 'Inbox', 'Messages, leads and payout updates'),
           tile('/wallet', 'wallet', 'Earnings', 'Payouts and what is on the way'),
           tile('/become-a-pro', 'shield', 'Verification', profile && profile.canBid ? 'You are cleared to quote' : 'Finish to start quoting', profile && profile.canBid ? '' : 'gold'),
         ]),
@@ -1198,8 +1200,7 @@
         h('div.group-label', 'Your activity'),
         h('div.group', [
           tile('/orders', 'jobs', 'Your jobs', 'Quotes, bookings and warranties'),
-          tile('/inbox', 'inbox', 'Messages', 'Conversations with pros'),
-          tile('/notifications', 'bell', 'Updates', 'Quotes, payments and progress'),
+          tile('/inbox', 'inbox', 'Inbox', 'Messages, quotes, payments and progress'),
           tile(`/member/${session.userId}`, 'star', 'My public profile', 'What pros see: your reviews and rating'),
         ]),
       );
@@ -1208,9 +1209,8 @@
     page.append(
       h('div.group-label', 'More from ProVeri'),
       h('div.group', [
-        isPro ? tile('/notifications', 'bell', 'Updates', 'New leads, payments and reviews') : tile('/become-a-pro', 'briefcase', 'Join as a pro', 'Earn from your skills — no lead fees', 'gold'),
-        tile('/business-studio', 'store', 'Business sites', 'A website for your business, with bookings'),
-        tile('/web-studio', 'globe', 'Web Studio', 'Free microsite from your verified profile'),
+        isPro ? null : tile('/become-a-pro', 'briefcase', 'Join as a pro', 'Earn from your skills — no lead fees', 'gold'),
+        tile('/business-studio', 'store', 'Business sites', 'A website for your business, with bookings — the free microsite comes with verification'),
         tile('/vehicles', 'car', 'Verified vehicles', 'Buy and sell cars with escrow'),
         tile('/property', 'building', 'Property', 'Coming soon'),
       ]),

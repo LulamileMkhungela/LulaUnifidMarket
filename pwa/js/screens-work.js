@@ -145,7 +145,7 @@
     return {
       at: b.createdAt,
       past: ['CLOSED', 'CANCELLED', 'REFUNDED'].includes(b.status),
-      node: h('a.order-card', { href: `/booking/${b.bookingId}` }, [
+      node: h('a.order-card', { href: `/order/${b.bookingId}` }, [
         h('div.oc-top', [tradeIcon(b.categoryId), h('div.grow', [h('div.oc-title', b.title), h('div.oc-sub', `${b.customerName} · ${b.suburb || ''} · ${money(b.totalCents)}`), h('div.oc-status', ui.statusPill(words))])]),
         ui.tracker(ui.bookingReached(b.status)),
         next ? h('div.oc-next' + (next[2] ? '.action' : ''), [icon(next[0], 18), h('span.grow', next[1]), icon('chevron', 18)]) : null,
@@ -752,13 +752,14 @@
    * Routes
    * ================================================================== */
 
-  screens['/booking/:bookingId'] = async (ctx) => window.ProVeri.bookingTracker(ctx);
+  /* One canonical URL per screen: legacy addresses normalise instead of duplicating. */
+  screens['/booking/:bookingId'] = async (ctx) => { ui.redirectTo(`/order/${encodeURIComponent(ctx.params.bookingId)}`); return window.ProVeri.bookingTracker(ctx); };
 
-  screens['/bookings'] = async ({ query }) => screens['/orders']({ query });
+  screens['/bookings'] = async (ctx) => { ui.redirectTo('/orders'); return screens['/orders'](ctx); };
 
-  screens['/notifications'] = async () => screens['/inbox']({ query: { tab: 'updates' } });
+  screens['/notifications'] = async (ctx) => { ui.redirectTo('/inbox?tab=updates'); return screens['/inbox']({ ...ctx, query: { ...(ctx.query || {}), tab: 'updates' } }); };
 
-  screens['/profile'] = async () => screens['/me']({ query: {} });
+  screens['/profile'] = async (ctx) => { ui.redirectTo('/me'); return screens['/me'](ctx); };
 
   /* ---------------- /wallet ---------------- */
 
@@ -785,7 +786,7 @@
       h('div.section', [
         h('h2', { style: { fontSize: '20px', marginBottom: '12px' } }, 'Recent payouts'),
         (wallet.recentTransactions || []).length
-          ? h('div.group', wallet.recentTransactions.map((t) => h(t.bookingId ? 'a.tile' : 'div.tile', { href: t.bookingId ? `/booking/${t.bookingId}` : null }, [
+          ? h('div.group', wallet.recentTransactions.map((t) => h(t.bookingId ? 'a.tile' : 'div.tile', { href: t.bookingId ? `/order/${t.bookingId}` : null }, [
             h('span.lead', icon(t.kind === 'PAYOUT' ? 'banknote' : 'receipt', 20)),
             h('div.body', [h('div.t', t.kind === 'PAYOUT' ? 'Payout' : String(t.kind || '').replace(/_/g, ' ').toLowerCase()), h('div.d', `${ui.dateTimeShort(t.at)} · ${t.reference || ''}`)]),
             h('span.money', money(t.amountCents)),

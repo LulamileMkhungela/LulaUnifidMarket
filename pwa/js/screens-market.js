@@ -36,6 +36,7 @@
     }, options.map(([v, l]) => h('option', { value: v, selected: v === state[name] ? true : null }, l)));
     page.append(
       h('div.page-head', h('div.titles', [h('h1', 'Find a verified pro'), count])),
+      ui.exploreSeg('pros'),
       h('div.row.wrap', { style: { gap: '8px' } }, [
         select('category', [['', 'All services'], ...categories().map((c) => [c.id, tradeName(c.id, c.label)]).sort((a, b) => a[1].localeCompare(b[1]))], 'Service'),
         select('metro', [['', 'All areas'], ...metros().map((m) => [m.id, m.name])], 'Area'),

@@ -957,12 +957,63 @@ test('the "you" hub keeps the advanced surfaces out of the main navigation', asy
   const node = await screen('/me')({ params: {}, query: {} });
   const text = assertCleanRender(node, '/me');
   const hrefs = node.querySelectorAll('a.tile').map((a) => a.getAttribute('href'));
-  for (const route of ['/orders', '/upload-work', '/notifications', '/wallet', '/trust', '/integrations', '/business-studio', '/sales-desk', '/vehicles', '/property', '/admin']) {
+  for (const route of ['/orders', '/upload-work', '/inbox', '/wallet', '/trust', '/integrations', '/business-studio', '/sales-desk', '/vehicles', '/property', '/admin']) {
     assert.ok(hrefs.includes(route), `${route} lives under You, not in the tab bar`);
+  }
+  for (const legacy of ['/web-studio', '/notifications', '/profile', '/bookings']) {
+    assert.ok(!hrefs.includes(legacy), `${legacy} is a legacy address — the hub links the canonical screen`);
   }
   assert.match(text, /Install the app/);
   assert.equal(node.querySelectorAll('#app-nav button').length, 0, 'the hub does not re-render the tab bar');
   global.window.ProVeri.api.setSession(null);
+});
+
+test('legacy addresses normalise onto one canonical screen — no duplicates', async () => {
+  const customer = marketplace.store.all('customers')[0];
+  global.window.ProVeri.api.setSession({ userId: customer.customerId, role: 'CUSTOMER', name: customer.fullName });
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 300));
+
+  const inbox = await screen('/notifications')({ params: {}, query: {} });
+  await settle();
+  assert.equal(global.window.location.pathname, '/inbox', '/notifications becomes the inbox');
+  assert.equal(global.window.location.search, '?tab=updates', 'on its updates tab');
+  assert.ok(inbox.querySelector('.seg'), 'and it is the one inbox, not a copy');
+
+  await screen('/bookings')({ params: {}, query: {} });
+  await settle();
+  assert.equal(global.window.location.pathname, '/orders', '/bookings becomes /orders');
+
+  await screen('/profile')({ params: {}, query: {} });
+  await settle();
+  assert.equal(global.window.location.pathname, '/me', '/profile becomes /me');
+
+  await screen('/web-studio')({ params: {}, query: {} });
+  await settle();
+  assert.equal(global.window.location.pathname, '/business-studio', 'and the studio has one front door');
+
+  const bookingId = (marketplace.store.all('bookings')[0] || {}).bookingId;
+  if (bookingId) {
+    await screen('/booking/:bookingId')({ params: { bookingId }, query: {} });
+    await settle();
+    assert.equal(global.window.location.pathname, `/order/${bookingId}`, 'the tracker has one address too');
+  }
+  global.window.ProVeri.api.setSession(null);
+});
+
+test('Explore is one destination with two modes: work and pros', async () => {
+  const browse = await screen('/browse')({ params: {}, query: {} });
+  await new Promise((resolve) => setTimeout(resolve, 350));
+  const browseSeg = browse.querySelector('.seg');
+  assert.ok(browseSeg, 'the work feed carries the Explore segment');
+  assert.match(browseSeg.textContent, /Work near you/);
+  assert.match(browseSeg.textContent, /Verified pros/);
+  assert.ok(browseSeg.querySelector('button.active'), 'with the mode you are in marked active');
+
+  const pros = await screen('/find-a-pro')({ params: {}, query: {} });
+  await new Promise((resolve) => setTimeout(resolve, 350));
+  const prosSeg = pros.querySelector('.seg');
+  assert.ok(prosSeg, 'and the pro directory carries the same segment');
+  assert.equal(prosSeg.querySelectorAll('button').length, 2, 'two modes, one control, everywhere');
 });
 
 test('the portfolio API serves the shelf over HTTP', async () => {
