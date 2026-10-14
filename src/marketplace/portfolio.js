@@ -48,11 +48,66 @@ const MAX_PHOTOS = 8;
 const MAX_DATAURL_CHARS = 1_200_000;   // ~900 KB of image; enough for a phone photo
 
 class PortfolioService {
-  constructor({ store, kernel, catalog, people }) {
+  constructor({ store, kernel, catalog, people, cloud = null }) {
     this.store = store;
     this.kernel = kernel;
     this.catalog = catalog;
     this.people = people;
+    this.cloud = cloud;
+  }
+
+  /** A Supabase posts row rendered as a feed item. */
+  #cloudWorkItem(row) {
+    const photos = Array.isArray(row.photos) ? row.photos.filter((ph) => ph && (ph.url || ph.dataUrl)) : [];
+    return {
+      itemId: row.id,
+      reference: row.reference || null,
+      title: row.title || 'Untitled work',
+      description: row.description || null,
+      categoryId: row.category_id || null,
+      categoryLabel: row.category_label || null,
+      suburb: row.suburb || null,
+      metro: row.metro || null,
+      priceCents: row.price_cents ?? null,
+      photos,
+      photo: photos[0] || null,
+      tier: PORTFOLIO_TIER.SELF_DECLARED,
+      tierLabel: TIER_LABEL[PORTFOLIO_TIER.SELF_DECLARED],
+      verified: false,
+      cloud: true,
+      proId: null,
+      proName: row.author_name || 'ProVeri member',
+      completedAt: row.created_at,
+      createdAt: row.created_at,
+      stats: { views: 0, saves: 0, enquiries: 0 },
+    };
+  }
+
+  /** The public feed: local shelf first, then cloud-mirrored work. */
+  async listWithCloud(opts = {}) {
+    const local = this.list(opts);
+    if (!this.cloud || opts.proId) return local;
+    const known = new Set(local.map((i) => i.itemId));
+    const rows = (await this.cloud.fetchPosts({ limit: opts.limit || 60 }))
+      .filter((r) => r.kind === 'work' && !known.has(r.id));
+    const merged = [...local, ...rows.map((r) => this.#cloudWorkItem(r))];
+    return merged.sort((a, b) => String(b.completedAt || b.createdAt || '').localeCompare(String(a.completedAt || a.createdAt || '')));
+  }
+
+  /** One item, falling back to the cloud copy after a restart. */
+  async detailWithCloud(itemId) {
+    const local = this.store.get('portfolioItems', itemId);
+    if (local) return this.detail(itemId);
+    if (!this.cloud) throw new Error(`portfolio item ${itemId} not found`);
+    const health = await this.cloud.health();
+    if (!health.online || health.supabase === false) throw new Error(`portfolio item ${itemId} not found`);
+    try {
+      const rows = await this.cloud.supabaseSelect('posts', `select=*&id=eq.${encodeURIComponent(itemId)}`);
+      if (!rows || !rows[0]) throw new Error(`portfolio item ${itemId} not found`);
+      return this.#cloudWorkItem(rows[0]);
+    } catch (error) {
+      throw new Error(`portfolio item ${itemId} not found`);
+    }
   }
 
   tiers() {
@@ -155,6 +210,26 @@ class PortfolioService {
 
     item.ledgerSeal = sha256({ itemId: item.itemId, proId, photos: item.photos.map((p) => p.hash), at: item.createdAt }).slice(0, 16);
     this.store.put('portfolioItems', item.itemId, item);
+
+    // The upload is real: mirror it to Supabase so it outlives this process.
+    if (this.cloud) {
+      this.cloud.mirrorPost({
+        id: item.itemId,
+        kind: 'work',
+        reference: item.reference || null,
+        authorUid: pro.firebaseUid || null,
+        authorName: pro.displayName,
+        title: item.title,
+        description: item.description || null,
+        categoryId: item.categoryId,
+        categoryLabel: item.categoryLabel,
+        suburb: item.suburb,
+        metro: item.metro,
+        priceCents: item.priceCents,
+        photos: item.photos.map((ph) => ({ url: ph.url || null, caption: ph.caption || null, hash: ph.hash })),
+        createdAt: item.createdAt,
+      }, { ledger: this.kernel.ledger, subject: item.itemId }).catch(() => {});
+    }
 
     this.kernel.ledger.append({
       action: 'PORTFOLIO_ITEM_ADDED',
@@ -506,53 +581,125 @@ class PortfolioService {
    * THE REACH-OUT LOOP
    * ================================================================== */
 
+  /**
+   * One conversation per (work item, homeowner). Every message is stamped with
+   * the homeowner it belongs to, so two people asking about the same bathroom
+   * never read each other's messages, and a pro's reply is addressed to the
+   * homeowner — not back to the pro.
+   */
   enquire({ itemId, customerId, body, actorId = null }) {
     const item = this.get(itemId);
     const from = actorId || customerId;
     if (!from) throw new Error('you must be signed in to message a pro');
     if (!body || !String(body).trim()) throw new Error('a message is required — write a line about the job you need');
+    const fromPro = from === item.proId;
+    let homeownerId = fromPro ? customerId : from;
+    if (fromPro && !homeownerId) {
+      // A pro replying without naming the homeowner: only unambiguous when one person has asked.
+      const askers = [...new Set(this.store.find('messages', (m) => m.thread === `portfolio:${item.itemId}`)
+        .map((m) => m.customerId || (m.fromUserId !== item.proId ? m.fromUserId : null))
+        .filter(Boolean))];
+      if (askers.length !== 1) throw new Error('customerId is required — say which homeowner you are replying to');
+      homeownerId = askers[0];
+    }
+    if (fromPro && homeownerId === item.proId) throw new Error('you cannot message yourself about your own work');
     const message = {
       messageId: idFor('msg'),
       thread: `portfolio:${item.itemId}`,
+      conversationId: `work.${item.itemId}.${homeownerId}`,
       itemId: item.itemId,
+      customerId: homeownerId,
       fromUserId: from,
-      toUserId: item.proId,
-      body: String(body).trim(),
+      fromRole: fromPro ? 'PRO' : 'CUSTOMER',
+      toUserId: fromPro ? homeownerId : item.proId,
+      body: String(body).trim().slice(0, 4000),
       at: nowIso(),
     };
     this.store.put('messages', message.messageId, message);
-    item.stats.enquiries += 1;
+    if (!fromPro) item.stats.enquiries += 1;
     item.updatedAt = nowIso();
     this.store.put('portfolioItems', item.itemId, item);
 
-    const customer = this.store.get('customers', from);
-    this.store.put('notifications', idFor('ntf'), {
-      notificationId: idFor('ntf'),
-      userId: item.proId,
-      type: 'PORTFOLIO_ENQUIRY',
-      title: `New enquiry on "${item.title}"`,
-      body: `${customer?.fullName || 'A homeowner'}: ${message.body}`,
+    const sender = fromPro
+      ? (this.store.get('pros', from)?.displayName || item.proName || 'The pro')
+      : (this.store.get('customers', from)?.fullName || 'A homeowner');
+    const notificationId = idFor('ntf');
+    this.store.put('notifications', notificationId, {
+      notificationId,
+      userId: message.toUserId,
+      type: fromPro ? 'PORTFOLIO_REPLY' : 'PORTFOLIO_ENQUIRY',
+      title: fromPro ? `${sender} replied about "${item.title}"` : `New enquiry on "${item.title}"`,
+      body: `${sender}: ${message.body}`.slice(0, 240),
       itemId: item.itemId,
+      conversationId: message.conversationId,
+      data: { itemId: item.itemId, conversationId: message.conversationId },
+      createdAt: nowIso(),
       at: nowIso(),
       read: false,
     });
     this.kernel.ledger.append({
-      action: 'PORTFOLIO_ENQUIRY',
+      action: fromPro ? 'PORTFOLIO_ENQUIRY_REPLY' : 'PORTFOLIO_ENQUIRY',
       subject: item.itemId,
       visibility: 'PRIVATE',
-      payload: { summary: `Homeowner enquired on "${item.title}" (${item.categoryLabel})`, proId: item.proId },
+      payload: {
+        summary: fromPro ? `Pro replied to an enquiry on "${item.title}"` : `Homeowner enquired on "${item.title}" (${item.categoryLabel})`,
+        proId: item.proId,
+      },
     });
     return deepClone(message);
   }
 
-  listEnquiries({ itemId, userId }) {
+  /** The homeowner a stored message belongs to (older messages predate the stamp). */
+  #homeownerOf(message, item) {
+    if (message.customerId) return message.customerId;
+    return message.fromUserId !== item.proId ? message.fromUserId : null;
+  }
+
+  listEnquiries({ itemId, userId, customerId = null }) {
     const item = this.get(itemId);
-    if (userId !== item.proId && !this.store.find('messages', (m) => m.thread === `portfolio:${itemId}` && m.fromUserId === userId).length) {
-      throw this.#forbidden('this conversation is not yours');
+    const all = this.store.find('messages', (m) => m.thread === `portfolio:${itemId}`);
+    let rows;
+    if (userId === item.proId) {
+      rows = customerId ? all.filter((m) => this.#homeownerOf(m, item) === customerId) : all;
+    } else {
+      rows = all.filter((m) => this.#homeownerOf(m, item) === userId);
+      if (!rows.length) throw this.#forbidden('this conversation is not yours');
     }
-    return this.store.find('messages', (m) => m.thread === `portfolio:${itemId}`)
+    return rows
       .sort((a, b) => String(a.at).localeCompare(String(b.at)))
       .map((m) => deepClone(m));
+  }
+
+  /** Every enquiry conversation a user is part of — the work half of the inbox. */
+  conversationsFor(userId) {
+    const byConversation = new Map();
+    for (const message of this.store.find('messages', (m) => typeof m.thread === 'string' && m.thread.startsWith('portfolio:'))) {
+      const item = this.store.get('portfolioItems', message.itemId);
+      if (!item) continue;
+      const homeownerId = this.#homeownerOf(message, item);
+      if (!homeownerId) continue;
+      if (userId !== item.proId && userId !== homeownerId) continue;
+      const conversationId = `work.${item.itemId}.${homeownerId}`;
+      const entry = byConversation.get(conversationId) || { item, homeownerId, messages: [] };
+      entry.messages.push(message);
+      byConversation.set(conversationId, entry);
+    }
+    return [...byConversation.entries()].map(([conversationId, { item, homeownerId, messages }]) => {
+      messages.sort((a, b) => String(a.at).localeCompare(String(b.at)));
+      const customer = this.store.get('customers', homeownerId);
+      const photo = (item.photos || []).find((p) => p.url || p.dataUrl);
+      return {
+        conversationId,
+        kind: 'WORK_ENQUIRY',
+        subject: item.title,
+        itemId: item.itemId,
+        categoryId: item.categoryId || null,
+        photoUrl: photo ? (photo.url || null) : null,
+        pro: { userId: item.proId, name: item.proName || this.store.get('pros', item.proId)?.displayName || 'Pro' },
+        customer: { userId: homeownerId, name: customer?.fullName || 'Homeowner' },
+        messages: messages.map((m) => deepClone(m)),
+      };
+    });
   }
 
   /* ================================================================== *

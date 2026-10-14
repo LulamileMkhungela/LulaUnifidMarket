@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Vertical plugins.
+ * ProVeri — Vertical plugins.
  *
  * A vertical tells the Trust Kernel what "trust" means in its world: which
  * verification profile applies, which fields are critical, which fields lock

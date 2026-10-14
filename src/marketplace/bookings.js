@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Bookings: award → escrow → proof of work → release → review.
+ * ProVeri — Bookings: award → escrow → proof of work → release → review.
  *
  * This module owns the money and the evidence, and it is deliberately paranoid:
  *
@@ -298,6 +298,7 @@ class BookingService {
 
       disputeId: null,
       reviewId: null,
+      customerReviewId: null,
       cancellation: null,
       payoutId: null,
       createdAt: nowIso(),
@@ -357,10 +358,9 @@ class BookingService {
     });
     this.#notify(customerId, 'BOOKING_CREATED', {
       title: `${pro.displayName} is booked`,
-      body: `Pay R${(bid.totalCents / 100).toFixed(2)} into escrow within ${Math.round(this.kernel.escrow.fees.paymentWindowMinutes / 60)} hours to confirm. Your arrival gate code is ${gateCode}.`,
+      body: `Pay R${(bid.totalCents / 100).toFixed(2)} into escrow within ${Math.round(this.kernel.escrow.fees.paymentWindowMinutes / 60)} hours to confirm. On the day, ${pro.displayName} reads you a 6-digit arrival code at the door — check it on the booking screen before you let them in.`,
       bookingId,
       reference,
-      gateCode,
       paymentDueBy: addMinutes(nowIso(), this.kernel.escrow.fees.paymentWindowMinutes),
     });
 
@@ -442,16 +442,17 @@ class BookingService {
 
     this.#notify(booking.proId, 'ESCROW_FUNDED', {
       title: 'Payment secured — your money is guaranteed',
-      body: `R${(booking.price.totalCents / 100).toFixed(2)} is now held in ${booking.escrowProvider} escrow for ${booking.title}. Complete the work, upload proof, and you are paid within minutes of acceptance.`,
+      body: `R${(booking.price.totalCents / 100).toFixed(2)} is now held in ${booking.escrowProvider} escrow for ${booking.title}. Your arrival code is ${booking.arrival.gateCode} — read it out at the door. Complete the work, upload proof, and you are paid within minutes of acceptance.`,
       bookingId,
       reference: booking.reference,
       guaranteedCents: booking.price.totalCents - percentageOf(booking.price.totalCents, 10),
     });
+    // The customer is the one who *checks* the code, so they are never sent it:
+    // the pro reads it out at the door and the customer types it in.
     this.#notify(booking.customerId, 'PAYMENT_CONFIRMED', {
       title: 'Your money is safe in escrow',
-      body: `${booking.proName} cannot be paid until you confirm the work is done. Your arrival gate code is ${booking.arrival.gateCode}.`,
+      body: `${booking.proName} cannot be paid until you confirm the work is done. When they arrive, ask for their 6-digit arrival code and enter it on the booking screen before you let them in.`,
       bookingId,
-      gateCode: booking.arrival.gateCode,
     });
 
     return deepClone(booking);
@@ -817,7 +818,7 @@ class BookingService {
     pro.verification = this.kernel.recordCheck(pro.proId, pro.verification, { subjectId: pro.proId, primaryTrade: pro.trade }, {
       name: 'platform_history',
       status: CHECK_STATUS.PASS,
-      source: 'Lula ProVeri completed-job ledger',
+      source: 'ProVeri completed-job ledger',
       reference: booking.reference,
       finding: `${pro.stats.completedJobs} escrow-released job(s), ${pro.stats.disputeCount} dispute(s)`,
       evidence: { completedJobs: pro.stats.completedJobs, disputeRate: pro.stats.completedJobs ? pro.stats.disputeCount / pro.stats.completedJobs : 0 },
@@ -891,7 +892,7 @@ class BookingService {
       platformFeeCents: split.platformFeeCents,
       grossCents: split.grossCents,
       currency: 'ZAR',
-      rail: { id: rail.id, label: rail.label, settlement: rail.settlementHours, feeCents: rail.feeCents },
+      rail: { id: rail.id, label: rail.label, settlement: rail.settlementHours, feeCents: rail.feeCents, instant: Boolean(rail.instant) },
       bankCode: pro.payoutBank?.bankCode || null,
       bankName: banks[pro.payoutBank?.bankCode]?.name || null,
       accountNumberMasked: pro.payoutBank?.accountNumberMasked || '••••',
@@ -1545,6 +1546,89 @@ class BookingService {
   }
 
   /**
+   * Two-way trust: the pro rates the homeowner too. Same REV-001 gate — only
+   * an escrow-released booking counts — and the review lives on the customer's
+   * public member profile, first name + last initial, contact details never.
+   */
+  writeCustomerReview({ bookingId, proId, rating, comment, tags = [] }) {
+    const booking = this.#booking(bookingId);
+    if (booking.proId !== proId) {
+      const error = new Error('only the pro who did this job can review the homeowner');
+      error.code = 'FORBIDDEN';
+      throw error;
+    }
+    if (booking.customerReviewId) throw new Error('you have already reviewed this homeowner for this job');
+
+    this.kernel.policy.enforce('review', {
+      subjectId: bookingId,
+      booking: { ...booking, escrowStatus: booking.escrowStatus },
+    });
+
+    if (!Number.isFinite(rating) || rating < 1 || rating > 5) throw new Error('rating must be between 1 and 5');
+
+    const customer = this.store.get('customers', booking.customerId);
+    const [firstNamePart, ...rest] = String(booking.customerName || '').trim().split(/\s+/);
+    const reviewId = idFor('creview');
+    const review = {
+      reviewId,
+      bookingId,
+      bookingReference: booking.reference,
+      jobId: booking.jobId,
+      customerId: booking.customerId,
+      customerDisplayName: `${firstNamePart} ${rest.length ? `${rest[rest.length - 1][0]}.` : ''}`.trim(),
+      proId,
+      proName: booking.proName,
+      categoryLabel: booking.categoryLabel,
+      suburb: booking.address.suburb,
+      metro: booking.address.metro,
+      rating: clamp(Math.round(rating * 2) / 2, 1, 5),
+      comment: String(comment || '').trim().slice(0, 2000),
+      tags: tags.slice(0, 8),
+      jobValueCents: booking.price.totalCents,
+      verified: true,
+      verificationBasis: 'Escrow-released booking — the pro was paid for this work through ProVeri',
+      evidenceSeal: this.kernel.ledger.exportProof(bookingId).digest.slice(0, 16),
+      visible: true,
+      createdAt: nowIso(),
+    };
+
+    this.store.put('customerReviews', reviewId, review);
+    booking.customerReviewId = reviewId;
+    booking.updatedAt = nowIso();
+    if (customer) customer.updatedAt = nowIso();
+
+    this.kernel.ledger.append({
+      action: 'CUSTOMER_REVIEW_PUBLISHED',
+      subject: booking.customerId,
+      visibility: 'PUBLIC',
+      payload: {
+        summary: `${review.rating}★ review of ${review.customerDisplayName} by ${booking.proName} on ${booking.reference}`,
+        reviewId,
+        rating: review.rating,
+        verifiedBasis: review.verificationBasis,
+      },
+    });
+
+    this.#notify(booking.customerId, 'NEW_CUSTOMER_REVIEW', {
+      title: `${booking.proName} rated you ${review.rating}★`,
+      body: review.comment
+        ? `“${review.comment.slice(0, 120)}${review.comment.length > 120 ? '…' : ''}” This review is on your public member profile.`
+        : 'This review is on your public member profile, so pros know what to expect.',
+      reviewId,
+      bookingId,
+    });
+    return deepClone(review);
+  }
+
+  /** Every public review of one homeowner, newest first. */
+  listCustomerReviews(customerId, { limit = 50 } = {}) {
+    return this.store.find('customerReviews', (r) => r.customerId === customerId && r.visible !== false)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, limit)
+      .map((r) => deepClone(r));
+  }
+
+  /**
    * Fake-review detection. Reviews are already gated on escrow release, but a
    * customer and pro can collude, so we look for the patterns anyway.
    */
@@ -1658,7 +1742,12 @@ class BookingService {
   }
 
   getBooking(bookingId, { viewerId, includeEscrow = true } = {}) {
-    const booking = this.#booking(bookingId);
+    const stored = this.#booking(bookingId);
+    // The arrival handshake only works if the customer cannot read the code
+    // they are meant to check, so their view of the booking never carries it.
+    const booking = viewerId && viewerId === stored.customerId
+      ? { ...stored, arrival: { ...stored.arrival, gateCode: null, gateCodeHidden: true, attempts: (stored.arrival.attempts || []).map((a) => ({ at: a.at, matched: a.matched })) } }
+      : stored;
     const pro = this.store.get('pros', booking.proId);
     const reviews = this.store.find('reviews', (r) => r.bookingId === bookingId);
     const escrow = includeEscrow ? this.kernel.escrow.get(booking.escrowId) : null;
@@ -1709,10 +1798,14 @@ class BookingService {
     return rows.slice(0, limit).map((b) => ({
       bookingId: b.bookingId,
       reference: b.reference,
+      jobId: b.jobId,
       title: b.title,
+      categoryId: b.categoryId,
       categoryLabel: b.categoryLabel,
       status: b.status,
       escrowStatus: b.escrowStatus,
+      proId: b.proId,
+      customerId: b.customerId,
       proName: b.proName,
       proBadge: b.proBadge,
       customerName: b.customerName,
@@ -1722,7 +1815,7 @@ class BookingService {
       scheduledAt: b.schedule.scheduledAt,
       autoReleaseAt: b.autoReleaseAt,
       warrantyEndsAt: b.warranty.endsAt,
-      gateCode: b.arrival.gateCode,
+      gateCode: customerId && !proId ? null : b.arrival.gateCode,
       evidenceCount: b.evidence.length,
       reviewId: b.reviewId,
       disputeId: b.disputeId,
@@ -1782,7 +1875,7 @@ class BookingService {
       proId,
       taxYear: `${year}/${String(year + 1).slice(2)}`,
       period: { start, end },
-      source: 'Lula ProVeri escrow ledger — every figure is a hash-sealed release event',
+      source: 'ProVeri escrow ledger — every figure is a hash-sealed release event',
       grossJobValueCents: gross,
       platformFeesCents: fees,
       netReceivedCents: net,
@@ -1794,7 +1887,7 @@ class BookingService {
         return acc;
       }, {}),
       sarsNotes: {
-        status: 'Independent contractor — not an employee of Lula ProVeri.',
+        status: 'Independent contractor — not an employee of ProVeri.',
         obligations: [
           'Income must be declared on ITR12 (individual) or ITR14 (company).',
           'Provisional tax IRP6 is due twice a year.',
@@ -1887,7 +1980,35 @@ class BookingService {
       disputesEscalated.push(dispute.disputeId);
     }
 
-    return { autoReleases, warrantyClosed, disputesEscalated, jobsExpired: this.jobs.expireStaleJobs() };
+    // Settle instructed payouts — the last step of the money journey:
+    // escrow funded → released → payout instructed → cash in the pro's bank.
+    const payoutsSettled = [];
+    for (const payout of this.store.all('payouts')) {
+      if (payout.status !== 'INSTRUCTED') continue;
+      const instant = Boolean(payout.rail && payout.rail.instant);
+      const ageHours = (Date.now() - new Date(payout.instructedAt).getTime()) / 3_600_000;
+      if (!instant && ageHours < 24) continue; // standard EFT: next business day
+      payout.status = 'SETTLED';
+      payout.settledAt = nowIso();
+      const wallet = this.#wallet(payout.proId);
+      wallet.transactions.push({ at: nowIso(), kind: 'SETTLEMENT', amountCents: payout.amountCents, reference: payout.releaseReference, bookingId: payout.bookingId });
+      this.kernel.ledger.append({
+        action: 'PAYOUT_SETTLED',
+        subject: payout.payoutId,
+        visibility: 'PRIVATE',
+        payload: { summary: `R${(payout.amountCents / 100).toFixed(2)} settled to ${payout.bankName || 'the pro’s account'} by ${payout.rail ? payout.rail.label : 'payout rail'}`, proId: payout.proId, bookingId: payout.bookingId },
+      });
+      this.#notify(payout.proId, 'PAYOUT_SETTLED', {
+        title: `R${(payout.amountCents / 100).toFixed(2)} has landed`,
+        body: `Your payout cleared into your ${payout.bankName || 'bank'} account (${payout.accountNumberMasked}). It is on your wallet history and tax summary.`,
+        payoutId: payout.payoutId,
+        bookingId: payout.bookingId,
+        amountCents: payout.amountCents,
+      });
+      payoutsSettled.push(payout.payoutId);
+    }
+
+    return { autoReleases, warrantyClosed, disputesEscalated, payoutsSettled, jobsExpired: this.jobs.expireStaleJobs() };
   }
 
   stats() {

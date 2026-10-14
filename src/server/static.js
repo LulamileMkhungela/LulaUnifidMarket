@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Static file server for the PWA.
+ * ProVeri — Static file server for the PWA.
  *
  * Serves `pwa/` from a single origin with the API, so the front end can use
  * relative URLs and be proxied anywhere (including the Arena live preview host)

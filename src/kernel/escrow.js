@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Escrow orchestrator.
+ * ProVeri — Escrow orchestrator.
  *
  * Lula never holds client money. Every escrow instance is a *shadow* of a real
  * account at a regulated partner (TradeSafe — PASA-authorised third-party

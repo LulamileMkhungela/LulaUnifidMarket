@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Business Site Studio & sales desk demo.
+ * ProVeri — Business Site Studio & sales desk demo.
  *
  * Prints the journey the MyServicePro_Demos playbook describes in markdown,
  * running for real: research a business → diagnose it free → build a preview →

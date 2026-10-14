@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Verification orchestrator.
+ * ProVeri — Verification orchestrator.
  *
  * One engine, every vertical. A *profile* declares which checks apply to a
  * subject (a pro, a vehicle listing, a website order). Checks are resolved by
@@ -151,7 +151,7 @@ const PROFILES = Object.freeze({
         required: false,
         blocking: false,
         ttlDays: null,
-        source: 'Lula ProVeri completed-job ledger',
+        source: 'ProVeri completed-job ledger',
         evidence: ['completedJobs', 'disputeRate'],
       },
     ],

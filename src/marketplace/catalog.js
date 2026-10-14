@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Catalogue: categories, geography and price bands.
+ * ProVeri — Catalogue: categories, geography and price bands.
  */
 
 const path = require('node:path');
@@ -84,7 +84,14 @@ class Catalog {
       const hits = [];
       if (needle.includes(category.label.toLowerCase())) { score += 50; hits.push(category.label); }
       for (const keyword of category.keywords) {
-        if (needle.includes(keyword)) { score += keyword.length >= 5 ? 14 : 8; hits.push(keyword); }
+        if (needle.includes(keyword)) { score += keyword.length >= 5 ? 14 : 8; hits.push(keyword); continue; }
+        // People write "paint my lounge" and "clean the flat", not "painting" or
+        // "cleaning": a word-start match on the stem counts, for less than an exact hit.
+        const stem = keyword.replace(/(ing|ers|er)$/, '');
+        if (stem !== keyword && stem.length >= 4 && new RegExp(`\\b${stem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).test(needle)) {
+          score += 6;
+          hits.push(stem);
+        }
       }
       for (const job of category.commonJobs) {
         const words = job.toLowerCase().split(/\s+/);

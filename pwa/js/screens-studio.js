@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Lula ProVeri PWA — Business Site Studio + sales desk
+   ProVeri PWA — Business Site Studio + sales desk
    /business-studio   template gallery, plans, live sites, scaffold wizard
    /site/:siteId      editor: content, theme, assets, permissions, bookings,
                       subscription, update credits, publish gate, export

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — People: customers, professionals and the KYC pipeline.
+ * ProVeri — People: customers, professionals and the KYC pipeline.
  *
  * The onboarding pipeline is the product. ServicePro requires "ID verification
  * (KYC)"; Snupit and Kandua require basic identity and business checks and are
@@ -283,7 +283,7 @@ class PeopleService {
           declarationHash: sha256({ proId, ...criminalDeclaration }),
           declaredAt: nowIso(),
         },
-        conflict: { declared: true, note: 'No undisclosed relationship with any Lula ProVeri staff member.' },
+        conflict: { declared: true, note: 'No undisclosed relationship with any ProVeri staff member.' },
         popiaConsent: { granted: true, grantedAt: nowIso(), purpose: 'Identity, bank and trade verification; escrow payout; dispute resolution' },
         independentContractor: { acknowledged: true, note: 'Independent contractor — responsible for own tax, tools and liability insurance.' },
       },
@@ -485,7 +485,7 @@ class PeopleService {
     record('platform_history', {
       name: 'platform_history',
       status: pro.stats.completedJobs > 0 ? CHECK_STATUS.PASS : CHECK_STATUS.UNAVAILABLE,
-      source: 'Lula ProVeri completed-job ledger',
+      source: 'ProVeri completed-job ledger',
       finding: pro.stats.completedJobs > 0
         ? `${pro.stats.completedJobs} escrow-released job(s), ${pro.stats.disputeCount} dispute(s)`
         : 'New pro — no delivery history yet. The badge reads "Newly verified" until 3 escrow-released jobs are complete.',
@@ -746,6 +746,9 @@ class PeopleService {
         }))
         : pro.portfolio.map((item) => ({ title: item.title, caption: item.caption, capturedAt: item.capturedAt, seal: item.hash.slice(0, 10) })),
       recentReviews: reviews.slice(-5).reverse().map((r) => ({
+        reviewId: r.reviewId,
+        customerId: r.customerId,
+        customerName: r.customerFirstName || r.customerName || null,
         rating: r.rating,
         comment: r.comment,
         categoryLabel: r.categoryLabel,
@@ -865,6 +868,58 @@ class PeopleService {
 
   getCustomer(customerId) {
     return deepClone(this.#customer(customerId));
+  }
+
+  /**
+   * The homeowner's public member profile: the two-way mirror of the pro
+   * profile. Pros who were paid through escrow can review the homeowner, and
+   * those reviews live here for any pro to read before quoting. Privacy by
+   * design: first name + last initial, suburb, no contact details, ever.
+   */
+  publicCustomerProfile(customerId) {
+    const customer = this.#customer(customerId);
+    const [firstName, ...rest] = String(customer.fullName || '').trim().split(/\s+/);
+    const displayName = `${firstName} ${rest.length ? `${rest[rest.length - 1][0]}.` : ''}`.trim();
+
+    const reviews = this.store.find('customerReviews', (r) => r.customerId === customerId && r.visible !== false)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const ratings = reviews.map((r) => r.rating).filter(Boolean);
+    const jobs = this.store.find('jobs', (j) => j.customerId === customerId);
+    const bookings = this.store.find('bookings', (b) => b.customerId === customerId);
+    const completed = bookings.filter((b) => ['IN_WARRANTY', 'CLOSED'].includes(b.status));
+
+    return {
+      customerId,
+      displayName,
+      firstName,
+      suburb: customer.suburb || null,
+      metro: customer.metro || null,
+      memberSince: customer.createdAt,
+      ratings: {
+        average: ratings.length ? Number((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(2)) : null,
+        count: ratings.length,
+        verifiedOnly: true,
+      },
+      stats: {
+        jobsPosted: jobs.length,
+        jobsCompleted: completed.length,
+        repeatHires: completed.length > 1 ? completed.length - 1 : 0,
+      },
+      reviews: reviews.map((r) => ({
+        reviewId: r.reviewId,
+        rating: r.rating,
+        comment: r.comment,
+        proId: r.proId,
+        proName: r.proName,
+        categoryLabel: r.categoryLabel,
+        suburb: r.suburb,
+        verified: r.verified,
+        verificationBasis: r.verificationBasis,
+        createdAt: r.createdAt,
+      })),
+      privacyNote: 'Public profile shows a first name and last initial only. Contact details are shared only with the pro you hire, after payment is secured in escrow.',
+      proofDigest: this.kernel.ledger.exportProof(customerId).digest.slice(0, 16),
+    };
   }
 }
 

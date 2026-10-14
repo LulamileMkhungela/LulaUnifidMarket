@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Lula ProVeri PWA — trust, transparency, integrations and the admin console
+   ProVeri PWA — trust, transparency, integrations and the admin console
    ========================================================================== */
 
 window.ProVeri = window.ProVeri || {};

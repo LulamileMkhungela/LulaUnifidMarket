@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — REST API surface.
+ * ProVeri — REST API surface.
  *
  * Every route is registered with metadata (tag + summary) so `GET /api/openapi.json`
  * is generated from what actually exists rather than from a hand-maintained spec
@@ -9,7 +9,7 @@
  */
 
 const { Router, badRequest, notFound, HttpError } = require('../router');
-const { nowIso, deepClone } = require('../../kernel/util');
+const { nowIso, deepClone, sha256 } = require('../../kernel/util');
 const integrations = require('../../integrations');
 const { synthesiseSaId } = require('../../integrations/saIdentity');
 
@@ -40,7 +40,7 @@ function buildApiRoutes({ marketplace }) {
   router.get('/api/offline-bundle', () => mp.offlineBundle(), { tags: ['platform'], summary: 'Everything the PWA needs to render and work offline on first paint' });
 
   router.get('/api/openapi.json', () => router.openapi({
-    title: 'Lula ProVeri API',
+    title: 'ProVeri API',
     version: '1.0.0',
     description: 'South Africa’s verified on-demand services marketplace. Jobs, bidding, escrow, proof-of-work evidence, disputes, verified reviews, the vehicles vertical and Web Studio — all on one hash-chained trust ledger.',
   }), { tags: ['platform'], summary: 'OpenAPI 3.1 document generated from the registered routes' });
@@ -106,12 +106,28 @@ function buildApiRoutes({ marketplace }) {
 
   router.get('/api/customers/:customerId', ({ params }) => mp.people.getCustomer(params.customerId), { tags: ['people'], summary: 'One customer' });
 
+  router.get('/api/customers/:customerId/public-profile', ({ params }) => mp.people.publicCustomerProfile(params.customerId), { tags: ['people', 'reviews'], summary: 'Public member profile: first name + last initial, verified reviews from pros, no contact details' });
+
   router.post('/api/pros', wrap(async ({ body }) => mp.people.registerPro(body)), { tags: ['people'], summary: 'Register a service professional (draft — cannot bid until verified)' });
 
   router.post('/api/pros/:proId/verify', wrap(async ({ params, body }) => {
-    const result = await mp.people.runVerificationPipeline(params.proId, { credentials: integrations.credentials() });
-    delete result.pro.__idNumber;
-    return result;
+    // The raw ID is never stored — only its seal — so an app sign-up re-supplies
+    // it here. It must match the seal taken at registration, is used for this
+    // one validation run, and is gone again before the response is written.
+    const stored = mp.store.get('pros', params.proId);
+    if (!stored) throw notFound(`pro ${params.proId} not found`);
+    const idNumber = body && body.idNumber ? String(body.idNumber).replace(/\s+/g, '') : null;
+    if (idNumber && sha256(idNumber) !== stored.idNumberSeal) {
+      throw badRequest('That ID number does not match the one you registered with');
+    }
+    if (idNumber) stored.__idNumber = idNumber;
+    try {
+      const result = await mp.people.runVerificationPipeline(params.proId, { credentials: integrations.credentials() });
+      delete result.pro.__idNumber;
+      return result;
+    } finally {
+      delete stored.__idNumber;
+    }
   }), { tags: ['people', 'trust'], summary: 'Run the full multi-source KYC / trade verification pipeline' });
 
   router.get('/api/pros', ({ query }) => mp.people.listPros({
@@ -175,7 +191,7 @@ function buildApiRoutes({ marketplace }) {
 
   /* ================= portfolio — the past work homeowners browse ================= */
 
-  router.get('/api/portfolio', ({ query }) => mp.portfolio.list({
+  router.get('/api/portfolio', ({ query }) => mp.portfolio.listWithCloud({
     categoryId: query.categoryId || null,
     suburbId: query.suburbId || null,
     metro: query.metro || null,
@@ -204,7 +220,7 @@ function buildApiRoutes({ marketplace }) {
     return mp.portfolio.addItem(body);
   }), { tags: ['portfolio'], summary: 'Upload past work (photos are sealed; a tier is computed, never claimed)' });
 
-  router.get('/api/portfolio/:itemId', ({ params }) => mp.portfolio.detail(params.itemId), { tags: ['portfolio'], summary: 'One piece of work: photos, seals, tier statement, the pro, enquiry count' });
+  router.get('/api/portfolio/:itemId', wrap(async ({ params }) => mp.portfolio.detailWithCloud(params.itemId)), { tags: ['portfolio'], summary: 'One piece of work: photos, seals, tier statement, the pro, enquiry count (cloud copy after a restart)' });
 
   router.patch('/api/portfolio/:itemId', wrap(async ({ params, body }) => {
     const { actorId, ...patch } = body;
@@ -238,7 +254,39 @@ function buildApiRoutes({ marketplace }) {
   router.get('/api/portfolio/:itemId/messages', ({ params, query }) => mp.portfolio.listEnquiries({
     itemId: params.itemId,
     userId: require_(query.userId, 'userId'),
+    customerId: query.customerId || null,
   }), { tags: ['portfolio'], summary: 'The enquiry thread on a work item (participants only)' });
+
+  /* ================= sign-in & inbox ================= */
+
+  router.get('/api/cloud-config', ({ }) => mp.cloud.clientConfig(), { tags: ['auth'], summary: 'Public client config: Firebase web keys + Supabase URL/anon key/bucket, and whether the clouds are reachable' });
+
+  router.post('/api/auth/register', wrap(async ({ body }) => mp.auth.registerWithEmail({
+    email: require_(body.email, 'email'),
+    password: require_(body.password, 'password'),
+    fullName: require_(body.fullName, 'fullName'),
+    suburbId: body.suburbId || null,
+    ...(body.mobile ? { mobile: body.mobile } : {}),
+  })), { tags: ['auth'], summary: 'Create an account with email + password (Firebase Auth; local hash only if Firebase is unreachable)' });
+
+  router.post('/api/auth/login', wrap(async ({ body }) => mp.auth.signInWithEmail({
+    email: require_(body.email, 'email'),
+    password: require_(body.password, 'password'),
+  })), { tags: ['auth'], summary: 'Sign in with email + password' });
+
+  router.post('/api/auth/session', wrap(async ({ body }) => mp.auth.signInWithFirebaseToken({
+    idToken: require_(body.idToken, 'idToken'),
+  })), { tags: ['auth'], summary: 'Exchange a Firebase ID token (Google popup or web session) for a ProVeri session' });
+
+  router.get('/api/inbox/:userId', ({ params }) => mp.inbox(params.userId), { tags: ['inbox'], summary: 'Every conversation a person is in — work enquiries and booking chats — with unread counts' });
+
+  router.get('/api/inbox/:userId/:conversationId', ({ params, query }) => mp.conversation(params.userId, params.conversationId, { markRead: query.markRead !== 'false' }), { tags: ['inbox'], summary: 'One conversation (participants only); opening it marks it read' });
+
+  router.post('/api/inbox/:userId/:conversationId', wrap(async ({ params, body }) => mp.sendToConversation(
+    params.userId,
+    params.conversationId,
+    require_(body.message || body.body, 'message'),
+  )), { tags: ['inbox'], summary: 'Reply in a conversation — routed to the enquiry thread or the booking chat (OFP-001 still applies)' });
 
   /* ================= jobs & bidding ================= */
 
@@ -271,7 +319,7 @@ function buildApiRoutes({ marketplace }) {
     return autoDetected ? { ...posted, categoryAutoDetected: autoDetected } : posted;
   }), { tags: ['jobs'], summary: 'Post a job — the trade is auto-detected from the description if it is not supplied; matching, weather, load-shedding and holiday advice run immediately' });
 
-  router.get('/api/jobs', ({ query }) => mp.jobs.listJobs({
+  router.get('/api/jobs', ({ query }) => mp.jobs.listJobsWithCloud({
     customerId: query.customerId,
     proId: query.proId,
     status: query.status,
@@ -298,6 +346,8 @@ function buildApiRoutes({ marketplace }) {
 
   router.post('/api/bids/:bidId/withdraw', wrap(async ({ params, body }) => mp.jobs.withdrawBid(params.bidId, body)), { tags: ['bidding'], summary: 'Withdraw a bid' });
 
+  router.post('/api/jobs/:jobId/cancel', wrap(async ({ params, body }) => mp.jobs.cancelJob({ jobId: params.jobId, customerId: require_(body.customerId, 'customerId'), reason: body.reason })), { tags: ['jobs'], summary: 'Homeowner cancels their own open job in one tap — quotes close, pros are told, no fee' });
+
   router.get('/api/bids', ({ query }) => mp.jobs.listBids({ jobId: query.jobId, proId: query.proId, status: query.status }), { tags: ['bidding'], summary: 'List bids' });
 
   /* ================= bookings, escrow & evidence ================= */
@@ -306,7 +356,9 @@ function buildApiRoutes({ marketplace }) {
     require_(body.jobId, 'jobId');
     require_(body.bidId, 'bidId');
     require_(body.customerId, 'customerId');
-    return mp.bookings.acceptBid(body);
+    const booking = mp.bookings.acceptBid(body);
+    // The customer's copy never carries the arrival code they are meant to check.
+    return mp.bookings.getBooking(booking.bookingId, { viewerId: body.customerId });
   }), { tags: ['bookings'], summary: 'Accept a bid — creates the booking, opens escrow and issues the arrival gate code' });
 
   router.get('/api/bookings', ({ query }) => mp.bookings.listBookings({
@@ -320,7 +372,8 @@ function buildApiRoutes({ marketplace }) {
 
   router.post('/api/bookings/:bookingId/fund', wrap(async ({ params, body }) => {
     require_(body.customerId, 'customerId');
-    return mp.bookings.fundBooking({ bookingId: params.bookingId, ...body });
+    await mp.bookings.fundBooking({ bookingId: params.bookingId, ...body });
+    return mp.bookings.getBooking(params.bookingId, { viewerId: body.customerId });
   }), { tags: ['bookings', 'money'], summary: 'Fund the escrow (domestic or Remit-a-Job from abroad)' });
 
   router.post('/api/bookings/:bookingId/eta', wrap(async ({ params, body }) => mp.bookings.shareEta({ bookingId: params.bookingId, ...body })), { tags: ['bookings', 'safety'], summary: 'Pro shares a live ETA' });
@@ -407,6 +460,14 @@ function buildApiRoutes({ marketplace }) {
     require_(body.rating, 'rating');
     return mp.bookings.writeReview({ bookingId: params.bookingId, ...body });
   }), { tags: ['reviews'], summary: 'Write a review — REV-001 allows only escrow-released bookings, so ratings cannot be bought' });
+
+  router.post('/api/bookings/:bookingId/customer-reviews', wrap(async ({ params, body }) => {
+    require_(body.proId, 'proId');
+    require_(body.rating, 'rating');
+    return mp.bookings.writeCustomerReview({ bookingId: params.bookingId, ...body });
+  }), { tags: ['reviews'], summary: 'Pro reviews the homeowner — two-way trust, same escrow-released gate, published to the member profile' });
+
+  router.get('/api/customers/:customerId/customer-reviews', ({ params }) => mp.bookings.listCustomerReviews(params.customerId), { tags: ['reviews'], summary: 'Public reviews of one homeowner, written by pros who were paid through escrow' });
 
   router.get('/api/reviews', ({ query }) => mp.bookings.listReviews({
     proId: query.proId,

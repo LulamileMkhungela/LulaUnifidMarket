@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Bank & payout-rail verification.
+ * ProVeri — Bank & payout-rail verification.
  *
  * Universal branch codes are public knowledge published by the banks
  * themselves and by PASA for the National Payments System, so validating the

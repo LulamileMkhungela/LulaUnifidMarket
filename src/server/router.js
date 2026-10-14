@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Zero-dependency HTTP router.
+ * ProVeri — Zero-dependency HTTP router.
  *
  * Path templates (`/api/jobs/:jobId/bids`), method matching, JSON body parsing
  * with a size cap, per-route error handling that never leaks a stack trace to a
@@ -11,7 +11,8 @@
 
 const { nextId, nowIso } = require('../kernel/util');
 
-const MAX_BODY_BYTES = 2 * 1024 * 1024;
+// Room for a handful of phone photos (the PWA shrinks each to ~450 KB before upload).
+const MAX_BODY_BYTES = 8 * 1024 * 1024;
 
 class HttpError extends Error {
   constructor(status, message, details = null) {
@@ -142,7 +143,7 @@ class Router {
         title,
         version,
         description,
-        contact: { name: 'Lula ProVeri', url: 'https://lulaproveri.co.za' },
+        contact: { name: 'ProVeri', url: 'https://lulaproveri.co.za' },
         license: { name: 'Proprietary' },
       },
       servers: [{ url: '/', description: 'This deployment' }],

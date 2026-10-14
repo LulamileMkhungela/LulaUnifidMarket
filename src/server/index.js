@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Server bootstrap.
+ * ProVeri — Server bootstrap.
  *
  * Zero runtime dependencies: node:http serves the REST API and the PWA from a
  * single origin, so the front end can use relative URLs and be proxied anywhere
@@ -230,7 +230,7 @@ async function boot() {
   {
     const address = server.address();
     log('');
-    log('  Lula ProVeri — verified services marketplace');
+    log('  ProVeri — verified services marketplace');
     log(`  API + PWA   http://${HOST}:${address.port}`);
     log(`  Preview     http://localhost:${address.port}`);
     log(`  OpenAPI     http://localhost:${address.port}/api/openapi.json`);

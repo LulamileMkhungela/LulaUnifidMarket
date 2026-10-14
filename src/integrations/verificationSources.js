@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Verification-source adapters.
+ * ProVeri — Verification-source adapters.
  *
  * These are the registries and bureaus that make a "verified pro" claim mean
  * something in South Africa. Several have no free public API, so each adapter

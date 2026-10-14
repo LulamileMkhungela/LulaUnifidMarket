@@ -1,57 +1,112 @@
 {
   "id": "co.za.lulaproveri.pwa",
-  "name": "Lula ProVeri — Verified Pros & Escrow-Protected Jobs",
+  "name": "ProVeri — hire a pro with proof",
   "short_name": "ProVeri",
-  "description": "South Africa's verified on-demand services marketplace. Post a job, get bids from KYC-verified pros, pay into escrow, release on proof of work. Plus verified vehicles and a free pro microsite.",
+  "description": "Hire verified local pros in South Africa. See real work done near you, compare quotes, and pay safely — money is only released when you approve the job.",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui", "browser"],
+  "display_override": [
+    "standalone",
+    "minimal-ui",
+    "browser"
+  ],
   "orientation": "portrait-primary",
-  "background_color": "#063527",
-  "theme_color": "#ffffff",
+  "background_color": "#062b1f",
+  "theme_color": "#f4f3ee",
   "lang": "en-ZA",
   "dir": "ltr",
-  "categories": ["business", "lifestyle", "productivity", "utilities"],
+  "categories": [
+    "business",
+    "lifestyle",
+    "productivity",
+    "utilities"
+  ],
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
     {
       "name": "Post a job",
-      "short_name": "Post job",
-      "description": "Describe the work and get bids from verified pros",
+      "short_name": "Post a job",
+      "description": "Describe the work and get quotes from verified pros",
       "url": "/post-job?source=pwa_shortcut",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
-      "name": "Find a verified pro",
-      "short_name": "Find a pro",
-      "description": "Search KYC-verified professionals near you",
-      "url": "/find-a-pro?source=pwa_shortcut",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+      "name": "Your jobs",
+      "short_name": "Jobs",
+      "description": "Quotes, payments and progress",
+      "url": "/orders?source=pwa_shortcut",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
-      "name": "My bookings",
-      "short_name": "Bookings",
-      "description": "Track escrow, proof of work and payouts",
-      "url": "/bookings?source=pwa_shortcut",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+      "name": "Inbox",
+      "short_name": "Inbox",
+      "description": "Messages with pros and homeowners",
+      "url": "/inbox?source=pwa_shortcut",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ],
   "share_target": {
     "action": "/post-job",
     "method": "GET",
     "enctype": "application/x-www-form-urlencoded",
-    "params": { "title": "title", "text": "description" }
+    "params": {
+      "title": "title",
+      "text": "description"
+    }
   },
   "protocol_handlers": [
-    { "protocol": "web+lulaproveri", "url": "/deep-link?url=%s" }
+    {
+      "protocol": "web+lulaproveri",
+      "url": "/deep-link?url=%s"
+    }
   ],
-  "launch_handler": { "client_mode": ["navigate-existing", "auto"] },
-  "edge_side_panel": { "preferred_width": 420 },
+  "launch_handler": {
+    "client_mode": [
+      "navigate-existing",
+      "auto"
+    ]
+  },
+  "edge_side_panel": {
+    "preferred_width": 420
+  },
   "related_applications": [],
   "prefer_related_applications": false
 }

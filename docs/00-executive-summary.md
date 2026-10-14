@@ -1,7 +1,7 @@
-# Lula ProVeri — executive summary
+# ProVeri — executive summary
 
 **What this repository is.** A working, installable reference implementation of
-**Lula ProVeri**, a South African on-demand services marketplace built to the
+**ProVeri**, a South African on-demand services marketplace built to the
 same product shape as [myservicepro.co.za](https://www.myservicepro.co.za) — post
 a job, KYC-verified pros bid, money sits in escrow until the customer confirms —
 and then extended well past it: a **portfolio storefront** where pros publish the

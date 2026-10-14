@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Lula ProVeri PWA — vertical screens
+   ProVeri PWA — vertical screens
    vehicles (list + detail + Service Passport) · property waitlist · Web Studio
    ========================================================================== */
 
@@ -74,7 +74,7 @@ window.ProVeri.screens = window.ProVeri.screens || {};
         h('p.sub', `${listing.reference} · ${listing.asset.odometerKm?.toLocaleString('en-ZA')} km · ${listing.location.suburb || listing.location.metro || ''} · ${listing.sellerType === 'TRADE_OR_DEALER' ? 'trade seller' : 'private seller'}`),
         h('div.row.wrap', [
           h('span.money.big', money(listing.priceCents)),
-          h('button.btn.on-dark.ghost', { onclick: () => share({ title: listing.title, text: `${listing.title} on Lula ProVeri`, url: location.href }) }, 'Share'),
+          h('button.btn.on-dark.ghost', { onclick: () => share({ title: listing.title, text: `${listing.title} on ProVeri`, url: location.href }) }, 'Share'),
         ]),
       ]));
 
@@ -233,159 +233,10 @@ window.ProVeri.screens = window.ProVeri.screens || {};
 
   /* ================= WEB STUDIO ================= */
 
-  screens['/web-studio'] = async function webStudio() {
-    const root = h('div.fade-in.stack');
-    const data = await api.get('/api/webstudio').catch(() => null);
-    if (!data) return h('div.banner.danger', 'Web Studio data unavailable');
-
-    root.append(h('h1', 'Web Studio'));
-    root.append(h('p.muted.small', data.promise));
-
-    root.append(h('div.card', { style: { borderLeft: '3px solid var(--gold, #F2A65A)' } }, [
-      h('div.kicker.gold', '🏪 Looking for the monthly website product?'),
-      h('h3', 'Business Site Studio'),
-      h('p.small.muted', 'Ten industry templates, R0 to build, hosting and metered updates included — and every booking form creates a real reservation or an escrow-protected job. The packages below are the custom, once-off builds.'),
-      h('div.row.wrap', { style: { gap: '8px', marginTop: '10px' } }, [
-        h('button.btn.sm.gold', { onclick: () => navigate('/business-studio') }, 'Open the studio'),
-        h('button.btn.sm.ghost', { onclick: () => navigate('/sites') }, 'See live sites'),
-        h('button.btn.sm.ghost', { onclick: () => navigate('/sales-desk') }, 'Sales desk'),
-      ]),
-    ]));
-
-    root.append(h('div.card.gold', [
-      h('div.kicker.gold', '🎁 Free with verification'),
-      h('h3', data.freeMicrosite.name),
-      h('p.small', data.freeMicrosite.blurb),
-      h('ul.small', data.freeMicrosite.includes.map((i) => h('li', i))),
-      h('button.btn.sm.gold', { style: { marginTop: '8px' }, onclick: () => navigate('/become-a-pro') }, 'Get verified — the site comes with it'),
-    ]));
-
-    root.append(h('section.section', [
-      h('h2', 'Packages'),
-      h('div.list', { style: { marginTop: '10px' } }, data.packages.map((pkg) => h('div.card', [
-        h('div.row.between', [
-          h('div', [h('h3', pkg.name), h('div.tiny.muted', pkg.audience)]),
-          h('div', { style: { textAlign: 'right' } }, [h('div.money.big', money(pkg.priceCents)), pkg.recurringCents ? h('div.tiny.muted', `+ ${money(pkg.recurringCents)}/mo`) : h('div.tiny.muted', 'once-off')]),
-        ]),
-        h('p.small.muted', pkg.blurb),
-        h('ul.small', pkg.includes.map((i) => h('li', i))),
-        h('div.banner.ok', { style: { marginTop: '8px' } }, [h('span.ico', '🔀'), h('div.tiny', `ProVeri upgrade: ${pkg.proveriUpgrade}`)]),
-        h('div.row', { style: { marginTop: '10px' } }, [
-          h('button.btn.sm', { onclick: () => orderSheet(pkg) }, 'Preview before I pay'),
-          pkg.popular ? badge('most popular', 'elite') : null,
-        ]),
-      ]))),
-    ]));
-
-    root.append(h('section.section', [
-      h('h2', 'Growth services'),
-      h('div.list', { style: { marginTop: '10px' } }, data.growthServices.map((g) => h('details.fold', [
-        h('summary', `${g.icon} ${g.name} — ${money(g.priceCents)}`),
-        h('div.fold-body', [
-          h('ul.small', g.how.map((i) => h('li', i))),
-          h('div.banner.warn', [h('span.ico', '🤝'), h('div.tiny', `Honest boundary: ${g.honestBoundary}`)]),
-          h('div.banner.ok', [h('span.ico', '🔀'), h('div.tiny', g.proveriUpgrade)]),
-          h('button.btn.sm', { style: { marginTop: '8px' }, onclick: () => orderSheet(null, g) }, 'Enquire'),
-        ]),
-      ]))),
-    ]));
-
-    root.append(h('section.section', [
-      h('h2', 'Free website rescue diagnostic'),
-      h('p.small.muted', 'Paste any South African business URL. We score it against nine checks that actually cost you customers, and the report is yours whether or not you buy anything.'),
-      h('form.row', { onsubmit: runDiagnostic }, [
-        h('input.grow', { type: 'text', name: 'url', placeholder: 'https://their-old-site.co.za', required: true }),
-        h('button.btn.sm', { type: 'submit' }, 'Diagnose'),
-      ]),
-      h('div.stack', { id: 'diag-result', style: { marginTop: '12px' } }),
-    ]));
-
-    if (data.stats?.micrositesLive) {
-      root.append(h('details.fold', [
-        h('summary', `🌐 ${data.stats.micrositesLive} free pro microsites live`),
-        h('div.fold-body', h('div.list', [
-          h('p.tiny.muted', 'Each is server-rendered HTML generated from the verified profile and audit ledger — no JavaScript required, so it loads on any phone on any network.'),
-          h('a.small', { href: '/api/webstudio/microsites' }, 'List of live microsites (JSON)'),
-        ])),
-      ]));
-    }
-
-    return root;
-
-    async function runDiagnostic(event) {
-      event.preventDefault();
-      const values = formValues(event.target);
-      const button = event.target.querySelector('button[type=submit]');
-      const out = root.querySelector('#diag-result');
-      out.innerHTML = '';
-      out.append(loading(3));
-      try {
-        const diag = await api.post('/api/webstudio/diagnostic', { url: values.url });
-        out.innerHTML = '';
-        out.append(h('div.card', [
-          h('div.row.between', [h('h3', `${diag.healthScore}/100 — grade ${diag.grade}`), h('span.badge.' + (diag.healthScore >= 70 ? 'verified' : diag.healthScore >= 40 ? 'warn' : 'danger'), diag.reachable ? 'reachable' : 'unreachable')]),
-          h('div.list', { style: { marginTop: '10px' } }, diag.findings.map((f) => h('div.split-row', [
-            h('span.lbl', `${f.passed ? '✅' : '❌'} ${f.label}`),
-            h('span.tiny', f.passed ? 'pass' : f.fix),
-          ]))),
-          h('p.small', { style: { marginTop: '10px' } }, diag.verdict),
-          h('p.tiny.mono.muted', `seal ${diag.seal.slice(0, 16)} · ${diag.responseMs} ms · ${diag.sizeKb} KB`),
-        ]));
-      } catch (error) {
-        out.innerHTML = '';
-        out.append(h('div.banner.danger', [h('span.ico', '⛔'), h('div', error.message)]));
-      }
-    }
-
-    function orderSheet(pkg, growth) {
-      const close = sheet(pkg ? `Order: ${pkg.name}` : `Enquire: ${growth.name}`, h('form.stack', { name: 'order' }, [
-        h('label.field', [h('span', 'Business name'), h('input', { type: 'text', name: 'businessName', required: true })]),
-        h('div.form-grid', [
-          h('label.field', [h('span', 'First name'), h('input', { type: 'text', name: 'firstName', required: true })]),
-          h('label.field', [h('span', 'Surname'), h('input', { type: 'text', name: 'surname', required: true })]),
-        ]),
-        h('div.form-grid', [
-          h('label.field', [h('span', 'Email'), h('input', { type: 'email', name: 'email', required: true })]),
-          h('label.field', [h('span', 'Mobile'), h('input', { type: 'tel', name: 'mobile', required: true })]),
-        ]),
-        h('label.field', [h('span', 'What must the site do?'), h('textarea', { name: 'whatTheSiteMustDo' })]),
-        h('p.tiny.muted', 'No payment now. We build your live interactive preview first; escrow only opens after you approve it.'),
-      ]), [h('button.btn.block', { onclick: async (e) => {
-        await withButton(e.target, async () => {
-          const contact = formValues(document.getElementById('sheet').querySelector('form'));
-          const order = await api.post('/api/webstudio/orders', {
-            packageId: pkg?.id || null,
-            growthServiceId: growth?.id || null,
-            contact,
-            brief: { whatTheSiteMustDo: contact.whatTheSiteMustDo },
-          });
-          const preview = await api.post(`/api/webstudio/orders/${order.orderId}/preview`, {});
-          close();
-          toast('Preview is building — nothing has been charged', 'ok');
-          webStudioOrderSheet(order.orderId, preview);
-        });
-      } }, 'Request my free preview')]);
-    }
-
-    function webStudioOrderSheet(orderId, order) {
-      const close = sheet('Your preview is ready', h('div.stack', [
-        h('div.banner.ok', [h('span.ico', '🖥️'), h('div', [h('strong', `${order.title} preview`), h('div.small', `Interactive preview at ${order.previewUrl} — mobile, tablet and desktop. R0 charged so far.`)])]),
-        h('div.split-row', [h('span.lbl', 'Price on approval'), h('span.money', money(order.priceCents))]),
-        h('div.split-row', [h('span.lbl', 'Milestones'), h('span', order.milestones.map((m) => `${m.label} (${m.weight}%)`).join(' → '))]),
-        h('p.tiny.muted', 'Approving opens escrow at the package price. Each milestone releases its portion as it is delivered — the same machinery as a plumbing job.'),
-      ]), [
-        h('button.btn.block', { onclick: async (e) => {
-          await withButton(e.target, async () => {
-            const approved = await api.post(`/api/webstudio/orders/${orderId}/preview-decision`, { approved: true });
-            await api.post(`/api/webstudio/orders/${orderId}/pay`, { method: 'card' });
-            for (const milestone of approved.milestones || order.milestones) {
-              await api.post(`/api/webstudio/orders/${orderId}/milestones/${milestone.seq}/complete`, { deliverable: `${milestone.label} delivered`, actorId: 'lula-webstudio' }).catch(() => {});
-            }
-            close(); toast('Paid into escrow, milestones released on handover', 'ok');
-          });
-        } }, 'Approve preview & pay into escrow'),
-        h('button.btn.block.ghost', { onclick: () => { close(); } }, 'Not yet'),
-      ]);
-    }
+  /* One studio, one front door. /web-studio was a second marketing page for the
+     same product as Business Site Studio — the address now normalises onto it. */
+  screens['/web-studio'] = async (ctx) => {
+    window.ProVeri.ui.redirectTo('/business-studio');
+    return screens['/business-studio'](ctx);
   };
 })();

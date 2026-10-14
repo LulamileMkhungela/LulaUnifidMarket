@@ -360,3 +360,101 @@ test('the scheduler closes matured warranties and releases holdbacks', async () 
   assert.equal(after.status, BOOKING_STATUS.CLOSED);
   assert.equal(after.warranty.released, true);
 });
+
+test('two-way trust: the pro reviews the homeowner and it lives on the public member profile', async () => {
+  const mp = newMarket();
+  const { pro, customer, booking } = await fullJourney(mp);
+
+  // The customer's review of the pro (existing side of the street)…
+  mp.bookings.writeReview({ bookingId: booking.bookingId, customerId: customer.customerId, rating: 5, comment: 'Excellent work.' });
+  // …and the pro's review of the customer (the new side).
+  const review = mp.bookings.writeCustomerReview({
+    bookingId: booking.bookingId, proId: pro.proId, rating: 4.5,
+    comment: 'Clear brief, easy access, paid on time.', tags: ['Clear brief'],
+  });
+  assert.equal(review.verified, true);
+  assert.equal(review.customerId, customer.customerId);
+  assert.ok(/Escrow-released booking/.test(review.verificationBasis));
+
+  // One review per side per booking.
+  assert.throws(() => mp.bookings.writeCustomerReview({ bookingId: booking.bookingId, proId: pro.proId, rating: 5 }), /already reviewed/);
+  // Only the pro who did the job can write it.
+  assert.throws(() => mp.bookings.writeCustomerReview({ bookingId: booking.bookingId, proId: 'pro_someone_else', rating: 5 }), /only the pro/);
+
+  // The review is public on the member profile — first name + last initial only.
+  const profile = mp.people.publicCustomerProfile(customer.customerId);
+  assert.equal(profile.reviews.length, 1);
+  assert.equal(profile.reviews[0].rating, 4.5);
+  assert.equal(profile.reviews[0].proName, review.proName);
+  assert.equal(profile.ratings.count, 1);
+  assert.equal(profile.stats.jobsCompleted, 1);
+  assert.match(profile.displayName, /^Test C\.$/);
+  const published = JSON.stringify(profile);
+  assert.ok(!published.includes(customer.mobile), 'a public profile must never carry the mobile number');
+  assert.ok(!published.includes(customer.email), 'a public profile must never carry the email address');
+
+  // The customer was told.
+  const notes = mp.jobs.notificationsFor(customer.customerId);
+  assert.ok(notes.some((n) => n.type === 'NEW_CUSTOMER_REVIEW'));
+});
+
+test('a pro review is refused before the escrow reaches a terminal state (REV-001 both ways)', async () => {
+  const mp = newMarket();
+  const pro = await makePro(mp, { name: 'Gate Pro' });
+  const customer = makeCustomer(mp, { name: 'Gate Customer' });
+  const job = await mp.jobs.postJob({
+    customerId: customer.customerId, categoryId: 'plumbing', title: 'Leak', description: 'Kitchen leak.', suburbId: customer.suburbId,
+  });
+  const bid = mp.jobs.submitBid({ jobId: job.jobId, proId: pro.proId, totalCents: 150000, includesCoc: true, scheduledAt: new Date(Date.now() + 86400000).toISOString() });
+  const booking = mp.bookings.acceptBid({ jobId: job.jobId, bidId: bid.bidId, customerId: customer.customerId });
+  assert.throws(() => mp.bookings.writeCustomerReview({ bookingId: booking.bookingId, proId: pro.proId, rating: 5 }), /escrow|released|policy/i);
+});
+
+test('a homeowner can cancel their open job in one tap and quoting pros are told', async () => {
+  const mp = newMarket();
+  const pro = await makePro(mp, { name: 'Quoting Pro' });
+  const customer = makeCustomer(mp, { name: 'Changing Mind' });
+  const job = await mp.jobs.postJob({
+    customerId: customer.customerId, categoryId: 'plumbing', title: 'Burst pipe', description: 'Burst pipe, water everywhere.', suburbId: customer.suburbId,
+  });
+  const bid = mp.jobs.submitBid({ jobId: job.jobId, proId: pro.proId, totalCents: 180000, includesCoc: true, scheduledAt: new Date(Date.now() + 86400000).toISOString() });
+
+  // Not the owner? Refused.
+  assert.throws(() => mp.jobs.cancelJob({ jobId: job.jobId, customerId: 'cus_nobody' }), /only the homeowner/);
+
+  const cancelled = mp.jobs.cancelJob({ jobId: job.jobId, customerId: customer.customerId, reason: 'Fixed it myself' });
+  assert.equal(cancelled.status, 'CANCELLED');
+  assert.equal(mp.store.get('bids', bid.bidId).status, 'EXPIRED');
+  const notes = mp.jobs.notificationsFor(pro.proId);
+  assert.ok(notes.some((n) => n.type === 'JOB_CANCELLED'), 'the quoting pro is notified');
+  // Cancelling twice, or cancelling a booked job, is refused with a helpful door.
+  assert.throws(() => mp.jobs.cancelJob({ jobId: job.jobId, customerId: customer.customerId }), /cannot be cancelled/);
+
+  // Once a bid is accepted there is a booking — cancellation moves to the tracker.
+  const mp2 = newMarket();
+  const pro2 = await makePro(mp2, { name: 'Booked Pro' });
+  const customer2 = makeCustomer(mp2, { name: 'Booked Customer' });
+  const job2 = await mp2.jobs.postJob({ customerId: customer2.customerId, categoryId: 'plumbing', title: 'Geyser', description: 'Geyser replacement.', suburbId: customer2.suburbId });
+  const bid2 = mp2.jobs.submitBid({ jobId: job2.jobId, proId: pro2.proId, totalCents: 200000, includesCoc: true, scheduledAt: new Date(Date.now() + 86400000).toISOString() });
+  mp2.bookings.acceptBid({ jobId: job2.jobId, bidId: bid2.bidId, customerId: customer2.customerId });
+  assert.throws(() => mp2.jobs.cancelJob({ jobId: job2.jobId, customerId: customer2.customerId }), /job tracker/);
+});
+
+test('the money journey ends: an instructed payout settles into the pro’s bank account', async () => {
+  const mp = newMarket();
+  const { pro, booking } = await fullJourney(mp);
+
+  const stored = mp.store.get('bookings', booking.bookingId);
+  const payout = mp.store.get('payouts', stored.payoutId);
+  assert.equal(payout.status, 'INSTRUCTED');
+  assert.equal(payout.rail.instant, true, 'the demo pro banks with Capitec, so the rail is instant');
+
+  const sweep = mp.runSchedulerOnce();
+  assert.ok(sweep.payoutsSettled.includes(payout.payoutId));
+  const settled = mp.store.get('payouts', payout.payoutId);
+  assert.equal(settled.status, 'SETTLED');
+  assert.ok(settled.settledAt);
+  const wallet = mp.bookings.walletFor(pro.proId);
+  assert.ok(wallet.recentTransactions.some((t) => t.kind === 'SETTLEMENT'));
+  assert.ok(mp.jobs.notificationsFor(pro.proId).some((n) => n.type === 'PAYOUT_SETTLED'));
+});

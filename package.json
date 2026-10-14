@@ -1,5 +1,5 @@
 {
-  "name": "lula-proveri",
+  "name": "proveri",
   "version": "1.0.0",
   "private": true,
   "description": "Lula ProVeri \u2014 South Africa's verified on-demand services marketplace. KYC-verified pros, multi-bid jobs, escrow-protected payments, proof-of-work evidence chains, load-shedding & weather-aware scheduling, plus a verified-vehicle vertical powered by the shared ProVeri Trust Kernel.",
@@ -15,6 +15,7 @@
     "demo:vehicle": "node src/demo-vehicle.js",
     "demo:studio": "node src/demo-studio.js",
     "test": "node --test",
+    "journey": "node scripts/verify-journey.mjs",
     "test:legacy": "node --test test/legacy.trustEscrowEngine.test.js",
     "seed:reset": "node scripts/reset-store.js",
     "openapi": "node scripts/print-openapi.js",

@@ -152,7 +152,7 @@ ProVeri answers all six in one record, and publishes the record.
 | Airtasker | 12.5–20% + GST | connection fee | tiered by earnings |
 | TaskRabbit | 5–15% trust fee | ~15% service fee | 15–30% combined |
 | ServicePro | 10% | none published | escrow-protected |
-| **Lula ProVeri** | **10%, released jobs only** | **none** | + 5% holdback returned after warranty |
+| **ProVeri** | **10%, released jobs only** | **none** | + 5% holdback returned after warranty |
 
 ## Why this wins in South Africa specifically
 

@@ -266,7 +266,7 @@ test('microsites are generated only for verified pros and render live data', asy
   const site = mp.webStudio.generateProMicrosite(pro.proId);
   assert.equal(site.status, 'LIVE');
   const html = mp.webStudio.renderMicrositeHtml(pro.proId);
-  assert.match(html, /Lula ProVeri/);
+  assert.match(html, /ProVeri/);
   assert.match(html, /What has been verified/);
   assert.ok(!html.includes('undefined'), 'rendered HTML must not leak undefined values');
 });

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Policy engine.
+ * ProVeri — Policy engine.
  *
  * Declarative, auditable rules. Every rule states *what it protects*, *when it
  * fires* and *what it does*. Rules are evaluated in order and the strictest

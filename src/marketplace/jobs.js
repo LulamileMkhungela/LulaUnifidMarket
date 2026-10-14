@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Jobs, matching and bidding.
+ * ProVeri — Jobs, matching and bidding.
  *
  * This is where ProVeri beats the incumbents on the two things South Africans
  * actually complain about:
@@ -25,6 +25,8 @@ const { CHECK_STATUS, BADGE } = require('../kernel/verification');
 const { WEATHER, HOLIDAYS } = require('../integrations/publicData');
 const { LOAD_SHEDDING } = require('../integrations/verificationSources');
 const { MARKET } = require('../integrations/context');
+
+const MAX_JOB_PHOTO_DATAURL = 1_200_000;   // ~900 KB of image; the PWA compresses well under this
 
 const JOB_STATUS = Object.freeze({
   DRAFT: 'DRAFT',
@@ -59,11 +61,12 @@ const URGENCY = Object.freeze({
 });
 
 class JobService {
-  constructor({ store, kernel, catalog, people }) {
+  constructor({ store, kernel, catalog, people, cloud = null }) {
     this.store = store;
     this.kernel = kernel;
     this.catalog = catalog;
     this.people = people;
+    this.cloud = cloud;
   }
 
   /* ================================================================== *
@@ -137,13 +140,19 @@ class JobService {
       urgency: URGENCY[urgency] ? URGENCY[urgency].id : 'SOON',
       urgencyLabel: (URGENCY[urgency] || URGENCY.SOON).label,
       preferredDates,
-      photos: (photos || []).map((p) => ({
-        photoId: nextId('evd'),
-        hash: typeof p === 'string' ? sha256(p) : sha256(p.hash || p),
-        caption: p.caption || null,
-        capturedAt: p.capturedAt || nowIso(),
-        geo: p.geo || null,
-      })),
+      photos: (photos || []).slice(0, 6).map((p) => {
+        const dataUrl = typeof p === 'object' && p && typeof p.dataUrl === 'string' && p.dataUrl.length <= MAX_JOB_PHOTO_DATAURL ? p.dataUrl : null;
+        const url = typeof p === 'object' && p && typeof p.url === 'string' ? p.url : null;
+        return {
+          photoId: nextId('evd'),
+          hash: typeof p === 'string' ? sha256(p) : sha256(dataUrl || url || p.hash || p),
+          dataUrl,
+          url,
+          caption: (typeof p === 'object' && p && p.caption) || null,
+          capturedAt: (typeof p === 'object' && p && p.capturedAt) || nowIso(),
+          geo: (typeof p === 'object' && p && p.geo) || null,
+        };
+      }),
       householdNotes: {
         childrenOnPremises: Boolean(householdNotes.childrenOnPremises ?? category.childrenDefault),
         petsOnPremises: Boolean(householdNotes.petsOnPremises),
@@ -193,6 +202,26 @@ class JobService {
 
     // Persist first so matching and notifications can read the job back.
     this.store.put('jobs', jobId, job);
+
+    // The post is real: mirror it to Supabase so it outlives this process.
+    if (this.cloud) {
+      this.cloud.mirrorPost({
+        id: jobId,
+        kind: 'job',
+        reference,
+        authorUid: customer.firebaseUid || null,
+        authorName: customer.fullName,
+        title: job.title,
+        description: job.description,
+        categoryId,
+        categoryLabel: category.label,
+        suburb: job.location.suburb,
+        metro: job.location.metro,
+        priceCents: job.budget.statedCents,
+        photos: job.photos.map((ph) => ({ url: ph.url || null, caption: ph.caption || null, hash: ph.hash })),
+        createdAt: job.postedAt,
+      }, { ledger: this.kernel.ledger, subject: jobId }).catch(() => {});
+    }
 
     // Match immediately — this is what makes quotes arrive in minutes.
     const match = await this.matchPros(jobId);
@@ -762,6 +791,34 @@ class JobService {
     return deepClone(bid);
   }
 
+  /**
+   * listJobs + the homeowner's cloud-mirrored posts, so a job posted today is
+   * still theirs after a restart (Supabase is the durable copy).
+   */
+  async listJobsWithCloud({ customerId, proId, status, categoryId, metroId, limit = 50 } = {}) {
+    const local = this.listJobs({ customerId, proId, status, categoryId, metroId, limit });
+    if (!this.cloud || !customerId) return local;
+    const uid = (this.store.get('customers', customerId) || {}).firebaseUid;
+    if (!uid) return local;
+    const rows = (await this.cloud.fetchPosts({ limit: 100 }))
+      .filter((r) => r.kind === 'job' && r.author_uid === uid && !local.some((j) => j.jobId === r.id));
+    return [...local, ...rows.map((r) => ({
+      jobId: r.id,
+      reference: r.reference || null,
+      title: r.title,
+      categoryId: r.category_id || null,
+      categoryLabel: r.category_label || null,
+      excerpt: r.description || null,
+      status: 'OPEN',
+      suburb: r.suburb || null,
+      metro: r.metro || null,
+      bidCount: 0,
+      postedAt: r.created_at,
+      cloud: true,
+      photos: r.photos || [],
+    }))].sort((a, b) => String(b.postedAt).localeCompare(String(a.postedAt))).slice(0, limit);
+  }
+
   listJobs({ customerId, proId, status, categoryId, metroId, limit = 50 } = {}) {
     let rows = this.store.all('jobs');
     if (customerId) rows = rows.filter((j) => j.customerId === customerId);
@@ -774,7 +831,10 @@ class JobService {
       jobId: j.jobId,
       reference: j.reference,
       title: j.title,
+      categoryId: j.categoryId,
       categoryLabel: j.categoryLabel,
+      excerpt: j.description ? (j.description.length > 160 ? `${j.description.slice(0, 157).trimEnd()}…` : j.description) : null,
+      urgencyId: j.urgency,
       status: j.status,
       suburb: j.location.suburb,
       metro: j.location.metro,
@@ -788,7 +848,14 @@ class JobService {
       expiresAt: j.expiresAt,
       awardedBidId: j.awardedBidId,
       bookingId: j.bookingId,
+      // For a pro's lead list: their own quote on this job, if any.
+      ...(proId ? { myBid: this.#myBid(j, proId) } : {}),
     }));
+  }
+
+  #myBid(job, proId) {
+    const bid = job.bids.map((id) => this.store.get('bids', id)).find((b) => b && b.proId === proId && b.status !== BID_STATUS.WITHDRAWN);
+    return bid ? { bidId: bid.bidId, status: bid.status, totalCents: bid.totalCents, createdAt: bid.createdAt } : null;
   }
 
   listBids({ jobId, proId, status } = {}) {
@@ -815,6 +882,59 @@ class JobService {
       payload: { summary: `${bid.proName} withdrew their bid${reason ? `: ${reason}` : ''}`, bidId },
     });
     return deepClone(bid);
+  }
+
+  /**
+   * The homeowner changed their mind — one tap, no phone calls, no fee.
+   * Allowed while the job is still open for quotes; once a bid is accepted
+   * there is a booking, and the booking cancellation (with the ECT Act s44
+   * cooling-off refund) is the right door.
+   */
+  cancelJob({ jobId, customerId, reason }) {
+    const job = this.store.get('jobs', jobId);
+    if (!job) throw new Error(`job ${jobId} not found`);
+    if (job.customerId !== customerId) {
+      const error = new Error('only the homeowner who posted this job can cancel it');
+      error.code = 'FORBIDDEN';
+      throw error;
+    }
+    if (![JOB_STATUS.OPEN, JOB_STATUS.BIDDING, JOB_STATUS.EXPIRED].includes(job.status)) {
+      if (job.bookingId) throw new Error('This job is booked — cancel from the job tracker instead; you get a full refund before work starts.');
+      throw new Error(`a ${job.status} job cannot be cancelled`);
+    }
+
+    job.status = JOB_STATUS.CANCELLED;
+    job.cancelledAt = nowIso();
+    job.cancellationReason = String(reason || '').trim().slice(0, 500) || null;
+    job.updatedAt = nowIso();
+
+    // Close out live quotes so no pro keeps working on a dead lead.
+    const notifiedPros = [];
+    for (const bidId of job.bids) {
+      const bid = this.store.get('bids', bidId);
+      if (!bid || [BID_STATUS.WITHDRAWN, BID_STATUS.EXPIRED, BID_STATUS.DECLINED].includes(bid.status)) continue;
+      bid.status = BID_STATUS.EXPIRED;
+      bid.withdrawReason = 'Job cancelled by the homeowner';
+      bid.updatedAt = nowIso();
+      this.#notify(bid.proId, 'JOB_CANCELLED', {
+        title: `${job.reference} was cancelled`,
+        body: `${job.customerName.split(' ')[0]} cancelled “${job.title}”, so your quote is closed. Nothing to do — we will send you new matches in your area.`,
+        jobId,
+      });
+      notifiedPros.push(bid.proId);
+    }
+
+    this.kernel.ledger.append({
+      action: 'JOB_CANCELLED',
+      subject: jobId,
+      visibility: 'PUBLIC',
+      payload: {
+        summary: `${job.reference} cancelled by the homeowner${job.cancellationReason ? `: ${job.cancellationReason}` : ''} — ${notifiedPros.length} quote(s) closed`,
+        bidCount: job.bidCount,
+        quotesClosed: notifiedPros.length,
+      },
+    });
+    return deepClone(job);
   }
 
   expireStaleJobs() {
@@ -867,7 +987,8 @@ class JobService {
   notificationsFor(userId, { unreadOnly = false, limit = 50 } = {}) {
     let rows = this.store.find('notifications', (n) => n.userId === userId);
     if (unreadOnly) rows = rows.filter((n) => !n.read);
-    return rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit).map((n) => deepClone(n));
+    const when = (n) => String(n.createdAt || n.at || '');
+    return rows.sort((a, b) => when(b).localeCompare(when(a))).slice(0, limit).map((n) => deepClone(n));
   }
 
   markNotificationRead(notificationId) {

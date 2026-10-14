@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Integration registry.
+ * ProVeri — Integration registry.
  *
  * One place that knows every external dependency, whether it is live, what it
  * costs, and what the product does when it is down. `GET /api/integrations`

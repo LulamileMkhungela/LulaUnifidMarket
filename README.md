@@ -1,11 +1,11 @@
-# Lula ProVeri 🇿
+# ProVeri 🇿
 
 **Upload your past work. Let home owners find you by it.**
 
 📍 In South Africa, for South Africa 🇿🇦 · Connecting local businesses with home
 owners · Reshaping the future of employment.
 
-Lula ProVeri is a South African marketplace whose front door is a **shelf of real
+ProVeri is a South African marketplace whose front door is a **shelf of real
 work**: individuals and small businesses publish the jobs they have done, home
 owners browse what has been done near them, tap it, and message the person who
 did it. Underneath that shop sits the machinery from
@@ -35,7 +35,8 @@ generated pitch kit.
 
 ```bash
 npm start        # seeds a full demo marketplace · API + PWA on http://localhost:4173
-npm test         # 200 tests: kernel, flows, portfolio, verticals, integrations, studio, sales desk, HTTP, PWA screens
+npm test         # 208 tests: kernel, flows, portfolio, verticals, integrations, studio, sales desk, HTTP, PWA screens
+npm run journey  # the whole product over live HTTP: sign-up → post → quote → escrow → arrival code → proof → payout → settlement → two-way reviews → cancel → refund
 npm run demo     # one services journey printed end to end
 npm run demo:vehicle   # one vehicle journey (the merged TrustShield rail)
 npm run demo:studio    # research → diagnose → demo → pitch → win → publish → booking → job → export
@@ -180,12 +181,37 @@ change a pro's ranking, a customer's price or who may work where. The rule is
 enforced in code (`RiskEngine.applyLocalitySignal` throws for any other
 purpose) and regression-tested.
 
+## Cloud identity & data (Firebase + Supabase)
+
+Real accounts, real posts — no demo logins:
+
+- **Sign-in** is Firebase Auth: email + password (server-side `identitytoolkit`
+  REST) or Google (the PWA runs the Firebase web SDK popup and the server
+  verifies the ID token). Every Firebase identity maps onto a local marketplace
+  profile the first time it signs in.
+- **Posts are mirrored** to Supabase (`posts` table) the moment a job or a
+  published work item is created, and photos upload straight from the phone
+  into the public `photos` bucket. Feeds merge local seed content with cloud
+  rows, so the marketplace is browsable even before the first cloud post.
+- **Setup (once):** enable *Email/Password* and *Google* providers in the
+  Firebase console ( authorised domains must include your preview/host), then
+  run [`docs/cloud/supabase-schema.sql`](docs/cloud/supabase-schema.sql) in the
+  Supabase SQL editor — it creates the tables, RLS policies and the `photos`
+  bucket.
+- **Honest degradation:** when the server cannot reach Firebase or Supabase
+  (air-gapped CI, sandboxed dev), registration falls back to a local password
+  hash labelled `local` on the session, mirrors are skipped *with a ledger
+  note*, and `GET /api/cloud-config` reports `online: false` — the UI says so
+  too. Nothing is ever disguised as a cloud write that did not happen.
+
 ## Environment
 
 | Variable | Effect |
 | --- | --- |
 | `PORT`, `HOST` | bind address (default `0.0.0.0:4173`) |
 | `PROVERI_INTEGRATION_MODE` | `offline` (deterministic bundled data) or `live` (real free APIs) |
+| `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`, `FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_APP_ID` | Firebase Auth project (also read with the `VITE_` prefix; defaults are baked in) |
+| `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_BUCKET` | Supabase project + storage bucket (also read with the `VITE_` prefix; defaults are baked in) |
 | `PROVERI_PERSIST` | `1` snapshots the store to `data/.store.json` |
 | `ESP_API_TOKEN` | EskomSePush area schedules |
 | `CIPC_API_KEY` | CIPC company status via a reseller |

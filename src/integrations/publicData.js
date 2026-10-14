@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Live public-data adapters.
+ * ProVeri — Live public-data adapters.
  *
  * Every source below is genuinely public and was reachable when this
  * integration was written. Each adapter has three properties that make it safe

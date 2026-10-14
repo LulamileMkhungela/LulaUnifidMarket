@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Lula ProVeri — Trust Kernel.
+ * ProVeri — Trust Kernel.
  *
  * One kernel, many verticals. A vertical is a small plugin that declares:
  *   - which verification profile applies

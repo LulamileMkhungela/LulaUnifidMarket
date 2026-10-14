@@ -7,7 +7,7 @@ this document updates it for the services-first shape.
 
 ## The golden decision, unchanged
 
-**Lula ProVeri never holds client money.** Every escrow record in this codebase
+**ProVeri never holds client money.** Every escrow record in this codebase
 is a *shadow* of an account at a regulated partner (TradeSafe — PASA-authorised
 third-party payment provider; or Paystack/Stripe/PayFast/Ozow/Yoco as PSPs; or a
 conveyancer trust account for property). The kernel decides *when* money may
